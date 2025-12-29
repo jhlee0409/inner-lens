@@ -3,8 +3,162 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import fs from 'fs-extra';
 import path from 'path';
+import { execSync } from 'child_process';
 
 const PACKAGE_VERSION = '1.0.0';
+
+// GitHub OAuth App Client ID for inner-lens
+// Users can also use their own OAuth App by setting INNERLENS_CLIENT_ID env var
+const GITHUB_CLIENT_ID = process.env.INNERLENS_CLIENT_ID || 'Ov23liXXXXXXXXXXXXXX';
+
+interface DeviceCodeResponse {
+  device_code: string;
+  user_code: string;
+  verification_uri: string;
+  expires_in: number;
+  interval: number;
+}
+
+interface AccessTokenResponse {
+  access_token?: string;
+  token_type?: string;
+  scope?: string;
+  error?: string;
+  error_description?: string;
+}
+
+/**
+ * GitHub Device Flow OAuth
+ * https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow
+ */
+async function githubDeviceFlow(): Promise<string | null> {
+  console.log(chalk.dim('\n  GitHub OAuth 인증을 시작합니다...\n'));
+
+  try {
+    // Step 1: Request device code
+    const deviceCodeRes = await fetch('https://github.com/login/device/code', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: GITHUB_CLIENT_ID,
+        scope: 'repo',
+      }),
+    });
+
+    if (!deviceCodeRes.ok) {
+      throw new Error(`Failed to get device code: ${deviceCodeRes.status}`);
+    }
+
+    const deviceCode = await deviceCodeRes.json() as DeviceCodeResponse;
+
+    // Step 2: Show user code and prompt to open browser
+    console.log(chalk.bold.yellow('  ┌─────────────────────────────────────┐'));
+    console.log(chalk.bold.yellow('  │                                     │'));
+    console.log(chalk.bold.yellow(`  │    코드: ${chalk.bold.white(deviceCode.user_code)}                 │`));
+    console.log(chalk.bold.yellow('  │                                     │'));
+    console.log(chalk.bold.yellow('  └─────────────────────────────────────┘'));
+    console.log();
+    console.log(chalk.dim('  아래 URL에서 위 코드를 입력하세요:'));
+    console.log(chalk.cyan(`  ${deviceCode.verification_uri}`));
+    console.log();
+
+    // Try to open browser automatically
+    try {
+      const openCommand = process.platform === 'darwin' ? 'open' :
+                         process.platform === 'win32' ? 'start' : 'xdg-open';
+      execSync(`${openCommand} ${deviceCode.verification_uri}`, { stdio: 'ignore' });
+      console.log(chalk.dim('  브라우저가 자동으로 열렸습니다.'));
+    } catch {
+      console.log(chalk.dim('  브라우저를 수동으로 열어주세요.'));
+    }
+
+    console.log(chalk.dim('\n  인증 대기 중... (Ctrl+C로 취소)\n'));
+
+    // Step 3: Poll for access token
+    const interval = (deviceCode.interval || 5) * 1000;
+    const expiresAt = Date.now() + deviceCode.expires_in * 1000;
+
+    while (Date.now() < expiresAt) {
+      await new Promise(resolve => setTimeout(resolve, interval));
+
+      const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          client_id: GITHUB_CLIENT_ID,
+          device_code: deviceCode.device_code,
+          grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+        }),
+      });
+
+      const tokenData = await tokenRes.json() as AccessTokenResponse;
+
+      if (tokenData.access_token) {
+        console.log(chalk.green('  ✓ ') + 'GitHub 인증 성공!\n');
+        return tokenData.access_token;
+      }
+
+      if (tokenData.error === 'authorization_pending') {
+        // Still waiting for user
+        process.stdout.write(chalk.dim('.'));
+        continue;
+      }
+
+      if (tokenData.error === 'slow_down') {
+        // Need to slow down polling
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        continue;
+      }
+
+      if (tokenData.error === 'expired_token') {
+        console.log(chalk.red('\n  ✗ ') + '인증 시간이 만료되었습니다. 다시 시도해주세요.');
+        return null;
+      }
+
+      if (tokenData.error === 'access_denied') {
+        console.log(chalk.red('\n  ✗ ') + '인증이 거부되었습니다.');
+        return null;
+      }
+
+      // Unknown error
+      console.log(chalk.red('\n  ✗ ') + `오류: ${tokenData.error_description || tokenData.error}`);
+      return null;
+    }
+
+    console.log(chalk.red('\n  ✗ ') + '인증 시간이 만료되었습니다.');
+    return null;
+  } catch (error) {
+    console.log(chalk.red('\n  ✗ ') + `OAuth 오류: ${error instanceof Error ? error.message : error}`);
+    return null;
+  }
+}
+
+/**
+ * Fetch user's repositories from GitHub
+ */
+async function fetchUserRepos(token: string): Promise<string[]> {
+  try {
+    const res = await fetch('https://api.github.com/user/repos?sort=updated&per_page=10', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github+json',
+      },
+    });
+
+    if (!res.ok) return [];
+
+    const repos = await res.json() as Array<{ full_name: string }>;
+    return repos.map(r => r.full_name);
+  } catch {
+    return [];
+  }
+}
 
 interface InitOptions {
   eject?: boolean;
@@ -83,6 +237,8 @@ program
     let repository: string;
     let provider: AIProvider;
 
+    let githubToken: string | null = null;
+
     if (options.yes) {
       // Skip all prompts
       provider = options.provider && options.provider in PROVIDER_CONFIGS
@@ -91,25 +247,173 @@ program
       repository = detectedRepo || 'owner/repo';
     } else {
       // Interactive setup
-      console.log(chalk.bold.cyan('  Step 1/3: GitHub Repository\n'));
+      console.log(chalk.bold.cyan('  Step 1/4: GitHub 연동\n'));
 
-      const repoAnswer = await inquirer.prompt([
+      const authMethodAnswer = await inquirer.prompt([
         {
-          type: 'input',
-          name: 'repository',
-          message: 'GitHub repository (owner/repo):',
-          default: detectedRepo || undefined,
-          validate: (input: string) => {
-            if (!input || !input.includes('/')) {
-              return 'Please enter in format: owner/repo (예: jhlee0409/my-app)';
-            }
-            return true;
-          },
+          type: 'list',
+          name: 'authMethod',
+          message: 'GitHub 연동 방식:',
+          choices: [
+            {
+              name: `${chalk.green('●')} GitHub 로그인 (OAuth) ${chalk.dim('- 권장')}`,
+              value: 'oauth'
+            },
+            {
+              name: `${chalk.yellow('●')} 토큰 직접 입력 ${chalk.dim('(PAT)')}`,
+              value: 'manual'
+            },
+            {
+              name: `${chalk.dim('●')} 나중에 설정`,
+              value: 'skip'
+            },
+          ],
+          default: 'oauth',
         },
       ]);
-      repository = repoAnswer.repository;
 
-      console.log('\n' + chalk.bold.cyan('  Step 2/3: AI Provider\n'));
+      if (authMethodAnswer.authMethod === 'oauth') {
+        githubToken = await githubDeviceFlow();
+
+        if (githubToken) {
+          // Fetch user's repos and let them choose
+          console.log(chalk.dim('  레포지토리 목록을 가져오는 중...'));
+          const repos = await fetchUserRepos(githubToken);
+
+          if (repos.length > 0) {
+            // Add detected repo to the list if not already there
+            const repoChoices = detectedRepo && !repos.includes(detectedRepo)
+              ? [detectedRepo, ...repos]
+              : repos;
+
+            const repoSelectAnswer = await inquirer.prompt([
+              {
+                type: 'list',
+                name: 'repository',
+                message: '레포지토리 선택:',
+                choices: [
+                  ...repoChoices.map(r => ({ name: r, value: r })),
+                  { name: chalk.dim('직접 입력...'), value: '__custom__' },
+                ],
+                default: detectedRepo || repos[0],
+              },
+            ]);
+
+            if (repoSelectAnswer.repository === '__custom__') {
+              const customRepoAnswer = await inquirer.prompt([
+                {
+                  type: 'input',
+                  name: 'repository',
+                  message: 'GitHub repository (owner/repo):',
+                  validate: (input: string) => {
+                    if (!input || !input.includes('/')) {
+                      return 'owner/repo 형식으로 입력하세요';
+                    }
+                    return true;
+                  },
+                },
+              ]);
+              repository = customRepoAnswer.repository;
+            } else {
+              repository = repoSelectAnswer.repository;
+            }
+          } else {
+            // No repos found, ask for manual input
+            const repoAnswer = await inquirer.prompt([
+              {
+                type: 'input',
+                name: 'repository',
+                message: 'GitHub repository (owner/repo):',
+                default: detectedRepo || undefined,
+                validate: (input: string) => {
+                  if (!input || !input.includes('/')) {
+                    return 'owner/repo 형식으로 입력하세요';
+                  }
+                  return true;
+                },
+              },
+            ]);
+            repository = repoAnswer.repository;
+          }
+        } else {
+          // OAuth failed, fall back to manual
+          console.log(chalk.yellow('  OAuth 인증 실패. 수동 설정으로 진행합니다.\n'));
+          const repoAnswer = await inquirer.prompt([
+            {
+              type: 'input',
+              name: 'repository',
+              message: 'GitHub repository (owner/repo):',
+              default: detectedRepo || undefined,
+              validate: (input: string) => {
+                if (!input || !input.includes('/')) {
+                  return 'owner/repo 형식으로 입력하세요';
+                }
+                return true;
+              },
+            },
+          ]);
+          repository = repoAnswer.repository;
+        }
+      } else if (authMethodAnswer.authMethod === 'manual') {
+        console.log(chalk.bold.cyan('\n  Step 1-1/4: GitHub Repository\n'));
+
+        const repoAnswer = await inquirer.prompt([
+          {
+            type: 'input',
+            name: 'repository',
+            message: 'GitHub repository (owner/repo):',
+            default: detectedRepo || undefined,
+            validate: (input: string) => {
+              if (!input || !input.includes('/')) {
+                return 'owner/repo 형식으로 입력하세요';
+              }
+              return true;
+            },
+          },
+        ]);
+        repository = repoAnswer.repository;
+
+        console.log(chalk.bold.cyan('\n  Step 1-2/4: GitHub Token\n'));
+        console.log(chalk.dim('  GitHub Personal Access Token을 입력하세요.'));
+        console.log(chalk.dim('  생성: https://github.com/settings/tokens/new?scopes=repo\n'));
+
+        const tokenAnswer = await inquirer.prompt([
+          {
+            type: 'password',
+            name: 'token',
+            message: 'GitHub Token:',
+            mask: '*',
+            validate: (input: string) => {
+              if (!input || input.length < 10) {
+                return '유효한 토큰을 입력하세요';
+              }
+              return true;
+            },
+          },
+        ]);
+        githubToken = tokenAnswer.token;
+      } else {
+        // Skip - just get repo
+        console.log(chalk.bold.cyan('\n  Step 1-1/4: GitHub Repository\n'));
+
+        const repoAnswer = await inquirer.prompt([
+          {
+            type: 'input',
+            name: 'repository',
+            message: 'GitHub repository (owner/repo):',
+            default: detectedRepo || undefined,
+            validate: (input: string) => {
+              if (!input || !input.includes('/')) {
+                return 'owner/repo 형식으로 입력하세요';
+              }
+              return true;
+            },
+          },
+        ]);
+        repository = repoAnswer.repository;
+      }
+
+      console.log('\n' + chalk.bold.cyan('  Step 2/4: AI Provider\n'));
       console.log(chalk.dim('  버그 리포트 분석에 사용할 AI를 선택하세요.\n'));
 
       const providerAnswer = await inquirer.prompt([
@@ -136,7 +440,7 @@ program
       ]);
       provider = providerAnswer.provider as AIProvider;
 
-      console.log('\n' + chalk.bold.cyan('  Step 3/3: 파일 생성\n'));
+      console.log('\n' + chalk.bold.cyan('  Step 3/4: 파일 생성\n'));
     }
 
     const providerConfig = PROVIDER_CONFIGS[provider];
@@ -194,37 +498,85 @@ program
       );
     }
 
+    // Save GitHub token to .env.local if obtained
+    if (githubToken) {
+      console.log('\n' + chalk.bold.cyan('  Step 4/4: 환경변수 저장\n'));
+
+      const envLocalPath = path.join(cwd, '.env.local');
+      let envContent = '';
+
+      if (await fs.pathExists(envLocalPath)) {
+        envContent = await fs.readFile(envLocalPath, 'utf-8');
+      }
+
+      // Check if GITHUB_TOKEN already exists
+      if (envContent.includes('GITHUB_TOKEN=')) {
+        // Update existing token
+        envContent = envContent.replace(/GITHUB_TOKEN=.*/g, `GITHUB_TOKEN=${githubToken}`);
+      } else {
+        // Add new token
+        envContent = envContent.trim() + (envContent ? '\n' : '') + `GITHUB_TOKEN=${githubToken}\n`;
+      }
+
+      await fs.writeFile(envLocalPath, envContent);
+      console.log(chalk.green('  ✓ ') + 'GITHUB_TOKEN saved to ' + chalk.cyan('.env.local'));
+
+      // Add .env.local to .gitignore if not already there
+      const gitignorePath = path.join(cwd, '.gitignore');
+      if (await fs.pathExists(gitignorePath)) {
+        const gitignoreContent = await fs.readFile(gitignorePath, 'utf-8');
+        if (!gitignoreContent.includes('.env.local')) {
+          await fs.appendFile(gitignorePath, '\n.env.local\n');
+          console.log(chalk.green('  ✓ ') + 'Added .env.local to ' + chalk.cyan('.gitignore'));
+        }
+      }
+    }
+
     // Print next steps with clear instructions
     console.log('\n' + chalk.bold.green('✅ Setup Complete!\n'));
     console.log(chalk.bold('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
     console.log(chalk.bold('\n📋 Next Steps:\n'));
 
-    // Step 1: GitHub Secrets
-    console.log(chalk.bold.white('  1. GitHub Secrets 설정\n'));
+    let stepNumber = 1;
+
+    // Step: GitHub Secrets (for AI provider)
+    console.log(chalk.bold.white(`  ${stepNumber}. GitHub Secrets 설정\n`));
     console.log(chalk.dim('     GitHub repository → Settings → Secrets → Actions\n'));
-    console.log(`     ${chalk.yellow('GITHUB_TOKEN')}     ${chalk.dim('(repo scope 필요)')}`);
+    if (!githubToken) {
+      console.log(`     ${chalk.yellow('GITHUB_TOKEN')}     ${chalk.dim('(repo scope 필요)')}`);
+    }
     console.log(`     ${chalk.yellow(providerConfig.secretName)}`);
     console.log();
     console.log(chalk.dim('     링크: ') + chalk.cyan(`https://github.com/${repository}/settings/secrets/actions`));
+    stepNumber++;
 
-    // Step 2: Environment Variable
-    console.log(chalk.bold.white('\n  2. 환경변수 설정 (.env.local)\n'));
-    console.log(chalk.dim('     ') + chalk.gray('# .env.local'));
-    console.log(chalk.dim('     ') + chalk.green('GITHUB_TOKEN=') + chalk.gray('ghp_xxxxxxxxxxxx'));
+    // Step: Environment Variable (only if not already set)
+    if (!githubToken) {
+      console.log(chalk.bold.white(`\n  ${stepNumber}. 환경변수 설정 (.env.local)\n`));
+      console.log(chalk.dim('     ') + chalk.gray('# .env.local'));
+      console.log(chalk.dim('     ') + chalk.green('GITHUB_TOKEN=') + chalk.gray('ghp_xxxxxxxxxxxx'));
+      stepNumber++;
+    }
 
-    // Step 3: Add Widget
-    console.log(chalk.bold.white('\n  3. 위젯 추가\n'));
+    // Step: Add Widget
+    console.log(chalk.bold.white(`\n  ${stepNumber}. 위젯 추가\n`));
     console.log(chalk.dim('     ') + chalk.gray('// app/layout.tsx'));
     console.log(chalk.dim('     ') + chalk.green("import { InnerLensWidget } from 'inner-lens/react';"));
     console.log();
     console.log(chalk.dim('     ') + chalk.gray('// return 안에:'));
     console.log(chalk.dim('     ') + chalk.yellow('<InnerLensWidget />'));
+    stepNumber++;
 
-    // Step 4: Test
-    console.log(chalk.bold.white('\n  4. 테스트\n'));
+    // Step: Test
+    console.log(chalk.bold.white(`\n  ${stepNumber}. 테스트\n`));
     console.log(chalk.dim('     ') + '앱 실행 후 우측 하단 버그 리포트 버튼 클릭!');
 
     console.log('\n' + chalk.bold('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
+
+    if (githubToken) {
+      console.log(chalk.green('\n🎉 GitHub 연동 완료! 토큰이 자동으로 저장되었습니다.'));
+    }
+
     console.log(
       chalk.dim('\n📚 Documentation: ') +
         chalk.cyan('https://github.com/jhlee0409/inner-lens')
