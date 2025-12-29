@@ -96,7 +96,7 @@ export default defineConfig([
     entry: {
       cli: 'src/cli.ts',
     },
-    format: ['esm'],
+    format: ['cjs'],
     dts: false,
     splitting: false,
     sourcemap: false,
@@ -107,6 +107,6 @@ export default defineConfig([
     banner: {
       js: '#!/usr/bin/env node',
     },
-    noExternal: ['chalk', 'commander', 'fs-extra', 'inquirer'],
+    outExtension: () => ({ js: '.cjs' }),
   },
 ]);
