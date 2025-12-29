@@ -81,6 +81,7 @@ export function InnerLensWidget({
   onError,
   trigger,
   disabled = false,
+  devOnly = true,
 }: InnerLensWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [description, setDescription] = useState('');
@@ -239,7 +240,9 @@ export function InnerLensWidget({
     onError,
   ]);
 
-  if (disabled) {
+  // Check if widget should be disabled
+  const isProduction = typeof process !== 'undefined' && process.env?.NODE_ENV === 'production';
+  if (disabled || (devOnly && isProduction)) {
     return null;
   }
 
