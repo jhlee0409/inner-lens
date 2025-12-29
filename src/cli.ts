@@ -278,7 +278,6 @@ jobs:
       provider: '${provider}'
     secrets:
       ${config.secretName}: \${{ secrets.${config.secretName} }}
-      GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
 `;
 }
 
