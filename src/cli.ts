@@ -8,9 +8,7 @@ import { execSync } from 'child_process';
 const PACKAGE_VERSION = '1.0.0';
 
 // GitHub OAuth App Client ID for inner-lens
-// Register your OAuth App at: https://github.com/settings/developers
-// Enable "Device Flow" in the OAuth App settings
-const GITHUB_CLIENT_ID = 'Ov23liXXXXXXXXXXXXXX'; // TODO: Replace with your OAuth App Client ID
+const GITHUB_CLIENT_ID = 'Ov23li3zMscAsVeYVXt5';
 
 interface DeviceCodeResponse {
   device_code: string;
