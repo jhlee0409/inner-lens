@@ -17,10 +17,14 @@ interface LogCaptureOptions {
 let capturedLogs: LogEntry[] = [];
 let isInitialized = false;
 let originalConsole: Pick<Console, 'error' | 'warn' | 'info' | 'log'> | null = null;
+let originalFetch: typeof fetch | null = null;
 let captureOptions: LogCaptureOptions = {
   maxEntries: 50,
   maskSensitiveData: true,
 };
+
+// Maximum characters for response body truncation
+const MAX_RESPONSE_BODY_LENGTH = 1000;
 
 /**
  * Formats console arguments into a string message
@@ -90,6 +94,159 @@ function addLogEntry(entry: LogEntry): void {
 }
 
 /**
+ * Truncates a string to the specified length
+ */
+function truncateString(str: string, maxLength: number): string {
+  if (str.length <= maxLength) {
+    return str;
+  }
+  return str.slice(0, maxLength) + '... [TRUNCATED]';
+}
+
+/**
+ * Safely extracts the request body from fetch input
+ */
+function extractRequestBody(init?: RequestInit): string | undefined {
+  if (!init?.body) {
+    return undefined;
+  }
+
+  // Handle string body
+  if (typeof init.body === 'string') {
+    return init.body;
+  }
+
+  // Handle JSON-serializable objects (through body being stringified already)
+  // URLSearchParams, FormData, Blob, ArrayBuffer are not captured for simplicity
+  return undefined;
+}
+
+/**
+ * Safely reads the response body as text
+ */
+async function safeReadResponseBody(response: Response): Promise<string> {
+  try {
+    // Clone to avoid consuming the original stream
+    const clonedResponse = response.clone();
+    const text = await clonedResponse.text();
+    return truncateString(text, MAX_RESPONSE_BODY_LENGTH);
+  } catch {
+    return '[Unable to read response body]';
+  }
+}
+
+/**
+ * Creates a network log entry
+ */
+function createNetworkLogEntry(
+  method: string,
+  url: string,
+  requestBody: string | undefined,
+  status: number,
+  responseBody: string,
+  duration: number
+): LogEntry {
+  const parts: string[] = [
+    `[NETWORK] ${method} ${url}`,
+    `Status: ${status}`,
+    `Duration: ${duration}ms`,
+  ];
+
+  if (requestBody) {
+    let maskedRequestBody = captureOptions.maskSensitiveData
+      ? maskSensitiveData(requestBody)
+      : requestBody;
+    maskedRequestBody = truncateString(maskedRequestBody, MAX_RESPONSE_BODY_LENGTH);
+    parts.push(`Request Body: ${maskedRequestBody}`);
+  }
+
+  let maskedResponseBody = captureOptions.maskSensitiveData
+    ? maskSensitiveData(responseBody)
+    : responseBody;
+  parts.push(`Response Body: ${maskedResponseBody}`);
+
+  const message = parts.join('\n');
+
+  return {
+    level: status >= 400 ? 'error' : 'info',
+    message,
+    timestamp: Date.now(),
+  };
+}
+
+/**
+ * Creates an intercepted fetch function
+ */
+function createFetchInterceptor(): typeof fetch {
+  return async function interceptedFetch(
+    input: RequestInfo | URL,
+    init?: RequestInit
+  ): Promise<Response> {
+    const startTime = Date.now();
+
+    // Extract request details
+    let method = 'GET';
+    let url: string;
+
+    if (input instanceof Request) {
+      method = input.method;
+      url = input.url;
+    } else if (input instanceof URL) {
+      url = input.toString();
+    } else {
+      url = input;
+    }
+
+    if (init?.method) {
+      method = init.method;
+    }
+
+    const requestBody = extractRequestBody(init);
+
+    try {
+      // Call original fetch
+      const response = await originalFetch!(input, init);
+      const duration = Date.now() - startTime;
+
+      // Read response body (using clone to preserve original)
+      const responseBody = await safeReadResponseBody(response);
+
+      // Create and add log entry
+      const entry = createNetworkLogEntry(
+        method,
+        url,
+        requestBody,
+        response.status,
+        responseBody,
+        duration
+      );
+      addLogEntry(entry);
+
+      return response;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+
+      // Log network errors
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      const entry = createNetworkLogEntry(
+        method,
+        url,
+        requestBody,
+        0,
+        `[Network Error: ${errorMessage}]`,
+        duration
+      );
+      entry.level = 'error';
+      addLogEntry(entry);
+
+      // Re-throw to not break the app
+      throw error;
+    }
+  };
+}
+
+/**
  * Initializes log capture by hooking into console methods
  */
 export function initLogCapture(options?: Partial<LogCaptureOptions>): void {
@@ -131,6 +288,12 @@ export function initLogCapture(options?: Partial<LogCaptureOptions>): void {
     addLogEntry(entry);
     originalConsole?.warn(...args);
   };
+
+  // Store original fetch and install interceptor
+  if (typeof window.fetch === 'function') {
+    originalFetch = window.fetch.bind(window);
+    window.fetch = createFetchInterceptor();
+  }
 
   // Global error handler for uncaught errors
   window.addEventListener('error', (event) => {
@@ -189,7 +352,7 @@ export function clearCapturedLogs(): void {
 }
 
 /**
- * Restores original console methods and removes listeners
+ * Restores original console methods, fetch, and removes listeners
  */
 export function restoreConsole(): void {
   if (!isInitialized || !originalConsole) {
@@ -200,6 +363,12 @@ export function restoreConsole(): void {
   console.warn = originalConsole.warn;
   console.info = originalConsole.info;
   console.log = originalConsole.log;
+
+  // Restore original fetch if it was intercepted
+  if (originalFetch && typeof window !== 'undefined') {
+    window.fetch = originalFetch;
+    originalFetch = null;
+  }
 
   originalConsole = null;
   isInitialized = false;
