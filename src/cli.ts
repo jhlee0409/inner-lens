@@ -167,12 +167,19 @@ interface InitOptions {
 
 type AIProvider = 'anthropic' | 'openai' | 'google';
 type Framework = 'nextjs-app' | 'nextjs-pages' | 'vite-react' | 'vite-vue' | 'sveltekit' | 'vanilla';
+type BackendFramework = 'nextjs-app' | 'nextjs-pages' | 'express' | 'fastify' | 'hono' | 'node';
 
 interface ProviderConfig {
   name: string;
   model: string;
   secretName: string;
   envVar: string;
+}
+
+interface BackendConfig {
+  name: string;
+  apiRouteFile: string;
+  apiRouteTemplate: string;
 }
 
 interface FrameworkConfig {
@@ -294,6 +301,114 @@ import { InnerLensWidget } from 'inner-lens/vue';
   },
 };
 
+const BACKEND_CONFIGS: Record<BackendFramework, BackendConfig> = {
+  'nextjs-app': {
+    name: 'Next.js App Router',
+    apiRouteFile: 'app/api/inner-lens/report/route.ts',
+    apiRouteTemplate: `import { createFetchHandler } from 'inner-lens/server';
+
+const handler = createFetchHandler({
+  githubToken: process.env.GITHUB_TOKEN!,
+  repository: process.env.GITHUB_REPOSITORY || 'owner/repo',
+  labels: ['inner-lens', 'bug'],
+});
+
+export const POST = handler;
+`,
+  },
+  'nextjs-pages': {
+    name: 'Next.js Pages Router',
+    apiRouteFile: 'pages/api/inner-lens/report.ts',
+    apiRouteTemplate: `import type { NextApiRequest, NextApiResponse } from 'next';
+import { handleBugReport } from 'inner-lens/server';
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const result = await handleBugReport(req.body, {
+    githubToken: process.env.GITHUB_TOKEN!,
+    repository: process.env.GITHUB_REPOSITORY || 'owner/repo',
+    labels: ['inner-lens', 'bug'],
+  });
+
+  return res.status(result.success ? 200 : 500).json(result);
+}
+`,
+  },
+  'express': {
+    name: 'Express',
+    apiRouteFile: 'src/routes/inner-lens.ts',
+    apiRouteTemplate: `import { Router } from 'express';
+import { createExpressHandler } from 'inner-lens/server';
+
+const router = Router();
+
+router.post('/inner-lens/report', createExpressHandler({
+  githubToken: process.env.GITHUB_TOKEN!,
+  repository: process.env.GITHUB_REPOSITORY || 'owner/repo',
+  labels: ['inner-lens', 'bug'],
+}));
+
+export default router;
+`,
+  },
+  'fastify': {
+    name: 'Fastify',
+    apiRouteFile: 'src/routes/inner-lens.ts',
+    apiRouteTemplate: `import { FastifyPluginAsync } from 'fastify';
+import { createFastifyHandler } from 'inner-lens/server';
+
+const innerLensRoutes: FastifyPluginAsync = async (fastify) => {
+  fastify.post('/inner-lens/report', createFastifyHandler({
+    githubToken: process.env.GITHUB_TOKEN!,
+    repository: process.env.GITHUB_REPOSITORY || 'owner/repo',
+    labels: ['inner-lens', 'bug'],
+  }));
+};
+
+export default innerLensRoutes;
+`,
+  },
+  'hono': {
+    name: 'Hono',
+    apiRouteFile: 'src/routes/inner-lens.ts',
+    apiRouteTemplate: `import { Hono } from 'hono';
+import { createFetchHandler } from 'inner-lens/server';
+
+const app = new Hono();
+
+const handler = createFetchHandler({
+  githubToken: process.env.GITHUB_TOKEN!,
+  repository: process.env.GITHUB_REPOSITORY || 'owner/repo',
+  labels: ['inner-lens', 'bug'],
+});
+
+app.post('/inner-lens/report', (c) => handler(c.req.raw));
+
+export default app;
+`,
+  },
+  'node': {
+    name: 'Node.js HTTP',
+    apiRouteFile: 'src/inner-lens-handler.ts',
+    apiRouteTemplate: `import { createNodeHandler } from 'inner-lens/server';
+
+export const innerLensHandler = createNodeHandler({
+  githubToken: process.env.GITHUB_TOKEN!,
+  repository: process.env.GITHUB_REPOSITORY || 'owner/repo',
+  labels: ['inner-lens', 'bug'],
+});
+
+// Usage in your server:
+// if (req.url === '/api/inner-lens/report' && req.method === 'POST') {
+//   await innerLensHandler(req, res);
+// }
+`,
+  },
+};
+
 /**
  * Detect the frontend framework from project files
  */
@@ -346,6 +461,212 @@ async function detectFramework(cwd: string): Promise<Framework | null> {
   }
 }
 
+/**
+ * Detect the backend framework from project files
+ */
+async function detectBackendFramework(cwd: string, frontendFramework: Framework | null): Promise<BackendFramework | null> {
+  try {
+    const packageJsonPath = path.join(cwd, 'package.json');
+    if (!(await fs.pathExists(packageJsonPath))) return null;
+
+    const pkg = await fs.readJson(packageJsonPath);
+    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+
+    // Next.js uses its own API routes
+    if (deps['next']) {
+      if (frontendFramework === 'nextjs-app') {
+        return 'nextjs-app';
+      }
+      return 'nextjs-pages';
+    }
+
+    // Check for Hono
+    if (deps['hono']) {
+      return 'hono';
+    }
+
+    // Check for Fastify
+    if (deps['fastify']) {
+      return 'fastify';
+    }
+
+    // Check for Express
+    if (deps['express']) {
+      return 'express';
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Generate widget file content based on existing file (if any)
+ */
+function generateWidgetFileContent(framework: Framework, existingContent: string | null): string {
+  const config = FRAMEWORK_CONFIGS[framework];
+
+  if (!existingContent) {
+    return config.example;
+  }
+
+  // For React-based frameworks, check if InnerLensWidget is already imported
+  if (framework === 'nextjs-app' || framework === 'nextjs-pages' || framework === 'vite-react') {
+    if (existingContent.includes('InnerLensWidget')) {
+      return existingContent; // Already has widget
+    }
+
+    // Add import at the top
+    const importStatement = `import { InnerLensWidget } from 'inner-lens/react';\n`;
+    let newContent = existingContent;
+
+    // Add import after existing imports or at the top
+    const lastImportIndex = existingContent.lastIndexOf('import ');
+    if (lastImportIndex !== -1) {
+      const lineEnd = existingContent.indexOf('\n', lastImportIndex);
+      newContent = existingContent.slice(0, lineEnd + 1) + importStatement + existingContent.slice(lineEnd + 1);
+    } else {
+      newContent = importStatement + existingContent;
+    }
+
+    // Add <InnerLensWidget /> before closing tags
+    // For App Router layout
+    if (framework === 'nextjs-app') {
+      newContent = newContent.replace(
+        /(\s*)({\s*children\s*})/g,
+        '$1$2$1<InnerLensWidget />'
+      );
+    } else {
+      // For other React apps, add before the last closing tag in the return statement
+      newContent = newContent.replace(
+        /(<\/[a-zA-Z]+>)(\s*\)?\s*;?\s*}\s*$)/,
+        '<InnerLensWidget />\n        $1$2'
+      );
+    }
+
+    return newContent;
+  }
+
+  // For Vue
+  if (framework === 'vite-vue') {
+    if (existingContent.includes('InnerLensWidget')) {
+      return existingContent;
+    }
+
+    // Add import in script setup
+    let newContent = existingContent;
+    if (existingContent.includes('<script setup>')) {
+      newContent = newContent.replace(
+        '<script setup>',
+        `<script setup>\nimport { InnerLensWidget } from 'inner-lens/vue';`
+      );
+    } else if (existingContent.includes('<script setup lang="ts">')) {
+      newContent = newContent.replace(
+        '<script setup lang="ts">',
+        `<script setup lang="ts">\nimport { InnerLensWidget } from 'inner-lens/vue';`
+      );
+    }
+
+    // Add component before closing template tag
+    newContent = newContent.replace(
+      '</template>',
+      '  <InnerLensWidget />\n</template>'
+    );
+
+    return newContent;
+  }
+
+  // For SvelteKit
+  if (framework === 'sveltekit') {
+    if (existingContent.includes('InnerLensCore')) {
+      return existingContent;
+    }
+
+    const svelteScript = `<script>
+  import { onMount } from 'svelte';
+  import { InnerLensCore } from 'inner-lens';
+
+  onMount(() => {
+    const lens = new InnerLensCore();
+    lens.mount();
+    return () => lens.unmount();
+  });
+</script>
+
+`;
+    return svelteScript + existingContent;
+  }
+
+  return existingContent;
+}
+
+/**
+ * Find the actual widget file path (handles src/ prefix)
+ */
+async function findWidgetFilePath(cwd: string, framework: Framework): Promise<string> {
+  const config = FRAMEWORK_CONFIGS[framework];
+  const defaultPath = config.widgetFile;
+
+  // Check if file exists at default path
+  if (await fs.pathExists(path.join(cwd, defaultPath))) {
+    return defaultPath;
+  }
+
+  // Check with src/ prefix for Next.js
+  if (framework === 'nextjs-app') {
+    const srcPath = `src/${defaultPath}`;
+    if (await fs.pathExists(path.join(cwd, srcPath))) {
+      return srcPath;
+    }
+    // Also check for layout.tsx vs layout.js
+    const jsPath = defaultPath.replace('.tsx', '.js');
+    if (await fs.pathExists(path.join(cwd, jsPath))) {
+      return jsPath;
+    }
+    const srcJsPath = `src/${jsPath}`;
+    if (await fs.pathExists(path.join(cwd, srcJsPath))) {
+      return srcJsPath;
+    }
+  }
+
+  if (framework === 'nextjs-pages') {
+    const srcPath = `src/${defaultPath}`;
+    if (await fs.pathExists(path.join(cwd, srcPath))) {
+      return srcPath;
+    }
+  }
+
+  return defaultPath;
+}
+
+/**
+ * Find the actual API route file path (handles src/ prefix)
+ */
+async function findApiRoutePath(cwd: string, backend: BackendFramework): Promise<string> {
+  const config = BACKEND_CONFIGS[backend];
+  const defaultPath = config.apiRouteFile;
+
+  // For Next.js, check src/ prefix
+  if (backend === 'nextjs-app') {
+    const srcPath = `src/${defaultPath}`;
+    const srcAppDir = path.join(cwd, 'src', 'app');
+    if (await fs.pathExists(srcAppDir)) {
+      return srcPath;
+    }
+  }
+
+  if (backend === 'nextjs-pages') {
+    const srcPath = `src/${defaultPath}`;
+    const srcPagesDir = path.join(cwd, 'src', 'pages');
+    if (await fs.pathExists(srcPagesDir)) {
+      return srcPath;
+    }
+  }
+
+  return defaultPath;
+}
+
 const program = new Command();
 
 program
@@ -387,7 +708,9 @@ program
     let repository: string;
     let provider: AIProvider;
     let framework: Framework;
+    let backendFramework: BackendFramework | null = null;
     let githubToken: string | null = null;
+    let generateFiles = true;
 
     if (options.yes) {
       // Skip all prompts
@@ -397,6 +720,7 @@ program
       repository = detectedRepo || 'owner/repo';
       const detected = await detectFramework(cwd);
       framework = detected || 'nextjs-app';
+      backendFramework = await detectBackendFramework(cwd, framework);
     } else {
       // Interactive setup
       console.log(chalk.bold.cyan('  Step 1/4: GitHub 연동\n'));
@@ -640,6 +964,56 @@ program
       ]);
       provider = providerAnswer.provider as AIProvider;
 
+      // Detect backend framework
+      const detectedBackend = await detectBackendFramework(cwd, framework);
+
+      // For non-Next.js frameworks, ask for backend selection
+      if (!framework.startsWith('nextjs')) {
+        console.log('\n' + chalk.bold.cyan('  Step 4/4: 백엔드 프레임워크\n'));
+        console.log(chalk.dim('  API 라우트를 생성할 백엔드를 선택하세요.\n'));
+
+        const backendChoices = [
+          { name: `${chalk.cyan('●')} Express`, value: 'express' },
+          { name: `${chalk.cyan('●')} Fastify`, value: 'fastify' },
+          { name: `${chalk.cyan('●')} Hono`, value: 'hono' },
+          { name: `${chalk.cyan('●')} Node.js HTTP`, value: 'node' },
+          { name: `${chalk.dim('●')} 나중에 설정`, value: 'skip' },
+        ];
+
+        if (detectedBackend && !detectedBackend.startsWith('nextjs')) {
+          console.log(chalk.dim(`  감지된 백엔드: ${BACKEND_CONFIGS[detectedBackend].name}\n`));
+        }
+
+        const backendAnswer = await inquirer.prompt([
+          {
+            type: 'list',
+            name: 'backend',
+            message: '백엔드 선택:',
+            choices: backendChoices,
+            default: detectedBackend || 'express',
+          },
+        ]);
+
+        if (backendAnswer.backend !== 'skip') {
+          backendFramework = backendAnswer.backend as BackendFramework;
+        }
+      } else {
+        backendFramework = detectedBackend;
+      }
+
+      // Ask whether to generate files
+      console.log('\n' + chalk.bold.cyan('  파일 자동 생성\n'));
+
+      const generateAnswer = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'generate',
+          message: '위젯 파일과 API 라우트를 자동으로 생성할까요?',
+          default: true,
+        },
+      ]);
+      generateFiles = generateAnswer.generate;
+
       console.log('\n' + chalk.bold.cyan('  파일 생성 중...\n'));
     }
 
@@ -701,9 +1075,90 @@ program
       }
     }
 
+    // Generate widget and API route files
+    let widgetFileCreated = false;
+    let apiRouteFileCreated = false;
+    let widgetFilePath = '';
+    let apiRouteFilePath = '';
+
+    if (generateFiles) {
+      // Generate widget file
+      if (framework !== 'vanilla') {
+        widgetFilePath = await findWidgetFilePath(cwd, framework);
+        const fullWidgetPath = path.join(cwd, widgetFilePath);
+
+        let existingContent: string | null = null;
+        if (await fs.pathExists(fullWidgetPath)) {
+          existingContent = await fs.readFile(fullWidgetPath, 'utf-8');
+        }
+
+        const newContent = generateWidgetFileContent(framework, existingContent);
+
+        // Only write if content changed
+        if (newContent !== existingContent) {
+          await fs.ensureDir(path.dirname(fullWidgetPath));
+          await fs.writeFile(fullWidgetPath, newContent);
+          widgetFileCreated = true;
+          console.log(chalk.green('  ✓ ') + 'Created/Updated ' + chalk.cyan(widgetFilePath));
+        } else if (existingContent?.includes('InnerLensWidget') || existingContent?.includes('InnerLensCore')) {
+          console.log(chalk.yellow('  ⊘ ') + chalk.dim(`Widget already exists in ${widgetFilePath}`));
+        }
+      }
+
+      // Generate API route file
+      if (backendFramework) {
+        apiRouteFilePath = await findApiRoutePath(cwd, backendFramework);
+        const fullApiRoutePath = path.join(cwd, apiRouteFilePath);
+
+        // Only create if file doesn't exist
+        if (!(await fs.pathExists(fullApiRoutePath))) {
+          const backendConfig = BACKEND_CONFIGS[backendFramework];
+          let apiRouteContent = backendConfig.apiRouteTemplate;
+
+          // Replace placeholder repository with actual repository
+          apiRouteContent = apiRouteContent.replace(
+            "process.env.GITHUB_REPOSITORY || 'owner/repo'",
+            `process.env.GITHUB_REPOSITORY || '${repository}'`
+          );
+
+          await fs.ensureDir(path.dirname(fullApiRoutePath));
+          await fs.writeFile(fullApiRoutePath, apiRouteContent);
+          apiRouteFileCreated = true;
+          console.log(chalk.green('  ✓ ') + 'Created ' + chalk.cyan(apiRouteFilePath));
+        } else {
+          console.log(chalk.yellow('  ⊘ ') + chalk.dim(`API route already exists at ${apiRouteFilePath}`));
+        }
+      }
+
+      // Update .env.local with GITHUB_REPOSITORY if not exists
+      const envLocalPath = path.join(cwd, '.env.local');
+      let envContent = '';
+      if (await fs.pathExists(envLocalPath)) {
+        envContent = await fs.readFile(envLocalPath, 'utf-8');
+      }
+
+      if (!envContent.includes('GITHUB_REPOSITORY=')) {
+        envContent = envContent.trim() + (envContent ? '\n' : '') + `GITHUB_REPOSITORY=${repository}\n`;
+        await fs.writeFile(envLocalPath, envContent);
+        console.log(chalk.green('  ✓ ') + 'Added GITHUB_REPOSITORY to ' + chalk.cyan('.env.local'));
+      }
+    }
+
     // Print next steps with clear instructions
     console.log('\n' + chalk.bold.green('✅ Setup Complete!\n'));
     console.log(chalk.bold('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
+
+    // Print generated files summary
+    if (generateFiles && (widgetFileCreated || apiRouteFileCreated)) {
+      console.log(chalk.bold('\n📁 생성된 파일:\n'));
+      if (widgetFileCreated) {
+        console.log(chalk.green('  ✓ ') + chalk.cyan(widgetFilePath) + chalk.dim(' (위젯)'));
+      }
+      if (apiRouteFileCreated) {
+        console.log(chalk.green('  ✓ ') + chalk.cyan(apiRouteFilePath) + chalk.dim(' (API 라우트)'));
+      }
+    }
+
     console.log(chalk.bold('\n📋 Next Steps:\n'));
 
     let stepNumber = 1;
@@ -727,16 +1182,31 @@ program
       stepNumber++;
     }
 
-    // Step: Add Widget (framework-specific)
-    console.log(chalk.bold.white(`\n  ${stepNumber}. 위젯 추가 (${frameworkConfig.name})\n`));
-    console.log(chalk.dim('     ') + chalk.gray(`// ${frameworkConfig.widgetFile}`));
-    console.log();
-    // Print the example code with proper indentation
-    const exampleLines = frameworkConfig.example.split('\n');
-    for (const line of exampleLines) {
-      console.log(chalk.dim('     ') + chalk.cyan(line));
+    // Step: Add Widget (framework-specific) - only if not generated
+    if (!widgetFileCreated) {
+      console.log(chalk.bold.white(`\n  ${stepNumber}. 위젯 추가 (${frameworkConfig.name})\n`));
+      console.log(chalk.dim('     ') + chalk.gray(`// ${frameworkConfig.widgetFile}`));
+      console.log();
+      // Print the example code with proper indentation
+      const exampleLines = frameworkConfig.example.split('\n');
+      for (const line of exampleLines) {
+        console.log(chalk.dim('     ') + chalk.cyan(line));
+      }
+      stepNumber++;
     }
-    stepNumber++;
+
+    // Step: Add API Route - only if not generated
+    if (!apiRouteFileCreated && backendFramework) {
+      const backendConfig = BACKEND_CONFIGS[backendFramework];
+      console.log(chalk.bold.white(`\n  ${stepNumber}. API 라우트 추가 (${backendConfig.name})\n`));
+      console.log(chalk.dim('     ') + chalk.gray(`// ${backendConfig.apiRouteFile}`));
+      console.log();
+      const routeLines = backendConfig.apiRouteTemplate.split('\n');
+      for (const line of routeLines) {
+        console.log(chalk.dim('     ') + chalk.cyan(line));
+      }
+      stepNumber++;
+    }
 
     // Step: Test
     console.log(chalk.bold.white(`\n  ${stepNumber}. 테스트\n`));
@@ -746,6 +1216,11 @@ program
 
     if (githubToken) {
       console.log(chalk.green('\n🎉 GitHub 연동 완료! 토큰이 자동으로 저장되었습니다.'));
+    }
+
+    if (widgetFileCreated && apiRouteFileCreated) {
+      console.log(chalk.green('\n🚀 위젯과 API 라우트가 자동으로 설정되었습니다!'));
+      console.log(chalk.dim('   npm run dev 후 바로 테스트할 수 있습니다.'));
     }
 
     console.log(
