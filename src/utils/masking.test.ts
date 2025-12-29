@@ -1,0 +1,149 @@
+import { describe, it, expect } from 'vitest';
+import { maskSensitiveData, maskSensitiveObject, validateMasking } from './masking';
+
+describe('maskSensitiveData', () => {
+  it('masks email addresses', () => {
+    expect(maskSensitiveData('Contact john@example.com')).toBe(
+      'Contact [EMAIL_REDACTED]'
+    );
+  });
+
+  it('masks Bearer tokens', () => {
+    expect(maskSensitiveData('Bearer abc123xyz')).toBe('Bearer [TOKEN_REDACTED]');
+  });
+
+  it('masks OpenAI API keys', () => {
+    expect(maskSensitiveData('key: sk-1234567890abcdefghij')).toBe(
+      'key: [OPENAI_KEY_REDACTED]'
+    );
+  });
+
+  it('masks Anthropic API keys', () => {
+    // The anthropic_key pattern matches sk-ant-*
+    expect(maskSensitiveData('sk-ant-api03-abcdefghij123456')).toBe(
+      '[ANTHROPIC_KEY_REDACTED]'
+    );
+  });
+
+  it('masks GitHub tokens', () => {
+    // GitHub tokens need 36+ chars after the prefix
+    expect(
+      maskSensitiveData('ghp_abcdefghijklmnopqrstuvwxyz1234567890')
+    ).toBe('[GITHUB_TOKEN_REDACTED]');
+  });
+
+  it('masks JWT tokens', () => {
+    const jwt =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U';
+    expect(maskSensitiveData(jwt)).toBe('[JWT_REDACTED]');
+  });
+
+  it('masks AWS access keys', () => {
+    expect(maskSensitiveData('AKIAIOSFODNN7EXAMPLE')).toBe('[AWS_KEY_REDACTED]');
+  });
+
+  it('masks database URLs', () => {
+    expect(maskSensitiveData('mongodb://user:pass@localhost:27017/db')).toBe(
+      '[DATABASE_URL_REDACTED]'
+    );
+    expect(maskSensitiveData('postgresql://user:pass@host:5432/db')).toBe(
+      '[DATABASE_URL_REDACTED]'
+    );
+  });
+
+  it('masks Stripe keys', () => {
+    // Stripe keys need 24+ chars after prefix
+    // Using obviously fake test values
+    const fakeSecretKey = 'sk_test_' + 'x'.repeat(24);
+    const fakePublishableKey = 'pk_test_' + 'y'.repeat(24);
+    expect(maskSensitiveData(fakeSecretKey)).toBe('[STRIPE_KEY_REDACTED]');
+    expect(maskSensitiveData(fakePublishableKey)).toBe('[STRIPE_KEY_REDACTED]');
+  });
+
+  it('masks multiple patterns in one string', () => {
+    const input = 'User john@test.com with key sk-abcdefghij1234567890 failed';
+    const result = maskSensitiveData(input);
+    expect(result).toContain('[EMAIL_REDACTED]');
+    expect(result).toContain('[OPENAI_KEY_REDACTED]');
+    expect(result).not.toContain('john@test.com');
+    expect(result).not.toContain('sk-');
+  });
+
+  it('returns original value for non-string input', () => {
+    expect(maskSensitiveData(null as unknown as string)).toBeNull();
+    expect(maskSensitiveData(undefined as unknown as string)).toBeUndefined();
+    expect(maskSensitiveData(123 as unknown as string)).toBe(123);
+  });
+
+  it('preserves text without sensitive data', () => {
+    const text = 'This is a normal log message without secrets';
+    expect(maskSensitiveData(text)).toBe(text);
+  });
+});
+
+describe('maskSensitiveObject', () => {
+  it('masks nested object values', () => {
+    const obj = {
+      user: 'john@example.com',
+      config: {
+        apiKey: 'sk-secret123',
+      },
+    };
+    const masked = maskSensitiveObject(obj);
+    expect(masked.user).toBe('[EMAIL_REDACTED]');
+    expect(masked.config.apiKey).toBe('[REDACTED]');
+  });
+
+  it('masks arrays of strings', () => {
+    const arr = ['john@test.com', 'normal text'];
+    const masked = maskSensitiveObject(arr);
+    expect(masked[0]).toBe('[EMAIL_REDACTED]');
+    expect(masked[1]).toBe('normal text');
+  });
+
+  it('redacts sensitive key names', () => {
+    const obj = {
+      password: 'secret123',
+      token: 'abc123',
+      privateKey: 'key-data',
+      normalField: 'value',
+    };
+    const masked = maskSensitiveObject(obj);
+    expect(masked.password).toBe('[REDACTED]');
+    expect(masked.token).toBe('[REDACTED]');
+    expect(masked.privateKey).toBe('[REDACTED]');
+    expect(masked.normalField).toBe('value');
+  });
+
+  it('handles null and undefined', () => {
+    expect(maskSensitiveObject(null)).toBeNull();
+    expect(maskSensitiveObject(undefined)).toBeUndefined();
+  });
+});
+
+describe('validateMasking', () => {
+  it('returns true for safe text', () => {
+    expect(validateMasking('This is a normal log message')).toBe(true);
+    expect(validateMasking('[EMAIL_REDACTED] sent a message')).toBe(true);
+  });
+
+  it('returns false for unmasked emails', () => {
+    expect(validateMasking('Contact user@example.com')).toBe(false);
+  });
+
+  it('returns false for unmasked API keys', () => {
+    expect(validateMasking('key: sk-abc123')).toBe(false);
+  });
+
+  it('returns false for unmasked JWTs', () => {
+    expect(validateMasking('eyJhbGciOiJIUzI1NiJ9.test')).toBe(false);
+  });
+
+  it('returns false for unmasked AWS keys', () => {
+    expect(validateMasking('AKIAIOSFODNN7EXAMPLE')).toBe(false);
+  });
+
+  it('returns false for unmasked GitHub tokens', () => {
+    expect(validateMasking('ghp_abcdefghij')).toBe(false);
+  });
+});
