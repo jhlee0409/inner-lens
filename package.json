@@ -1,7 +1,7 @@
 {
   "name": "inner-lens",
   "version": "1.0.0",
-  "description": "Self-Debugging QA Agent for Next.js - Zero-config bug reporting with AI-powered analysis",
+  "description": "Self-Debugging QA Agent - Universal bug reporting widget with AI-powered analysis for any frontend framework",
   "author": "jack",
   "license": "MIT",
   "repository": {
@@ -9,14 +9,21 @@
     "url": "git+https://github.com/jhlee0409/inner-lens.git"
   },
   "keywords": [
-    "nextjs",
     "debugging",
     "qa",
     "ai",
     "bug-report",
     "developer-tools",
     "react",
-    "github-actions"
+    "vue",
+    "svelte",
+    "vanilla-js",
+    "nextjs",
+    "vite",
+    "remix",
+    "astro",
+    "github-actions",
+    "error-tracking"
   ],
   "type": "module",
   "bin": {
@@ -25,12 +32,42 @@
   "exports": {
     ".": {
       "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
+        "types": "./dist/core.d.ts",
+        "default": "./dist/core.js"
       },
       "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
+        "types": "./dist/core.d.cts",
+        "default": "./dist/core.cjs"
+      }
+    },
+    "./react": {
+      "import": {
+        "types": "./dist/react.d.ts",
+        "default": "./dist/react.js"
+      },
+      "require": {
+        "types": "./dist/react.d.cts",
+        "default": "./dist/react.cjs"
+      }
+    },
+    "./vanilla": {
+      "import": {
+        "types": "./dist/vanilla.d.ts",
+        "default": "./dist/vanilla.js"
+      },
+      "require": {
+        "types": "./dist/vanilla.d.cts",
+        "default": "./dist/vanilla.cjs"
+      }
+    },
+    "./vue": {
+      "import": {
+        "types": "./dist/vue.d.ts",
+        "default": "./dist/vue.js"
+      },
+      "require": {
+        "types": "./dist/vue.d.cts",
+        "default": "./dist/vue.cjs"
       }
     },
     "./server": {
@@ -44,9 +81,9 @@
       }
     }
   },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/core.cjs",
+  "module": "./dist/core.js",
+  "types": "./dist/core.d.ts",
   "files": [
     "dist",
     "README.md",
@@ -59,15 +96,19 @@
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
-    "react": ">=18.0.0",
-    "react-dom": ">=18.0.0"
+    "react": ">=17.0.0",
+    "react-dom": ">=17.0.0",
+    "vue": ">=3.0.0"
   },
   "peerDependenciesMeta": {
     "react": {
-      "optional": false
+      "optional": true
     },
     "react-dom": {
-      "optional": false
+      "optional": true
+    },
+    "vue": {
+      "optional": true
     }
   },
   "dependencies": {
@@ -90,9 +131,10 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tsup": "^8.3.5",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vue": "^3.5.26"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=18.0.0"
   }
 }

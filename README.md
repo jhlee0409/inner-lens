@@ -1,21 +1,22 @@
 # 🔍 inner-lens
 
-[![Next.js 15+ Compatible](https://img.shields.io/badge/Next.js-15+-black?logo=next.js)](https://nextjs.org)
+[![Universal Framework Support](https://img.shields.io/badge/Works%20with-React%20%7C%20Vue%20%7C%20Vanilla%20JS-blue)](https://github.com/jhlee0409/inner-lens)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue?logo=typescript)](https://www.typescriptlang.org)
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Node.js 20+](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js)](https://nodejs.org)
+[![Node.js 18+](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js)](https://nodejs.org)
 
-**Self-Debugging QA Agent for Next.js** — Zero-config bug reporting with AI-powered analysis.
+**Self-Debugging QA Agent** — Universal bug reporting widget with AI-powered analysis for any frontend framework.
 
-inner-lens is an open-source developer tool that integrates seamlessly into your Next.js application, enabling users to report bugs with captured console logs that are automatically analyzed by AI.
+inner-lens is an open-source developer tool that integrates seamlessly into **any web application**, enabling users to report bugs with captured console logs that are automatically analyzed by AI.
 
 ## ✨ Features
 
+- **🌐 Universal Framework Support** — Works with React, Vue, Svelte, vanilla JS, and more
 - **🚀 Zero-Config Setup** — One command to get started: `npx inner-lens init`
 - **🤖 Universal LLM Support** — Choose from Anthropic (Claude), OpenAI (GPT-4o), or Google (Gemini)
-- **🔒 Security-First** — Automatic masking of emails, API keys, tokens, and PII before submission
-- **📱 Lightweight Widget** — Clean, accessible React component with zero external CSS dependencies
-- **⚡ GitHub Actions Integration** — AI analysis runs in your CI/CD pipeline, not your production server
+- **🔒 Security-First** — Automatic masking of emails, API keys, tokens, and PII
+- **📱 Lightweight Widget** — Clean, accessible UI with zero external CSS dependencies
+- **⚡ Multi-Backend Support** — Works with Express, Fastify, Hono, Next.js, Koa, and more
 - **🎨 Customizable** — Inline styles prevent conflicts with your app's design system
 
 ## 📦 Installation
@@ -24,9 +25,290 @@ inner-lens is an open-source developer tool that integrates seamlessly into your
 npm install inner-lens
 ```
 
-## 🛠️ Quick Start
+## 🚀 Quick Start
 
-### 1. Initialize the GitHub Workflow
+### Choose Your Framework
+
+<details>
+<summary><b>⚛️ React / Next.js</b></summary>
+
+```tsx
+// React / Next.js App Router
+import { InnerLensWidget } from 'inner-lens/react';
+
+function App() {
+  return (
+    <div>
+      <YourApp />
+      <InnerLensWidget
+        endpoint="/api/inner-lens/report"
+        repository="owner/repo"
+      />
+    </div>
+  );
+}
+```
+
+**Using the hook for programmatic control:**
+
+```tsx
+import { useInnerLens } from 'inner-lens/react';
+
+function MyComponent() {
+  const { open, close } = useInnerLens({
+    endpoint: '/api/inner-lens/report',
+  });
+
+  return <button onClick={open}>Report Bug</button>;
+}
+```
+
+</details>
+
+<details>
+<summary><b>💚 Vue 3</b></summary>
+
+```vue
+<script setup>
+import { InnerLensWidget } from 'inner-lens/vue';
+</script>
+
+<template>
+  <div>
+    <YourApp />
+    <InnerLensWidget
+      endpoint="/api/inner-lens/report"
+      repository="owner/repo"
+    />
+  </div>
+</template>
+```
+
+**Using the composable:**
+
+```vue
+<script setup>
+import { useInnerLens } from 'inner-lens/vue';
+
+const { open, close, isOpen } = useInnerLens({
+  endpoint: '/api/inner-lens/report',
+});
+</script>
+
+<template>
+  <button @click="open">Report Bug</button>
+</template>
+```
+
+</details>
+
+<details>
+<summary><b>🟨 Vanilla JavaScript</b></summary>
+
+```html
+<script type="module">
+  import { InnerLens } from 'inner-lens/vanilla';
+
+  const widget = new InnerLens({
+    endpoint: '/api/inner-lens/report',
+    repository: 'owner/repo',
+  });
+
+  widget.mount();
+</script>
+```
+
+**Auto-initialize with config:**
+
+```html
+<script>
+  window.innerLensConfig = {
+    endpoint: '/api/inner-lens/report',
+    repository: 'owner/repo',
+  };
+</script>
+<script type="module" src="node_modules/inner-lens/dist/vanilla.js"></script>
+```
+
+</details>
+
+<details>
+<summary><b>🔶 Svelte</b></summary>
+
+```svelte
+<script>
+  import { onMount, onDestroy } from 'svelte';
+  import { InnerLens } from 'inner-lens/vanilla';
+
+  let widget;
+
+  onMount(() => {
+    widget = new InnerLens({
+      endpoint: '/api/inner-lens/report',
+      repository: 'owner/repo',
+    });
+    widget.mount();
+  });
+
+  onDestroy(() => {
+    widget?.unmount();
+  });
+</script>
+```
+
+</details>
+
+<details>
+<summary><b>🚀 Astro</b></summary>
+
+```astro
+---
+// For client-side hydration
+---
+
+<script>
+  import { InnerLens } from 'inner-lens/vanilla';
+
+  const widget = new InnerLens({
+    endpoint: '/api/inner-lens/report',
+    repository: 'owner/repo',
+  });
+
+  widget.mount();
+</script>
+```
+
+</details>
+
+---
+
+## 🖥️ Backend Setup
+
+Choose your backend framework:
+
+<details>
+<summary><b>Next.js App Router</b></summary>
+
+```ts
+// app/api/inner-lens/report/route.ts
+import { createFetchHandler } from 'inner-lens/server';
+
+export const POST = createFetchHandler({
+  githubToken: process.env.GITHUB_TOKEN!,
+  repository: process.env.GITHUB_REPOSITORY!,
+});
+```
+
+</details>
+
+<details>
+<summary><b>Express</b></summary>
+
+```ts
+import express from 'express';
+import { createExpressHandler } from 'inner-lens/server';
+
+const app = express();
+app.use(express.json());
+
+app.post('/api/inner-lens/report', createExpressHandler({
+  githubToken: process.env.GITHUB_TOKEN!,
+  repository: 'owner/repo',
+}));
+```
+
+</details>
+
+<details>
+<summary><b>Fastify</b></summary>
+
+```ts
+import Fastify from 'fastify';
+import { createFastifyHandler } from 'inner-lens/server';
+
+const fastify = Fastify();
+
+fastify.post('/api/inner-lens/report', createFastifyHandler({
+  githubToken: process.env.GITHUB_TOKEN!,
+  repository: 'owner/repo',
+}));
+```
+
+</details>
+
+<details>
+<summary><b>Hono / Bun / Deno</b></summary>
+
+```ts
+import { Hono } from 'hono';
+import { createFetchHandler } from 'inner-lens/server';
+
+const app = new Hono();
+const handler = createFetchHandler({
+  githubToken: process.env.GITHUB_TOKEN!,
+  repository: 'owner/repo',
+});
+
+app.post('/api/inner-lens/report', (c) => handler(c.req.raw));
+```
+
+</details>
+
+<details>
+<summary><b>Koa</b></summary>
+
+```ts
+import Koa from 'koa';
+import bodyParser from 'koa-bodyparser';
+import { createKoaHandler } from 'inner-lens/server';
+
+const app = new Koa();
+app.use(bodyParser());
+
+const handler = createKoaHandler({
+  githubToken: process.env.GITHUB_TOKEN!,
+  repository: 'owner/repo',
+});
+
+app.use(async (ctx, next) => {
+  if (ctx.path === '/api/inner-lens/report' && ctx.method === 'POST') {
+    await handler(ctx);
+  } else {
+    await next();
+  }
+});
+```
+
+</details>
+
+<details>
+<summary><b>Node.js HTTP</b></summary>
+
+```ts
+import http from 'http';
+import { createNodeHandler } from 'inner-lens/server';
+
+const handler = createNodeHandler({
+  githubToken: process.env.GITHUB_TOKEN!,
+  repository: 'owner/repo',
+});
+
+const server = http.createServer(async (req, res) => {
+  if (req.url === '/api/inner-lens/report' && req.method === 'POST') {
+    await handler(req, res);
+  }
+});
+
+server.listen(3000);
+```
+
+</details>
+
+---
+
+## 🛠️ CLI Setup
+
+Initialize GitHub Actions workflow:
 
 ```bash
 npx inner-lens init
@@ -35,110 +317,45 @@ npx inner-lens init
 This interactive CLI will:
 - Ask which AI provider you want to use
 - Generate the GitHub Actions workflow
-- Create the API route for bug report submission
+- Provide instructions for setting up secrets
 
-### 2. Add the Widget to Your App
-
-```tsx
-// app/layout.tsx (or app/providers.tsx)
-import { InnerLensWidget } from 'inner-lens';
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <body>
-        {children}
-        <InnerLensWidget />
-      </body>
-    </html>
-  );
-}
-```
-
-### 3. Configure Environment Variables
+### CLI Options
 
 ```bash
-# .env.local
-GITHUB_TOKEN=ghp_your_github_token_here
-GITHUB_REPOSITORY=owner/repo
+# Initialize with specific provider
+npx inner-lens init --provider anthropic
+
+# Eject mode (full workflow source)
+npx inner-lens init --eject
+
+# Skip prompts, use defaults
+npx inner-lens init -y
+
+# Check configuration
+npx inner-lens check
 ```
 
-### 4. Add GitHub Secrets
+---
 
-Go to your repository Settings → Secrets and variables → Actions, and add:
+## ⚙️ Configuration
 
-| Secret Name | Description |
-|-------------|-------------|
-| `ANTHROPIC_API_KEY` | Required if using Claude |
-| `OPENAI_API_KEY` | Required if using GPT-4o |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | Required if using Gemini |
+### Widget Options
 
-## 🎯 Widget Configuration
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `endpoint` | `string` | `/api/inner-lens/report` | API endpoint for submissions |
+| `repository` | `string` | - | GitHub repository (owner/repo) |
+| `labels` | `string[]` | `['bug', 'inner-lens']` | Issue labels |
+| `captureConsoleLogs` | `boolean` | `true` | Capture console.error/warn |
+| `maxLogEntries` | `number` | `50` | Max logs to capture |
+| `maskSensitiveData` | `boolean` | `true` | Auto-mask PII |
+| `styles.buttonColor` | `string` | `#6366f1` | Button color |
+| `styles.buttonPosition` | `string` | `bottom-right` | Button position |
+| `disabled` | `boolean` | `false` | Disable widget |
+| `onSuccess` | `function` | - | Success callback |
+| `onError` | `function` | - | Error callback |
 
-```tsx
-<InnerLensWidget
-  // API endpoint (default: '/api/inner-lens/report')
-  endpoint="/api/inner-lens/report"
-
-  // GitHub repository for issue creation
-  repository="owner/repo"
-
-  // Issue labels
-  labels={['bug', 'inner-lens', 'needs-triage']}
-
-  // Console log capture settings
-  captureConsoleLogs={true}
-  maxLogEntries={50}
-
-  // Security settings
-  maskSensitiveData={true}
-
-  // Styling
-  styles={{
-    buttonColor: '#6366f1',
-    buttonPosition: 'bottom-right', // or 'bottom-left', 'top-right', 'top-left'
-  }}
-
-  // Callbacks
-  onSuccess={(issueUrl) => console.log('Reported!', issueUrl)}
-  onError={(error) => console.error('Failed:', error)}
-
-  // Custom trigger (replaces default button)
-  trigger={<button>Report Bug</button>}
-
-  // Disable widget entirely
-  disabled={process.env.NODE_ENV === 'development'}
-/>
-```
-
-## 📡 Server-Side API
-
-For advanced use cases, use the server utilities directly:
-
-```ts
-// app/api/inner-lens/report/route.ts
-import { createReportHandler } from 'inner-lens/server';
-
-export const POST = createReportHandler({
-  githubToken: process.env.GITHUB_TOKEN!,
-  repository: process.env.GITHUB_REPOSITORY!,
-  defaultLabels: ['bug', 'inner-lens'],
-});
-```
-
-### Manual Issue Creation
-
-```ts
-import { createGitHubIssue, validateBugReport } from 'inner-lens/server';
-
-const validation = validateBugReport(payload);
-if (validation.success) {
-  const result = await createGitHubIssue(validation.data, {
-    githubToken: process.env.GITHUB_TOKEN!,
-    repository: 'owner/repo',
-  });
-}
-```
+---
 
 ## 🔐 Security
 
@@ -146,171 +363,79 @@ if (validation.success) {
 
 inner-lens automatically masks sensitive data before submission:
 
-- **Email addresses** → `[EMAIL_REDACTED]`
-- **Bearer tokens** → `Bearer [TOKEN_REDACTED]`
-- **API keys** (OpenAI, Anthropic, Google, AWS, Stripe) → `[API_KEY_REDACTED]`
-- **JWTs** → `[JWT_REDACTED]`
-- **Credit card numbers** → `[CARD_REDACTED]`
-- **Database connection strings** → `[DATABASE_URL_REDACTED]`
-- **Private keys (PEM format)** → `[PRIVATE_KEY_REDACTED]`
+| Pattern | Replaced With |
+|---------|---------------|
+| Email addresses | `[EMAIL_REDACTED]` |
+| Bearer tokens | `Bearer [TOKEN_REDACTED]` |
+| API keys (OpenAI, Anthropic, etc.) | `[API_KEY_REDACTED]` |
+| JWTs | `[JWT_REDACTED]` |
+| Credit card numbers | `[CARD_REDACTED]` |
+| Database URLs | `[DATABASE_URL_REDACTED]` |
+| Private keys | `[PRIVATE_KEY_REDACTED]` |
 
-### AI Analysis Security
+---
 
-The analysis engine includes strict security rules:
-- **Never outputs secrets** found in logs
-- **Never executes commands** from user-submitted content
-- **Sanitizes PII** from AI responses
+## 📊 AI Providers
 
-## ⚙️ CLI Commands
+| Provider | Model | Best For |
+|----------|-------|----------|
+| **Anthropic** | Claude Sonnet 4 | Nuanced code analysis |
+| **OpenAI** | GPT-4o | Fast general debugging |
+| **Google** | Gemini 2.0 Flash | Cost-effective |
 
-```bash
-# Initialize inner-lens in your project
-npx inner-lens init
-
-# Initialize with specific provider (skip prompts)
-npx inner-lens init --provider anthropic
-
-# Eject mode (full workflow source, no external dependency)
-npx inner-lens init --eject
-
-# Skip all prompts, use defaults
-npx inner-lens init -y
-
-# Check configuration
-npx inner-lens check
-```
-
-## 🔄 GitHub Workflow
-
-### Standard Mode (Recommended)
-
-Uses the reusable workflow from the inner-lens repository:
-
-```yaml
-# .github/workflows/inner-lens.yml
-name: inner-lens Analysis
-
-on:
-  issues:
-    types: [opened, labeled]
-
-jobs:
-  analyze:
-    if: contains(github.event.issue.labels.*.name, 'inner-lens')
-    uses: jhlee0409/inner-lens/.github/workflows/analysis-engine.yml@v1
-    with:
-      provider: 'anthropic'
-    secrets:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
-
-### Ejected Mode
-
-For full control, use `npx inner-lens init --eject` to generate a standalone workflow.
-
-## 📊 AI Providers Comparison
-
-| Provider | Model | Strengths |
-|----------|-------|-----------|
-| **Anthropic** | Claude Sonnet 4 | Best for nuanced code analysis, safety-focused |
-| **OpenAI** | GPT-4o | Fast, great for general debugging |
-| **Google** | Gemini 2.0 Flash | Cost-effective, good context window |
-
-## 🔧 Advanced Usage
-
-### Custom Log Capture
-
-```tsx
-import { addCustomLog, getCapturedLogs, clearCapturedLogs } from 'inner-lens';
-
-// Add custom log entries
-addCustomLog('error', 'Custom error message', errorStack);
-
-// Get all captured logs
-const logs = getCapturedLogs();
-
-// Clear logs after handling
-clearCapturedLogs();
-```
-
-### Manual Masking
-
-```tsx
-import { maskSensitiveData, maskSensitiveObject } from 'inner-lens';
-
-// Mask a string
-const masked = maskSensitiveData('User email: user@example.com');
-// → "User email: [EMAIL_REDACTED]"
-
-// Mask an object recursively
-const maskedObj = maskSensitiveObject({
-  user: 'john',
-  apiKey: 'sk-1234567890',
-  nested: { password: 'secret123' }
-});
-```
+---
 
 ## 📚 API Reference
 
-### Client Exports (`inner-lens`)
+### Client Exports
+
+| Package | Export | Description |
+|---------|--------|-------------|
+| `inner-lens` | `InnerLensCore` | Framework-agnostic core class |
+| `inner-lens/react` | `InnerLensWidget` | React component |
+| `inner-lens/react` | `useInnerLens` | React hook |
+| `inner-lens/vue` | `InnerLensWidget` | Vue component |
+| `inner-lens/vue` | `useInnerLens` | Vue composable |
+| `inner-lens/vanilla` | `InnerLens` | Vanilla JS class |
+
+### Server Exports
 
 | Export | Description |
 |--------|-------------|
-| `InnerLensWidget` | Main React component |
-| `initLogCapture` | Initialize console log capture |
-| `getCapturedLogs` | Get captured log entries |
-| `clearCapturedLogs` | Clear captured logs |
-| `addCustomLog` | Add custom log entry |
-| `maskSensitiveData` | Mask sensitive strings |
-| `maskSensitiveObject` | Mask sensitive objects |
+| `createFetchHandler` | Web Fetch API (Next.js, Hono, Bun, Deno) |
+| `createExpressHandler` | Express/Connect middleware |
+| `createFastifyHandler` | Fastify handler |
+| `createKoaHandler` | Koa middleware |
+| `createNodeHandler` | Node.js http module |
+| `handleBugReport` | Core handler (framework-agnostic) |
+| `validateBugReport` | Validate payload |
+| `createGitHubIssue` | Create GitHub issue |
 
-### Server Exports (`inner-lens/server`)
+---
 
-| Export | Description |
-|--------|-------------|
-| `createReportHandler` | Create Next.js API route handler |
-| `createGitHubIssue` | Create GitHub issue from report |
-| `validateBugReport` | Validate incoming report payload |
-| `BugReportSchema` | Zod schema for validation |
+## ⚠️ Legal & Security Notice
 
-## ⚠️ Security Notice
-
-**Data Processing:** Bug reports and console logs are processed by your chosen AI provider (Anthropic, OpenAI, or Google). While sensitive data masking is enabled by default, please:
+**Data Processing:** Bug reports are processed by your chosen AI provider (Anthropic, OpenAI, or Google). While sensitive data masking is enabled by default:
 
 1. Review your application's logging practices
 2. Audit what data appears in console logs
-3. Consider disabling the widget in production for sensitive applications
-4. Review your AI provider's data handling policies
+3. Review your AI provider's data handling policies
 
-## 📜 Legal Disclaimer
+**Disclaimer:** This software is provided "AS IS". The authors are not responsible for AI-generated suggestions or data handling by third-party providers.
 
-This software is provided "AS IS" without warranty of any kind. The authors are not responsible for:
-
-- AI-generated suggestions that may be incorrect or harmful
-- Data transmitted to third-party AI providers
-- Security vulnerabilities in user applications
-- Any damages arising from the use of this software
-
-Always review AI suggestions before applying them to your codebase.
+---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) first.
-
 ```bash
-# Clone the repository
 git clone https://github.com/jhlee0409/inner-lens.git
-
-# Install dependencies
+cd inner-lens
 npm install
-
-# Build
 npm run build
-
-# Development mode
-npm run dev
+npm run dev  # Watch mode
 ```
+
+---
 
 ## 📄 License
 
@@ -319,5 +444,5 @@ npm run dev
 ---
 
 <p align="center">
-  Made with ❤️ for the Next.js community
+  Made with ❤️ for the developer community
 </p>

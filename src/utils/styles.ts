@@ -3,7 +3,8 @@
  * Zero dependency on external CSS libraries to prevent conflicts
  */
 
-import type { CSSProperties } from 'react';
+// Framework-agnostic CSS properties type
+type CSSStyleDeclaration = Record<string, string | number | undefined>;
 
 export interface StyleConfig {
   buttonColor?: string;
@@ -12,8 +13,8 @@ export interface StyleConfig {
 
 const getPositionStyles = (
   position: StyleConfig['buttonPosition'] = 'bottom-right'
-): CSSProperties => {
-  const base: CSSProperties = { position: 'fixed', zIndex: 9999 };
+): CSSStyleDeclaration => {
+  const base: CSSStyleDeclaration = { position: 'fixed', zIndex: 9999 };
 
   switch (position) {
     case 'bottom-left':
@@ -48,12 +49,12 @@ export const createStyles = (config?: StyleConfig) => {
       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
       transition: 'transform 0.2s ease, box-shadow 0.2s ease',
       outline: 'none',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     triggerButtonHover: {
       transform: 'scale(1.05)',
       boxShadow: '0 6px 16px rgba(0, 0, 0, 0.2)',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     // Modal overlay
     overlay: {
@@ -68,7 +69,7 @@ export const createStyles = (config?: StyleConfig) => {
       justifyContent: 'center',
       zIndex: 10000,
       padding: '20px',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     // Modal dialog
     dialog: {
@@ -81,7 +82,7 @@ export const createStyles = (config?: StyleConfig) => {
       display: 'flex',
       flexDirection: 'column',
       boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     // Dialog header
     header: {
@@ -90,7 +91,7 @@ export const createStyles = (config?: StyleConfig) => {
       justifyContent: 'space-between',
       padding: '16px 20px',
       borderBottom: '1px solid #e5e7eb',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     headerTitle: {
       margin: 0,
@@ -99,7 +100,7 @@ export const createStyles = (config?: StyleConfig) => {
       color: '#111827',
       fontFamily:
         '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     closeButton: {
       background: 'none',
@@ -112,14 +113,14 @@ export const createStyles = (config?: StyleConfig) => {
       justifyContent: 'center',
       borderRadius: '4px',
       transition: 'background-color 0.15s ease',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     // Dialog content
     content: {
       padding: '20px',
       overflowY: 'auto',
       flex: 1,
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     // Form elements
     label: {
@@ -130,7 +131,7 @@ export const createStyles = (config?: StyleConfig) => {
       color: '#374151',
       fontFamily:
         '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     textarea: {
       width: '100%',
@@ -145,12 +146,12 @@ export const createStyles = (config?: StyleConfig) => {
       outline: 'none',
       transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
       boxSizing: 'border-box',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     textareaFocus: {
       borderColor: buttonColor,
       boxShadow: `0 0 0 3px ${buttonColor}20`,
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     // Log preview
     logPreview: {
@@ -159,14 +160,14 @@ export const createStyles = (config?: StyleConfig) => {
       backgroundColor: '#f9fafb',
       borderRadius: '8px',
       border: '1px solid #e5e7eb',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     logPreviewHeader: {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: '8px',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     logPreviewTitle: {
       fontSize: '12px',
@@ -176,35 +177,35 @@ export const createStyles = (config?: StyleConfig) => {
       letterSpacing: '0.05em',
       fontFamily:
         '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     logCount: {
       fontSize: '12px',
       color: '#9ca3af',
       fontFamily:
         '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     logList: {
       maxHeight: '150px',
       overflowY: 'auto',
       fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace',
       fontSize: '12px',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     logEntry: {
       padding: '4px 0',
       borderBottom: '1px solid #e5e7eb',
       wordBreak: 'break-word',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     logError: {
       color: '#dc2626',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     logWarn: {
       color: '#d97706',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     // Footer with actions
     footer: {
@@ -213,7 +214,7 @@ export const createStyles = (config?: StyleConfig) => {
       padding: '16px 20px',
       borderTop: '1px solid #e5e7eb',
       backgroundColor: '#f9fafb',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     submitButton: {
       flex: 1,
@@ -228,12 +229,12 @@ export const createStyles = (config?: StyleConfig) => {
       transition: 'background-color 0.15s ease, transform 0.1s ease',
       fontFamily:
         '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     submitButtonDisabled: {
       opacity: 0.5,
       cursor: 'not-allowed',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     cancelButton: {
       padding: '10px 16px',
@@ -247,7 +248,7 @@ export const createStyles = (config?: StyleConfig) => {
       transition: 'background-color 0.15s ease',
       fontFamily:
         '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     // Success/Error states
     successMessage: {
@@ -256,7 +257,7 @@ export const createStyles = (config?: StyleConfig) => {
       alignItems: 'center',
       padding: '24px',
       textAlign: 'center',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     successIcon: {
       width: '48px',
@@ -268,7 +269,7 @@ export const createStyles = (config?: StyleConfig) => {
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: '16px',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     errorMessage: {
       padding: '12px',
@@ -280,7 +281,7 @@ export const createStyles = (config?: StyleConfig) => {
       marginTop: '12px',
       fontFamily:
         '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     // Loading spinner
     spinner: {
@@ -290,7 +291,7 @@ export const createStyles = (config?: StyleConfig) => {
       borderTopColor: 'transparent',
       borderRadius: '50%',
       animation: 'inner-lens-spin 0.8s linear infinite',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
 
     // Privacy notice
     privacyNotice: {
@@ -302,7 +303,7 @@ export const createStyles = (config?: StyleConfig) => {
       color: '#1e40af',
       fontFamily:
         '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    } satisfies CSSProperties,
+    } as CSSStyleDeclaration,
   };
 };
 

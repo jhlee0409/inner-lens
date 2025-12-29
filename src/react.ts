@@ -1,16 +1,33 @@
 'use client';
 
 /**
- * inner-lens
- * Self-Debugging QA Agent for Next.js
+ * inner-lens React Module
+ * React components and hooks for bug reporting
  *
  * @packageDocumentation
+ *
+ * @example
+ * ```tsx
+ * import { InnerLensWidget } from 'inner-lens/react';
+ *
+ * function App() {
+ *   return (
+ *     <div>
+ *       <YourApp />
+ *       <InnerLensWidget />
+ *     </div>
+ *   );
+ * }
+ * ```
  */
 
 // Main Widget Component
 export { InnerLensWidget } from './components/InnerLensWidget';
 
-// Types
+// Hook for programmatic control
+export { useInnerLens } from './hooks/useInnerLens';
+
+// Re-export types
 export type {
   AIProvider,
   InnerLensConfig,
@@ -20,7 +37,7 @@ export type {
   GitHubIssuePayload,
 } from './types';
 
-// Utilities (for advanced usage)
+// Re-export utilities
 export {
   initLogCapture,
   getCapturedLogs,

@@ -1,6 +1,7 @@
 /**
  * inner-lens/server
- * Server-side utilities for processing bug reports
+ * Universal server-side utilities for processing bug reports
+ * Works with any Node.js backend: Express, Fastify, Hono, Next.js, Nuxt, etc.
  *
  * @packageDocumentation
  */
@@ -55,9 +56,7 @@ export async function createGitHubIssue(
   const [owner, repo] = config.repository.split('/');
 
   if (!owner || !repo) {
-    throw new Error(
-      'Invalid repository format. Expected "owner/repo".'
-    );
+    throw new Error('Invalid repository format. Expected "owner/repo".');
   }
 
   const octokit = new Octokit({
@@ -147,44 +146,240 @@ export function validateBugReport(
 }
 
 /**
- * Creates a Next.js API route handler for bug reports
+ * Core handler logic - framework agnostic
+ * Use this with any backend framework
+ */
+export async function handleBugReport(
+  body: unknown,
+  config: IssueCreatorConfig
+): Promise<{ status: number; body: BugReportResponse | { success: false; message: string } }> {
+  const validation = validateBugReport(body);
+
+  if (!validation.success) {
+    return {
+      status: 400,
+      body: { success: false, message: validation.error },
+    };
+  }
+
+  const result = await createGitHubIssue(validation.data, config);
+
+  return {
+    status: result.success ? 201 : 500,
+    body: result,
+  };
+}
+
+// ============================================
+// Framework-Specific Adapters
+// ============================================
+
+/**
+ * Web Standards Fetch API handler (Next.js App Router, Hono, Bun, Deno, Cloudflare Workers)
  *
  * @example
- * // app/api/inner-lens/report/route.ts
- * import { createReportHandler } from 'inner-lens/server';
+ * ```ts
+ * // Next.js App Router: app/api/inner-lens/report/route.ts
+ * import { createFetchHandler } from 'inner-lens/server';
  *
- * export const POST = createReportHandler({
+ * export const POST = createFetchHandler({
  *   githubToken: process.env.GITHUB_TOKEN!,
  *   repository: 'owner/repo',
  * });
+ * ```
+ *
+ * @example
+ * ```ts
+ * // Hono
+ * import { Hono } from 'hono';
+ * import { createFetchHandler } from 'inner-lens/server';
+ *
+ * const app = new Hono();
+ * const handler = createFetchHandler({ ... });
+ *
+ * app.post('/api/inner-lens/report', (c) => handler(c.req.raw));
+ * ```
  */
-export function createReportHandler(config: IssueCreatorConfig) {
+export function createFetchHandler(config: IssueCreatorConfig) {
   return async (request: Request): Promise<Response> => {
     try {
       const body = await request.json();
+      const result = await handleBugReport(body, config);
 
-      // Validate the payload
-      const validation = validateBugReport(body);
-      if (!validation.success) {
-        return Response.json(
-          { success: false, message: validation.error },
-          { status: 400 }
-        );
-      }
-
-      // Create the GitHub issue
-      const result = await createGitHubIssue(validation.data, config);
-
-      if (result.success) {
-        return Response.json(result, { status: 201 });
-      }
-
-      return Response.json(result, { status: 500 });
+      return Response.json(result.body, { status: result.status });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Internal server error';
       return Response.json({ success: false, message }, { status: 500 });
     }
+  };
+}
+
+// Alias for backwards compatibility
+export const createReportHandler = createFetchHandler;
+
+/**
+ * Express/Connect middleware
+ *
+ * @example
+ * ```ts
+ * import express from 'express';
+ * import { createExpressHandler } from 'inner-lens/server';
+ *
+ * const app = express();
+ * app.use(express.json());
+ *
+ * app.post('/api/inner-lens/report', createExpressHandler({
+ *   githubToken: process.env.GITHUB_TOKEN!,
+ *   repository: 'owner/repo',
+ * }));
+ * ```
+ */
+export function createExpressHandler(config: IssueCreatorConfig) {
+  return async (
+    req: { body: unknown },
+    res: { status: (code: number) => { json: (body: unknown) => void } }
+  ): Promise<void> => {
+    try {
+      const result = await handleBugReport(req.body, config);
+      res.status(result.status).json(result.body);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Internal server error';
+      res.status(500).json({ success: false, message });
+    }
+  };
+}
+
+/**
+ * Fastify handler
+ *
+ * @example
+ * ```ts
+ * import Fastify from 'fastify';
+ * import { createFastifyHandler } from 'inner-lens/server';
+ *
+ * const fastify = Fastify();
+ *
+ * fastify.post('/api/inner-lens/report', createFastifyHandler({
+ *   githubToken: process.env.GITHUB_TOKEN!,
+ *   repository: 'owner/repo',
+ * }));
+ * ```
+ */
+export function createFastifyHandler(config: IssueCreatorConfig) {
+  return async (
+    request: { body: unknown },
+    reply: { status: (code: number) => { send: (body: unknown) => void } }
+  ): Promise<void> => {
+    try {
+      const result = await handleBugReport(request.body, config);
+      reply.status(result.status).send(result.body);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Internal server error';
+      reply.status(500).send({ success: false, message });
+    }
+  };
+}
+
+/**
+ * Koa middleware
+ *
+ * @example
+ * ```ts
+ * import Koa from 'koa';
+ * import bodyParser from 'koa-bodyparser';
+ * import { createKoaHandler } from 'inner-lens/server';
+ *
+ * const app = new Koa();
+ * app.use(bodyParser());
+ *
+ * const handler = createKoaHandler({
+ *   githubToken: process.env.GITHUB_TOKEN!,
+ *   repository: 'owner/repo',
+ * });
+ *
+ * app.use(async (ctx, next) => {
+ *   if (ctx.path === '/api/inner-lens/report' && ctx.method === 'POST') {
+ *     await handler(ctx);
+ *   } else {
+ *     await next();
+ *   }
+ * });
+ * ```
+ */
+export function createKoaHandler(config: IssueCreatorConfig) {
+  return async (ctx: {
+    request: { body: unknown };
+    status: number;
+    body: unknown;
+  }): Promise<void> => {
+    try {
+      const result = await handleBugReport(ctx.request.body, config);
+      ctx.status = result.status;
+      ctx.body = result.body;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Internal server error';
+      ctx.status = 500;
+      ctx.body = { success: false, message };
+    }
+  };
+}
+
+/**
+ * Generic Node.js HTTP handler (http/https modules)
+ *
+ * @example
+ * ```ts
+ * import http from 'http';
+ * import { createNodeHandler } from 'inner-lens/server';
+ *
+ * const handler = createNodeHandler({
+ *   githubToken: process.env.GITHUB_TOKEN!,
+ *   repository: 'owner/repo',
+ * });
+ *
+ * const server = http.createServer(async (req, res) => {
+ *   if (req.url === '/api/inner-lens/report' && req.method === 'POST') {
+ *     await handler(req, res);
+ *   }
+ * });
+ * ```
+ */
+export function createNodeHandler(config: IssueCreatorConfig) {
+  return async (
+    req: { on: (event: string, callback: (chunk: Buffer) => void) => void },
+    res: {
+      statusCode: number;
+      setHeader: (name: string, value: string) => void;
+      end: (body: string) => void;
+    }
+  ): Promise<void> => {
+    const chunks: Buffer[] = [];
+
+    return new Promise((resolve) => {
+      req.on('data', (chunk: Buffer) => chunks.push(chunk));
+      req.on('end', async () => {
+        try {
+          const bodyStr = Buffer.concat(chunks).toString();
+          const body = JSON.parse(bodyStr);
+          const result = await handleBugReport(body, config);
+
+          res.statusCode = result.status;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(result.body));
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : 'Internal server error';
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ success: false, message }));
+        }
+        resolve();
+      });
+    });
   };
 }
 
