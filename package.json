@@ -106,7 +106,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "example": "node examples/vanilla/server.js",
+    "example:dev": "npm run build && node examples/vanilla/server.js"
   },
   "peerDependencies": {
     "react": ">=17.0.0",
