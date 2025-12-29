@@ -106,13 +106,19 @@ export const createStyles = (config?: StyleConfig) => {
       background: 'none',
       border: 'none',
       cursor: 'pointer',
-      padding: '4px',
-      color: '#6b7280',
+      padding: '8px',
+      minWidth: '44px',
+      minHeight: '44px',
+      color: '#4b5563',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: '4px',
+      borderRadius: '8px',
       transition: 'background-color 0.15s ease',
+    } as CSSStyleDeclaration,
+
+    closeButtonHover: {
+      backgroundColor: '#f3f4f6',
     } as CSSStyleDeclaration,
 
     // Dialog content
@@ -146,6 +152,8 @@ export const createStyles = (config?: StyleConfig) => {
       outline: 'none',
       transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
       boxSizing: 'border-box',
+      color: '#111827',
+      backgroundColor: '#ffffff',
     } as CSSStyleDeclaration,
 
     textareaFocus: {
@@ -172,7 +180,7 @@ export const createStyles = (config?: StyleConfig) => {
     logPreviewTitle: {
       fontSize: '12px',
       fontWeight: 500,
-      color: '#6b7280',
+      color: '#4b5563',
       textTransform: 'uppercase',
       letterSpacing: '0.05em',
       fontFamily:
@@ -181,7 +189,7 @@ export const createStyles = (config?: StyleConfig) => {
 
     logCount: {
       fontSize: '12px',
-      color: '#9ca3af',
+      color: '#6b7280',
       fontFamily:
         '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     } as CSSStyleDeclaration,
@@ -307,10 +315,38 @@ export const createStyles = (config?: StyleConfig) => {
   };
 };
 
-// CSS keyframes as a string (injected once)
+// CSS keyframes and responsive styles (injected once)
 export const keyframesCSS = `
 @keyframes inner-lens-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  #inner-lens-widget * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 640px) {
+  #inner-lens-widget [role="dialog"] > div {
+    margin: 10px;
+    max-height: 90vh;
+  }
+}
+
+/* Focus visible for keyboard users */
+#inner-lens-widget button:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+#inner-lens-widget textarea:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
 }
 `;
