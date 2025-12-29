@@ -90,7 +90,9 @@ export function InnerLensWidget({
   const [issueUrl, setIssueUrl] = useState<string | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [closeHovered, setCloseHovered] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const styleInjectedRef = useRef(false);
 
   const styles = createStyles(styleConfig);
@@ -134,11 +136,29 @@ export function InnerLensWidget({
     }
   }, [isOpen]);
 
-  // Handle escape key to close dialog
+  // Handle escape key and focus trap
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
         handleClose();
+        return;
+      }
+
+      // Focus trap: keep focus within dialog
+      if (e.key === 'Tab' && isOpen && dialogRef.current) {
+        const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, textarea, input, a[href], [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
       }
     };
 
@@ -261,8 +281,8 @@ export function InnerLensWidget({
   const renderDialogContent = () => {
     if (submissionState === 'success') {
       return (
-        <div style={styles.successMessage}>
-          <div style={styles.successIcon}>
+        <div style={styles.successMessage} role="status" aria-live="polite">
+          <div style={styles.successIcon} aria-hidden="true">
             <CheckIcon />
           </div>
           <h3 style={{ ...styles.headerTitle, marginBottom: '8px' }}>
@@ -270,7 +290,7 @@ export function InnerLensWidget({
           </h3>
           <p
             style={{
-              color: '#6b7280',
+              color: '#4b5563',
               fontSize: '14px',
               marginBottom: '16px',
             }}
@@ -384,8 +404,10 @@ export function InnerLensWidget({
                   gap: '8px',
                   justifyContent: 'center',
                 }}
+                role="status"
+                aria-live="polite"
               >
-                <span style={styles.spinner} />
+                <span style={styles.spinner} aria-hidden="true" />
                 Submitting...
               </span>
             ) : (
@@ -413,7 +435,7 @@ export function InnerLensWidget({
           aria-modal="true"
           aria-labelledby="inner-lens-title"
         >
-          <div style={styles.dialog} onClick={(e) => e.stopPropagation()}>
+          <div ref={dialogRef} style={styles.dialog} onClick={(e) => e.stopPropagation()}>
             <div style={styles.header}>
               <h2 id="inner-lens-title" style={styles.headerTitle}>
                 Report an Issue
@@ -421,8 +443,13 @@ export function InnerLensWidget({
               <button
                 type="button"
                 onClick={handleClose}
-                style={styles.closeButton}
-                aria-label="Close"
+                style={{
+                  ...styles.closeButton,
+                  ...(closeHovered ? styles.closeButtonHover : {}),
+                }}
+                onMouseEnter={() => setCloseHovered(true)}
+                onMouseLeave={() => setCloseHovered(false)}
+                aria-label="Close dialog"
               >
                 <CloseIcon />
               </button>

@@ -233,6 +233,27 @@ export class InnerLensCore {
   private handleKeyDown = (e: KeyboardEvent): void => {
     if (e.key === 'Escape' && this.isOpen) {
       this.close();
+      return;
+    }
+
+    // Focus trap: keep focus within dialog
+    if (e.key === 'Tab' && this.isOpen && this.widgetRoot) {
+      const dialog = this.widgetRoot.querySelector('#inner-lens-dialog');
+      if (!dialog) return;
+
+      const focusableElements = dialog.querySelectorAll<HTMLElement>(
+        'button, textarea, input, a[href], [tabindex]:not([tabindex="-1"])'
+      );
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (e.shiftKey && document.activeElement === firstElement) {
+        e.preventDefault();
+        lastElement?.focus();
+      } else if (!e.shiftKey && document.activeElement === lastElement) {
+        e.preventDefault();
+        firstElement?.focus();
+      }
     }
   };
 
@@ -331,14 +352,14 @@ export class InnerLensCore {
 
   private renderSuccess(styles: ReturnType<typeof createStyles>): string {
     return `
-      <div style="${this.styleToString(styles.successMessage)}">
-        <div style="${this.styleToString(styles.successIcon)}">
+      <div style="${this.styleToString(styles.successMessage)}" role="status" aria-live="polite">
+        <div style="${this.styleToString(styles.successIcon)}" aria-hidden="true">
           ${this.getCheckIcon()}
         </div>
         <h3 style="${this.styleToString({ ...styles.headerTitle, marginBottom: '8px' })}">
           Report Submitted
         </h3>
-        <p style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">
+        <p style="color: #4b5563; font-size: 14px; margin-bottom: 16px;">
           Thank you for your feedback! Our team will look into this.
         </p>
         ${
@@ -398,8 +419,8 @@ export class InnerLensCore {
         >
           ${
             this.submissionState === 'submitting'
-              ? `<span style="display: flex; align-items: center; gap: 8px; justify-content: center;">
-                  <span style="${this.styleToString(styles.spinner)}"></span>
+              ? `<span style="display: flex; align-items: center; gap: 8px; justify-content: center;" role="status" aria-live="polite">
+                  <span style="${this.styleToString(styles.spinner)}" aria-hidden="true"></span>
                   Submitting...
                 </span>`
               : 'Submit Report'
@@ -447,7 +468,7 @@ export class InnerLensCore {
   private attachEventListeners(styles: ReturnType<typeof createStyles>): void {
     const overlay = this.widgetRoot?.querySelector('#inner-lens-overlay');
     const dialog = this.widgetRoot?.querySelector('#inner-lens-dialog');
-    const closeBtn = this.widgetRoot?.querySelector('#inner-lens-close');
+    const closeBtn = this.widgetRoot?.querySelector('#inner-lens-close') as HTMLElement;
     const cancelBtn = this.widgetRoot?.querySelector('#inner-lens-cancel');
     const submitBtn = this.widgetRoot?.querySelector('#inner-lens-submit');
     const textarea = this.widgetRoot?.querySelector(
@@ -461,6 +482,12 @@ export class InnerLensCore {
 
     dialog?.addEventListener('click', (e) => e.stopPropagation());
     closeBtn?.addEventListener('click', () => this.close());
+    closeBtn?.addEventListener('mouseenter', () => {
+      if (closeBtn) closeBtn.style.backgroundColor = '#f3f4f6';
+    });
+    closeBtn?.addEventListener('mouseleave', () => {
+      if (closeBtn) closeBtn.style.backgroundColor = 'transparent';
+    });
     cancelBtn?.addEventListener('click', () => this.close());
     submitBtn?.addEventListener('click', () => this.submit());
     trigger?.addEventListener('click', () => this.open());

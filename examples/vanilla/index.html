@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inner Lens - 로컬 테스트</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+      background: #f5f5f5;
+    }
+    h1 { color: #333; }
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 0.25rem;
+      font-size: 14px;
+    }
+    button:hover { background: #2563eb; }
+    button.error { background: #ef4444; }
+    button.error:hover { background: #dc2626; }
+    button.warn { background: #f59e0b; }
+    button.warn:hover { background: #d97706; }
+    .logs {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 1rem;
+      border-radius: 6px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .log-entry { margin: 0.25rem 0; }
+    .log-error { color: #f87171; }
+    .log-warn { color: #fbbf24; }
+    .log-info { color: #60a5fa; }
+  </style>
+</head>
+<body>
+  <h1>Inner Lens 로컬 테스트</h1>
+
+  <div class="card">
+    <h2>테스트 버튼</h2>
+    <p>아래 버튼을 눌러서 다양한 로그/에러를 발생시켜보세요:</p>
+
+    <div>
+      <button onclick="testConsoleLog()">console.log</button>
+      <button onclick="testConsoleInfo()">console.info</button>
+      <button class="warn" onclick="testConsoleWarn()">console.warn</button>
+      <button class="error" onclick="testConsoleError()">console.error</button>
+    </div>
+
+    <div style="margin-top: 0.5rem;">
+      <button class="error" onclick="testUncaughtError()">Uncaught Error</button>
+      <button class="error" onclick="testPromiseRejection()">Promise Rejection</button>
+      <button onclick="testFetchSuccess()">Fetch (성공)</button>
+      <button class="error" onclick="testFetchError()">Fetch (실패)</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>로그 출력</h2>
+    <div id="log-output" class="logs">
+      <div class="log-entry log-info">[INFO] 페이지 로드됨</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>사용 방법</h2>
+    <ol>
+      <li>우측 하단의 <strong>버그 리포트 버튼</strong>을 클릭</li>
+      <li>버그 설명을 입력</li>
+      <li>제출하면 캡처된 로그와 함께 전송됨 (현재는 mock 서버)</li>
+    </ol>
+  </div>
+
+  <script type="module">
+    import { InnerLens } from '../../dist/vanilla.js';
+
+    // Inner Lens 위젯 초기화
+    const widget = new InnerLens({
+      endpoint: '/api/bug-report',  // mock 서버 엔드포인트
+      repository: 'jhlee0409/inner-lens',
+      position: 'bottom-right',
+      buttonText: '버그 리포트',
+      dialogTitle: '버그 리포트',
+      dialogDescription: '발견한 버그를 설명해주세요',
+      submitText: '제출',
+      cancelText: '취소',
+      successMessage: '버그 리포트가 제출되었습니다!',
+      collectLogs: true,
+      collectNetwork: true,
+      maskSensitiveData: true,
+    });
+
+    widget.mount();
+    console.log('[Inner Lens] 위젯이 마운트되었습니다.');
+
+    // 전역에 노출 (디버깅용)
+    window.innerLensWidget = widget;
+
+    // 로그 출력 헬퍼
+    function addLog(type, message) {
+      const output = document.getElementById('log-output');
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      entry.textContent = `[${type.toUpperCase()}] ${message}`;
+      output.appendChild(entry);
+      output.scrollTop = output.scrollHeight;
+    }
+
+    // 테스트 함수들 (전역)
+    window.testConsoleLog = () => {
+      console.log('일반 로그 메시지입니다.');
+      addLog('info', '일반 로그 메시지입니다.');
+    };
+
+    window.testConsoleInfo = () => {
+      console.info('정보 메시지입니다.');
+      addLog('info', '정보 메시지입니다.');
+    };
+
+    window.testConsoleWarn = () => {
+      console.warn('경고 메시지입니다!');
+      addLog('warn', '경고 메시지입니다!');
+    };
+
+    window.testConsoleError = () => {
+      console.error('에러 메시지입니다!');
+      addLog('error', '에러 메시지입니다!');
+    };
+
+    window.testUncaughtError = () => {
+      addLog('error', 'Uncaught Error 발생!');
+      throw new Error('테스트용 Uncaught Error');
+    };
+
+    window.testPromiseRejection = () => {
+      addLog('error', 'Promise Rejection 발생!');
+      Promise.reject(new Error('테스트용 Promise Rejection'));
+    };
+
+    window.testFetchSuccess = async () => {
+      addLog('info', 'Fetch 요청 중...');
+      try {
+        const res = await fetch('https://jsonplaceholder.typicode.com/posts/1');
+        const data = await res.json();
+        addLog('info', `Fetch 성공: ${data.title.slice(0, 30)}...`);
+      } catch (e) {
+        addLog('error', `Fetch 실패: ${e.message}`);
+      }
+    };
+
+    window.testFetchError = async () => {
+      addLog('info', 'Fetch 요청 중 (실패 예정)...');
+      try {
+        await fetch('https://invalid-domain-12345.com/api');
+      } catch (e) {
+        addLog('error', `Fetch 실패: ${e.message}`);
+      }
+    };
+  </script>
+</body>
+</html>

@@ -48,7 +48,7 @@ program
   .name('inner-lens')
   .description(
     chalk.bold('🔍 inner-lens') +
-      ' - Self-Debugging QA Agent for Next.js\n' +
+      ' - Self-Debugging QA Agent\n' +
       chalk.dim('   Zero-config bug reporting with AI-powered analysis')
   )
   .version(PACKAGE_VERSION);
@@ -60,42 +60,89 @@ program
   .option('-p, --provider <provider>', 'AI provider (anthropic, openai, google)')
   .option('-y, --yes', 'Skip prompts and use defaults')
   .action(async (options: InitOptions) => {
-    console.log('\n' + chalk.bold.magenta('🔍 inner-lens Setup Wizard\n'));
+    console.log('\n' + chalk.bold.magenta('🔍 inner-lens Setup Wizard'));
+    console.log(chalk.dim('   버그 리포트 위젯 + AI 분석 자동 설정\n'));
 
     const cwd = process.cwd();
 
-    // Check if .github/workflows directory exists
-    const workflowsDir = path.join(cwd, '.github', 'workflows');
-    const githubDir = path.join(cwd, '.github');
+    // Try to detect repository from git or package.json
+    let detectedRepo = '';
+    try {
+      const packageJsonPath = path.join(cwd, 'package.json');
+      if (await fs.pathExists(packageJsonPath)) {
+        const pkg = await fs.readJson(packageJsonPath);
+        if (pkg.repository?.url) {
+          const match = pkg.repository.url.match(/github\.com[/:](.+?\/.+?)(?:\.git)?$/);
+          if (match) detectedRepo = match[1];
+        }
+      }
+    } catch {
+      // ignore
+    }
 
-    // Determine AI provider
+    let repository: string;
     let provider: AIProvider;
 
-    if (options.provider && options.provider in PROVIDER_CONFIGS) {
-      provider = options.provider as AIProvider;
-    } else if (options.yes) {
-      provider = 'anthropic';
+    if (options.yes) {
+      // Skip all prompts
+      provider = options.provider && options.provider in PROVIDER_CONFIGS
+        ? options.provider as AIProvider
+        : 'anthropic';
+      repository = detectedRepo || 'owner/repo';
     } else {
-      const answers = await inquirer.prompt([
+      // Interactive setup
+      console.log(chalk.bold.cyan('  Step 1/3: GitHub Repository\n'));
+
+      const repoAnswer = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'repository',
+          message: 'GitHub repository (owner/repo):',
+          default: detectedRepo || undefined,
+          validate: (input: string) => {
+            if (!input || !input.includes('/')) {
+              return 'Please enter in format: owner/repo (예: jhlee0409/my-app)';
+            }
+            return true;
+          },
+        },
+      ]);
+      repository = repoAnswer.repository;
+
+      console.log('\n' + chalk.bold.cyan('  Step 2/3: AI Provider\n'));
+      console.log(chalk.dim('  버그 리포트 분석에 사용할 AI를 선택하세요.\n'));
+
+      const providerAnswer = await inquirer.prompt([
         {
           type: 'list',
           name: 'provider',
-          message: 'Which AI Provider do you want to use for bug analysis?',
+          message: 'AI Provider 선택:',
           choices: [
-            { name: '🟣 Anthropic (Claude Sonnet 4)', value: 'anthropic' },
-            { name: '🟢 OpenAI (GPT-4o)', value: 'openai' },
-            { name: '🔵 Google (Gemini 2.0 Flash)', value: 'google' },
+            {
+              name: `${chalk.magenta('●')} Anthropic ${chalk.dim('(Claude Sonnet 4 - 추천)')}`,
+              value: 'anthropic'
+            },
+            {
+              name: `${chalk.green('●')} OpenAI ${chalk.dim('(GPT-4o)')}`,
+              value: 'openai'
+            },
+            {
+              name: `${chalk.blue('●')} Google ${chalk.dim('(Gemini 2.0 Flash)')}`,
+              value: 'google'
+            },
           ],
           default: 'anthropic',
         },
       ]);
-      provider = answers.provider as AIProvider;
+      provider = providerAnswer.provider as AIProvider;
+
+      console.log('\n' + chalk.bold.cyan('  Step 3/3: 파일 생성\n'));
     }
 
     const providerConfig = PROVIDER_CONFIGS[provider];
-    console.log(
-      chalk.dim('\n  Selected: ') + chalk.cyan(providerConfig.name) + '\n'
-    );
+
+    // Check if .github/workflows directory exists
+    const workflowsDir = path.join(cwd, '.github', 'workflows');
 
     // Create directories if they don't exist
     await fs.ensureDir(workflowsDir);
@@ -106,11 +153,9 @@ program
     let workflowContent: string;
 
     if (options.eject) {
-      // Eject mode: Full workflow with embedded analysis
       console.log(chalk.yellow('  ⚠️  Eject mode: Generating standalone workflow...\n'));
       workflowContent = generateEjectedWorkflow(provider, providerConfig);
     } else {
-      // Standard mode: Use reusable workflow
       workflowContent = generateReusableWorkflow(provider, providerConfig);
     }
 
@@ -127,7 +172,7 @@ program
 
     await fs.ensureDir(targetApiDir);
 
-    const apiRouteContent = generateApiRoute();
+    const apiRouteContent = generateApiRoute(repository);
     const apiRoutePath = path.join(targetApiDir, 'route.ts');
 
     // Only create if doesn't exist
@@ -149,55 +194,42 @@ program
       );
     }
 
-    // Print next steps
+    // Print next steps with clear instructions
     console.log('\n' + chalk.bold.green('✅ Setup Complete!\n'));
-    console.log(chalk.bold('Next Steps:\n'));
+    console.log(chalk.bold('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
+    console.log(chalk.bold('\n📋 Next Steps:\n'));
 
-    console.log(chalk.dim('  1. ') + 'Add the following secret to your GitHub repository:');
-    console.log(
-      chalk.bgBlack.white(`     ${providerConfig.secretName}`) +
-        chalk.dim(' = <your API key>')
-    );
-    console.log(
-      chalk.dim('     Go to: ') +
-        chalk.cyan('https://github.com/<owner>/<repo>/settings/secrets/actions')
-    );
+    // Step 1: GitHub Secrets
+    console.log(chalk.bold.white('  1. GitHub Secrets 설정\n'));
+    console.log(chalk.dim('     GitHub repository → Settings → Secrets → Actions\n'));
+    console.log(`     ${chalk.yellow('GITHUB_TOKEN')}     ${chalk.dim('(repo scope 필요)')}`);
+    console.log(`     ${chalk.yellow(providerConfig.secretName)}`);
+    console.log();
+    console.log(chalk.dim('     링크: ') + chalk.cyan(`https://github.com/${repository}/settings/secrets/actions`));
 
-    console.log(
-      chalk.dim('\n  2. ') +
-        'Add the widget to your app layout:'
-    );
+    // Step 2: Environment Variable
+    console.log(chalk.bold.white('\n  2. 환경변수 설정 (.env.local)\n'));
+    console.log(chalk.dim('     ') + chalk.gray('# .env.local'));
+    console.log(chalk.dim('     ') + chalk.green('GITHUB_TOKEN=') + chalk.gray('ghp_xxxxxxxxxxxx'));
+
+    // Step 3: Add Widget
+    console.log(chalk.bold.white('\n  3. 위젯 추가\n'));
     console.log(chalk.dim('     ') + chalk.gray('// app/layout.tsx'));
-    console.log(chalk.dim('     ') + chalk.green("import { InnerLensWidget } from 'inner-lens';"));
-    console.log(chalk.dim('     '));
-    console.log(chalk.dim('     ') + chalk.gray('// Inside your layout:'));
+    console.log(chalk.dim('     ') + chalk.green("import { InnerLensWidget } from 'inner-lens/react';"));
+    console.log();
+    console.log(chalk.dim('     ') + chalk.gray('// return 안에:'));
     console.log(chalk.dim('     ') + chalk.yellow('<InnerLensWidget />'));
 
-    console.log(
-      chalk.dim('\n  3. ') +
-        'Set the environment variable in your app:'
-    );
-    console.log(
-      chalk.dim('     ') +
-        chalk.gray('// .env.local')
-    );
-    console.log(
-      chalk.dim('     ') +
-        chalk.green('GITHUB_TOKEN=') +
-        chalk.gray('<your GitHub token with repo scope>')
-    );
+    // Step 4: Test
+    console.log(chalk.bold.white('\n  4. 테스트\n'));
+    console.log(chalk.dim('     ') + '앱 실행 후 우측 하단 버그 리포트 버튼 클릭!');
 
+    console.log('\n' + chalk.bold('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
     console.log(
-      chalk.dim('\n  4. ') +
-        'Commit and push your changes!'
-    );
-
-    console.log('\n' + chalk.dim('─'.repeat(50)));
-    console.log(
-      chalk.dim('📚 Documentation: ') +
+      chalk.dim('\n📚 Documentation: ') +
         chalk.cyan('https://github.com/jhlee0409/inner-lens')
     );
-    console.log(chalk.dim('─'.repeat(50)) + '\n');
+    console.log();
   });
 
 program
@@ -208,6 +240,7 @@ program
 
     const cwd = process.cwd();
     let hasErrors = false;
+    let hasWarnings = false;
 
     // Check workflow file
     const workflowPath = path.join(cwd, '.github', 'workflows', 'inner-lens.yml');
@@ -215,7 +248,7 @@ program
       console.log(chalk.green('  ✓ ') + 'GitHub workflow found');
     } else {
       console.log(chalk.red('  ✗ ') + 'GitHub workflow not found');
-      console.log(chalk.dim('    Run: npx inner-lens init'));
+      console.log(chalk.dim('    → Run: npx inner-lens init'));
       hasErrors = true;
     }
 
@@ -233,6 +266,7 @@ program
       console.log(chalk.green('  ✓ ') + 'API route found');
     } else {
       console.log(chalk.red('  ✗ ') + 'API route not found');
+      console.log(chalk.dim('    → Run: npx inner-lens init'));
       hasErrors = true;
     }
 
@@ -245,14 +279,35 @@ program
         console.log(chalk.green('  ✓ ') + 'inner-lens is installed');
       } else {
         console.log(chalk.yellow('  ⊘ ') + 'inner-lens not in package.json');
+        console.log(chalk.dim('    → Run: npm install inner-lens'));
+        hasWarnings = true;
       }
+    }
+
+    // Check .env.local for GITHUB_TOKEN
+    const envLocalPath = path.join(cwd, '.env.local');
+    if (await fs.pathExists(envLocalPath)) {
+      const envContent = await fs.readFile(envLocalPath, 'utf-8');
+      if (envContent.includes('GITHUB_TOKEN')) {
+        console.log(chalk.green('  ✓ ') + 'GITHUB_TOKEN found in .env.local');
+      } else {
+        console.log(chalk.yellow('  ⊘ ') + 'GITHUB_TOKEN not found in .env.local');
+        console.log(chalk.dim('    → Add: GITHUB_TOKEN=ghp_xxxxx'));
+        hasWarnings = true;
+      }
+    } else {
+      console.log(chalk.yellow('  ⊘ ') + '.env.local not found');
+      console.log(chalk.dim('    → Create .env.local with GITHUB_TOKEN'));
+      hasWarnings = true;
     }
 
     console.log('');
     if (hasErrors) {
-      console.log(chalk.yellow('⚠️  Some issues found. Run "npx inner-lens init" to fix.\n'));
+      console.log(chalk.red('❌ Configuration issues found.\n'));
+    } else if (hasWarnings) {
+      console.log(chalk.yellow('⚠️  Some warnings. Check the items above.\n'));
     } else {
-      console.log(chalk.green('✅ Configuration looks good!\n'));
+      console.log(chalk.green('✅ All checks passed!\n'));
     }
   });
 
@@ -431,19 +486,19 @@ Provide:
 }
 
 // Generate API route
-function generateApiRoute(): string {
-  return `import { createReportHandler } from 'inner-lens/server';
+function generateApiRoute(repository: string): string {
+  return `import { createFetchHandler } from 'inner-lens/server';
 
 // Configure the bug report handler
-export const POST = createReportHandler({
+export const POST = createFetchHandler({
   githubToken: process.env.GITHUB_TOKEN!,
-  repository: process.env.GITHUB_REPOSITORY || 'owner/repo', // Update this!
+  repository: '${repository}',
   defaultLabels: ['bug', 'inner-lens'],
 });
 
-// Optionally handle other methods
+// Health check endpoint
 export const GET = () => {
-  return Response.json({ status: 'inner-lens report endpoint' });
+  return Response.json({ status: 'ok', endpoint: 'inner-lens report' });
 };
 `;
 }
