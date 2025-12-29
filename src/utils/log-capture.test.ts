@@ -25,8 +25,8 @@ describe('log-capture', () => {
 
       const logs = getCapturedLogs();
       expect(logs).toHaveLength(1);
-      expect(logs[0].level).toBe('error');
-      expect(logs[0].message).toBe('test error');
+      expect(logs[0]!.level).toBe('error');
+      expect(logs[0]!.message).toBe('test error');
     });
 
     it('hooks into console.warn', () => {
@@ -35,8 +35,8 @@ describe('log-capture', () => {
 
       const logs = getCapturedLogs();
       expect(logs).toHaveLength(1);
-      expect(logs[0].level).toBe('warn');
-      expect(logs[0].message).toBe('test warning');
+      expect(logs[0]!.level).toBe('warn');
+      expect(logs[0]!.message).toBe('test warning');
     });
 
     it('captures multiple logs', () => {
@@ -57,8 +57,8 @@ describe('log-capture', () => {
 
       const logs = getCapturedLogs();
       expect(logs).toHaveLength(2);
-      expect(logs[0].message).toBe('error 2');
-      expect(logs[1].message).toBe('error 3');
+      expect(logs[0]!.message).toBe('error 2');
+      expect(logs[1]!.message).toBe('error 3');
     });
 
     it('masks sensitive data by default', () => {
@@ -66,8 +66,8 @@ describe('log-capture', () => {
       console.error('User email: john@example.com');
 
       const logs = getCapturedLogs();
-      expect(logs[0].message).toContain('[EMAIL_REDACTED]');
-      expect(logs[0].message).not.toContain('john@example.com');
+      expect(logs[0]!.message).toContain('[EMAIL_REDACTED]');
+      expect(logs[0]!.message).not.toContain('john@example.com');
     });
 
     it('can disable sensitive data masking', () => {
@@ -75,7 +75,7 @@ describe('log-capture', () => {
       console.error('User email: john@example.com');
 
       const logs = getCapturedLogs();
-      expect(logs[0].message).toContain('john@example.com');
+      expect(logs[0]!.message).toContain('john@example.com');
     });
 
     it('captures Error objects with stack', () => {
@@ -84,8 +84,8 @@ describe('log-capture', () => {
       console.error(error);
 
       const logs = getCapturedLogs();
-      expect(logs[0].message).toContain('Error: Test error');
-      expect(logs[0].stack).toBeDefined();
+      expect(logs[0]!.message).toContain('Error: Test error');
+      expect(logs[0]!.stack).toBeDefined();
     });
 
     it('handles object arguments', () => {
@@ -93,8 +93,8 @@ describe('log-capture', () => {
       console.error('Error:', { code: 500, message: 'Internal' });
 
       const logs = getCapturedLogs();
-      expect(logs[0].message).toContain('code');
-      expect(logs[0].message).toContain('500');
+      expect(logs[0]!.message).toContain('code');
+      expect(logs[0]!.message).toContain('500');
     });
 
     it('handles null and undefined', () => {
@@ -102,7 +102,7 @@ describe('log-capture', () => {
       console.error(null, undefined);
 
       const logs = getCapturedLogs();
-      expect(logs[0].message).toBe('null undefined');
+      expect(logs[0]!.message).toBe('null undefined');
     });
   });
 
@@ -152,15 +152,15 @@ describe('log-capture', () => {
 
       const logs = getCapturedLogs();
       expect(logs).toHaveLength(1);
-      expect(logs[0].level).toBe('error');
-      expect(logs[0].message).toBe('Custom error message');
+      expect(logs[0]!.level).toBe('error');
+      expect(logs[0]!.message).toBe('Custom error message');
     });
 
     it('adds custom log with stack', () => {
       addCustomLog('error', 'Error', 'at line 42');
 
       const logs = getCapturedLogs();
-      expect(logs[0].stack).toBe('at line 42');
+      expect(logs[0]!.stack).toBe('at line 42');
     });
 
     it('masks sensitive data in custom logs', () => {
@@ -168,7 +168,7 @@ describe('log-capture', () => {
       addCustomLog('warn', 'Key: sk-1234567890abcdefghij');
 
       const logs = getCapturedLogs();
-      expect(logs[0].message).toContain('[OPENAI_KEY_REDACTED]');
+      expect(logs[0]!.message).toContain('[OPENAI_KEY_REDACTED]');
     });
   });
 });
