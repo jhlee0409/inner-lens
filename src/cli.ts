@@ -1229,14 +1229,24 @@ program
 
     // Step: Backend setup - only for frontend-only frameworks
     if (!isFullstackFramework(framework)) {
-      console.log(chalk.bold.white(`\n  ${stepNumber}. 백엔드 서버 설정\n`));
-      console.log(chalk.dim('     프론트엔드 전용 프레임워크입니다.'));
-      console.log(chalk.dim('     별도 백엔드 서버에 API 엔드포인트를 설정하세요.\n'));
-      console.log(chalk.dim('     ') + chalk.gray('// 예시: Express'));
-      console.log(chalk.dim('     ') + chalk.cyan(`import { createExpressHandler } from 'inner-lens/server';`));
-      console.log(chalk.dim('     ') + chalk.cyan(`app.post('/api/inner-lens/report', createExpressHandler({ ... }));`));
+      console.log(chalk.bold.white(`\n  ${stepNumber}. 백엔드 설정 (서버리스 추천)\n`));
+      console.log(chalk.dim('     프론트엔드 전용 프레임워크입니다. 아래 방법 중 선택하세요:\n'));
+
+      // Cloudflare Workers (recommended)
+      console.log(chalk.bold.cyan('     [추천] Cloudflare Workers (무료 10만 요청/일)'));
+      console.log(chalk.dim('     ') + chalk.gray('# 1-click 배포:'));
+      console.log(chalk.dim('     ') + chalk.cyan('npx degit jhlee0409/inner-lens/templates/cloudflare-worker inner-lens-api'));
+      console.log(chalk.dim('     ') + chalk.cyan('cd inner-lens-api && npm install'));
+      console.log(chalk.dim('     ') + chalk.cyan('npx wrangler secret put GITHUB_TOKEN'));
+      console.log(chalk.dim('     ') + chalk.cyan('npm run deploy'));
       console.log();
-      console.log(chalk.dim('     📚 서버 설정 가이드: ') + chalk.cyan('https://github.com/jhlee0409/inner-lens#server-setup'));
+
+      // Alternative: Express/Fastify
+      console.log(chalk.dim('     [대안] 기존 백엔드 서버가 있다면:'));
+      console.log(chalk.dim('     ') + chalk.gray('// Express, Fastify, Hono 등'));
+      console.log(chalk.dim('     ') + chalk.cyan(`import { createExpressHandler } from 'inner-lens/server';`));
+      console.log();
+      console.log(chalk.dim('     📚 가이드: ') + chalk.cyan('https://github.com/jhlee0409/inner-lens#backend-setup'));
       stepNumber++;
     }
 

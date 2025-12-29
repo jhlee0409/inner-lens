@@ -1,0 +1,13 @@
+name = "inner-lens-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# 환경변수는 Cloudflare Dashboard에서 설정하세요:
+# - GITHUB_TOKEN: GitHub Personal Access Token (repo scope)
+# - GITHUB_REPOSITORY: owner/repo 형식
+
+[vars]
+# GITHUB_REPOSITORY = "your-username/your-repo"
+
+# Secrets (Dashboard에서 설정):
+# wrangler secret put GITHUB_TOKEN
