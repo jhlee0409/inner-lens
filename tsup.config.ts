@@ -76,6 +76,21 @@ export default defineConfig([
     minify: false,
     target: 'node18',
   },
+  // Session Replay build (optional, large bundle)
+  {
+    entry: {
+      replay: 'src/replay.ts',
+    },
+    format: ['esm', 'cjs'],
+    dts: true,
+    splitting: false,
+    sourcemap: true,
+    clean: false,
+    treeshake: true,
+    minify: false,
+    target: 'es2022',
+    external: [], // Bundle rrweb for standalone use
+  },
   // CLI executable build
   {
     entry: {

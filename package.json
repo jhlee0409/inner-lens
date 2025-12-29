@@ -79,6 +79,16 @@
         "types": "./dist/server.d.cts",
         "default": "./dist/server.cjs"
       }
+    },
+    "./replay": {
+      "import": {
+        "types": "./dist/replay.d.ts",
+        "default": "./dist/replay.js"
+      },
+      "require": {
+        "types": "./dist/replay.d.cts",
+        "default": "./dist/replay.cjs"
+      }
     }
   },
   "main": "./dist/core.cjs",
@@ -120,6 +130,7 @@
     "commander": "^12.1.0",
     "fs-extra": "^11.2.0",
     "inquirer": "^10.2.2",
+    "rrweb": "^2.0.0-alpha.17",
     "zod": "^3.23.8"
   },
   "devDependencies": {
