@@ -81,6 +81,7 @@ export function InnerLensWidget({
   onError,
   trigger,
   disabled = false,
+  devOnly = true,
 }: InnerLensWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [description, setDescription] = useState('');
@@ -239,7 +240,20 @@ export function InnerLensWidget({
     onError,
   ]);
 
-  if (disabled) {
+  // Check if widget should be disabled
+  const isProduction = (() => {
+    // Check for Vite's import.meta.env.PROD
+    // @ts-expect-error import.meta.env is Vite-specific
+    if (typeof import.meta !== 'undefined' && import.meta.env?.PROD) {
+      return true;
+    }
+    // Check for Node.js / webpack / other bundlers
+    if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
+      return true;
+    }
+    return false;
+  })();
+  if (disabled || (devOnly && isProduction)) {
     return null;
   }
 

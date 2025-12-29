@@ -80,6 +80,12 @@ export interface InnerLensCoreConfig {
   disabled?: boolean;
 
   /**
+   * Only show widget in development environment (NODE_ENV !== 'production')
+   * @default true
+   */
+  devOnly?: boolean;
+
+  /**
    * Custom container element (defaults to document.body)
    */
   container?: HTMLElement;
@@ -112,6 +118,7 @@ export class InnerLensCore {
       | 'maxLogEntries'
       | 'maskSensitiveData'
       | 'disabled'
+      | 'devOnly'
     >
   > &
     InnerLensCoreConfig;
@@ -135,15 +142,35 @@ export class InnerLensCore {
       maxLogEntries: 50,
       maskSensitiveData: true,
       disabled: false,
+      devOnly: true,
       ...config,
     };
+  }
+
+  /**
+   * Check if widget should be disabled based on environment
+   */
+  private isDisabledByEnvironment(): boolean {
+    if (this.config.disabled) return true;
+    if (this.config.devOnly) {
+      // Check for Vite's import.meta.env.PROD
+      // @ts-expect-error import.meta.env is Vite-specific
+      if (typeof import.meta !== 'undefined' && import.meta.env?.PROD) {
+        return true;
+      }
+      // Check for Node.js / webpack / other bundlers
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
    * Mount the widget to the DOM
    */
   mount(container?: HTMLElement): void {
-    if (this.mounted || this.config.disabled) return;
+    if (this.mounted || this.isDisabledByEnvironment()) return;
 
     if (typeof window === 'undefined') {
       console.warn('InnerLens: Cannot mount in non-browser environment');
@@ -203,7 +230,7 @@ export class InnerLensCore {
    * Programmatically open the dialog
    */
   open(): void {
-    if (this.config.disabled || !this.mounted) return;
+    if (this.isDisabledByEnvironment() || !this.mounted) return;
     this.isOpen = true;
     this.logs = getCapturedLogs();
     this.render();

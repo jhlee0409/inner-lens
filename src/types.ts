@@ -73,6 +73,12 @@ export interface InnerLensConfig {
    * @default false
    */
   disabled?: boolean;
+
+  /**
+   * Only show widget in development environment (NODE_ENV !== 'production')
+   * @default true
+   */
+  devOnly?: boolean;
 }
 
 /**

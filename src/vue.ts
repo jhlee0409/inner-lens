@@ -148,6 +148,10 @@ export const InnerLensWidget = defineComponent({
       type: Boolean,
       default: false,
     },
+    devOnly: {
+      type: Boolean,
+      default: true,
+    },
   },
   emits: ['success', 'error', 'open', 'close'],
   setup(props, { emit }) {
@@ -168,6 +172,7 @@ export const InnerLensWidget = defineComponent({
         maskSensitiveData: props.maskSensitiveData,
         styles: props.styles,
         disabled: props.disabled,
+        devOnly: props.devOnly,
         onSuccess: (url) => emit('success', url),
         onError: (error) => emit('error', error),
         onOpen: () => emit('open'),
@@ -196,6 +201,7 @@ export const InnerLensWidget = defineComponent({
         props.endpoint,
         props.repository,
         props.disabled,
+        props.devOnly,
         props.styles?.buttonColor,
         props.styles?.buttonPosition,
       ],
