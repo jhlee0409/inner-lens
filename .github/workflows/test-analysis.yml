@@ -1,0 +1,73 @@
+# Test workflow for inner-lens repository
+# Triggers on issues with 'inner-lens' label to test the analysis engine
+
+name: Test inner-lens Analysis
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  analyze:
+    name: Analyze Bug Report
+    if: contains(github.event.issue.labels.*.name, 'inner-lens')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          npm install --no-save \
+            ai@^4.0.0 \
+            @ai-sdk/anthropic@^1.0.0 \
+            @ai-sdk/openai@^1.0.0 \
+            @ai-sdk/google@^1.0.0 \
+            @octokit/rest@^21.0.0 \
+            zod@^3.23.0 \
+            tsx@^4.19.0
+
+      - name: Run analysis
+        env:
+          AI_PROVIDER: anthropic
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          MAX_FILES: 25
+          MAX_TOKENS: 4000
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          echo "🔍 inner-lens Analysis Test"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📋 Issue: $REPO_OWNER/$REPO_NAME#$ISSUE_NUMBER"
+          echo ""
+          npx tsx scripts/analyze-issue.ts
+
+      - name: Report failure
+        if: failure()
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: `## ⚠️ Analysis Failed
+
+            The analysis encountered an error. Check the [workflow run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.`
+            });
