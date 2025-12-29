@@ -152,8 +152,16 @@ export class InnerLensCore {
    */
   private isDisabledByEnvironment(): boolean {
     if (this.config.disabled) return true;
-    if (this.config.devOnly && typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
-      return true;
+    if (this.config.devOnly) {
+      // Check for Vite's import.meta.env.PROD
+      // @ts-expect-error import.meta.env is Vite-specific
+      if (typeof import.meta !== 'undefined' && import.meta.env?.PROD) {
+        return true;
+      }
+      // Check for Node.js / webpack / other bundlers
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
+        return true;
+      }
     }
     return false;
   }
