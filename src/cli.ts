@@ -569,7 +569,6 @@ program
 
       // Detect framework
       const detectedFramework = await detectFramework(cwd);
-      let framework: Framework;
 
       if (detectedFramework) {
         console.log(chalk.dim(`  감지된 프레임워크: ${FRAMEWORK_CONFIGS[detectedFramework].name}\n`));
