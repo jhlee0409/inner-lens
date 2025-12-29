@@ -167,7 +167,7 @@ interface InitOptions {
 
 type AIProvider = 'anthropic' | 'openai' | 'google';
 type Framework = 'nextjs-app' | 'nextjs-pages' | 'vite-react' | 'vite-vue' | 'sveltekit' | 'vanilla';
-type BackendFramework = 'nextjs-app' | 'nextjs-pages' | 'express' | 'fastify' | 'hono' | 'node';
+type BackendFramework = 'nextjs-app' | 'nextjs-pages' | 'sveltekit' | 'express' | 'fastify' | 'hono' | 'node';
 
 interface ProviderConfig {
   name: string;
@@ -301,6 +301,9 @@ import { InnerLensWidget } from 'inner-lens/vue';
   },
 };
 
+// Fullstack frameworks that have built-in API routes
+const FULLSTACK_FRAMEWORKS: Framework[] = ['nextjs-app', 'nextjs-pages', 'sveltekit'];
+
 const BACKEND_CONFIGS: Record<BackendFramework, BackendConfig> = {
   'nextjs-app': {
     name: 'Next.js App Router',
@@ -335,6 +338,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   return res.status(result.success ? 200 : 500).json(result);
 }
+`,
+  },
+  'sveltekit': {
+    name: 'SvelteKit',
+    apiRouteFile: 'src/routes/api/inner-lens/report/+server.ts',
+    apiRouteTemplate: `import { json } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
+import { handleBugReport } from 'inner-lens/server';
+
+export const POST: RequestHandler = async ({ request }) => {
+  const body = await request.json();
+
+  const result = await handleBugReport(body, {
+    githubToken: process.env.GITHUB_TOKEN!,
+    repository: process.env.GITHUB_REPOSITORY || 'owner/repo',
+    labels: ['inner-lens', 'bug'],
+  });
+
+  return json(result, { status: result.success ? 200 : 500 });
+};
 `,
   },
   'express': {
@@ -462,6 +485,13 @@ async function detectFramework(cwd: string): Promise<Framework | null> {
 }
 
 /**
+ * Check if the frontend framework is fullstack (has built-in API routes)
+ */
+function isFullstackFramework(framework: Framework): boolean {
+  return FULLSTACK_FRAMEWORKS.includes(framework);
+}
+
+/**
  * Detect the backend framework from project files
  */
 async function detectBackendFramework(cwd: string, frontendFramework: Framework | null): Promise<BackendFramework | null> {
@@ -472,14 +502,14 @@ async function detectBackendFramework(cwd: string, frontendFramework: Framework 
     const pkg = await fs.readJson(packageJsonPath);
     const deps = { ...pkg.dependencies, ...pkg.devDependencies };
 
-    // Next.js uses its own API routes
-    if (deps['next']) {
-      if (frontendFramework === 'nextjs-app') {
-        return 'nextjs-app';
-      }
-      return 'nextjs-pages';
+    // Fullstack frameworks use their own API routes
+    if (frontendFramework && isFullstackFramework(frontendFramework)) {
+      if (frontendFramework === 'nextjs-app') return 'nextjs-app';
+      if (frontendFramework === 'nextjs-pages') return 'nextjs-pages';
+      if (frontendFramework === 'sveltekit') return 'sveltekit';
     }
 
+    // For frontend-only frameworks, detect separate backend
     // Check for Hono
     if (deps['hono']) {
       return 'hono';
@@ -647,7 +677,7 @@ async function findApiRoutePath(cwd: string, backend: BackendFramework): Promise
   const config = BACKEND_CONFIGS[backend];
   const defaultPath = config.apiRouteFile;
 
-  // For Next.js, check src/ prefix
+  // For Next.js App Router, check src/ prefix
   if (backend === 'nextjs-app') {
     const srcPath = `src/${defaultPath}`;
     const srcAppDir = path.join(cwd, 'src', 'app');
@@ -656,11 +686,26 @@ async function findApiRoutePath(cwd: string, backend: BackendFramework): Promise
     }
   }
 
+  // For Next.js Pages Router, check src/ prefix
   if (backend === 'nextjs-pages') {
     const srcPath = `src/${defaultPath}`;
     const srcPagesDir = path.join(cwd, 'src', 'pages');
     if (await fs.pathExists(srcPagesDir)) {
       return srcPath;
+    }
+  }
+
+  // SvelteKit always uses src/routes
+  if (backend === 'sveltekit') {
+    return defaultPath;
+  }
+
+  // For standalone backend frameworks (Express, Fastify, Hono, Node)
+  // Check if there's a server/ directory
+  if (['express', 'fastify', 'hono', 'node'].includes(backend)) {
+    const serverDir = path.join(cwd, 'server');
+    if (await fs.pathExists(serverDir)) {
+      return defaultPath.replace('src/', 'server/');
     }
   }
 
@@ -964,51 +1009,25 @@ program
       ]);
       provider = providerAnswer.provider as AIProvider;
 
-      // Detect backend framework
-      const detectedBackend = await detectBackendFramework(cwd, framework);
-
-      // For non-Next.js frameworks, ask for backend selection
-      if (!framework.startsWith('nextjs')) {
-        console.log('\n' + chalk.bold.cyan('  Step 4/4: 백엔드 프레임워크\n'));
-        console.log(chalk.dim('  API 라우트를 생성할 백엔드를 선택하세요.\n'));
-
-        const backendChoices = [
-          { name: `${chalk.cyan('●')} Express`, value: 'express' },
-          { name: `${chalk.cyan('●')} Fastify`, value: 'fastify' },
-          { name: `${chalk.cyan('●')} Hono`, value: 'hono' },
-          { name: `${chalk.cyan('●')} Node.js HTTP`, value: 'node' },
-          { name: `${chalk.dim('●')} 나중에 설정`, value: 'skip' },
-        ];
-
-        if (detectedBackend && !detectedBackend.startsWith('nextjs')) {
-          console.log(chalk.dim(`  감지된 백엔드: ${BACKEND_CONFIGS[detectedBackend].name}\n`));
-        }
-
-        const backendAnswer = await inquirer.prompt([
-          {
-            type: 'list',
-            name: 'backend',
-            message: '백엔드 선택:',
-            choices: backendChoices,
-            default: detectedBackend || 'express',
-          },
-        ]);
-
-        if (backendAnswer.backend !== 'skip') {
-          backendFramework = backendAnswer.backend as BackendFramework;
-        }
-      } else {
-        backendFramework = detectedBackend;
+      // Fullstack frameworks (Next.js, SvelteKit) have built-in API routes
+      if (isFullstackFramework(framework)) {
+        backendFramework = await detectBackendFramework(cwd, framework);
       }
+      // Frontend-only frameworks don't need backend file generation
+      // Backend setup will be shown in Next Steps
 
       // Ask whether to generate files
       console.log('\n' + chalk.bold.cyan('  파일 자동 생성\n'));
+
+      const generateMessage = isFullstackFramework(framework)
+        ? '위젯 파일과 API 라우트를 자동으로 생성할까요?'
+        : '위젯 파일을 자동으로 생성할까요?';
 
       const generateAnswer = await inquirer.prompt([
         {
           type: 'confirm',
           name: 'generate',
-          message: '위젯 파일과 API 라우트를 자동으로 생성할까요?',
+          message: generateMessage,
           default: true,
         },
       ]);
@@ -1195,8 +1214,8 @@ program
       stepNumber++;
     }
 
-    // Step: Add API Route - only if not generated
-    if (!apiRouteFileCreated && backendFramework) {
+    // Step: Add API Route - only for fullstack frameworks if not generated
+    if (isFullstackFramework(framework) && !apiRouteFileCreated && backendFramework) {
       const backendConfig = BACKEND_CONFIGS[backendFramework];
       console.log(chalk.bold.white(`\n  ${stepNumber}. API 라우트 추가 (${backendConfig.name})\n`));
       console.log(chalk.dim('     ') + chalk.gray(`// ${backendConfig.apiRouteFile}`));
@@ -1205,6 +1224,19 @@ program
       for (const line of routeLines) {
         console.log(chalk.dim('     ') + chalk.cyan(line));
       }
+      stepNumber++;
+    }
+
+    // Step: Backend setup - only for frontend-only frameworks
+    if (!isFullstackFramework(framework)) {
+      console.log(chalk.bold.white(`\n  ${stepNumber}. 백엔드 서버 설정\n`));
+      console.log(chalk.dim('     프론트엔드 전용 프레임워크입니다.'));
+      console.log(chalk.dim('     별도 백엔드 서버에 API 엔드포인트를 설정하세요.\n'));
+      console.log(chalk.dim('     ') + chalk.gray('// 예시: Express'));
+      console.log(chalk.dim('     ') + chalk.cyan(`import { createExpressHandler } from 'inner-lens/server';`));
+      console.log(chalk.dim('     ') + chalk.cyan(`app.post('/api/inner-lens/report', createExpressHandler({ ... }));`));
+      console.log();
+      console.log(chalk.dim('     📚 서버 설정 가이드: ') + chalk.cyan('https://github.com/jhlee0409/inner-lens#server-setup'));
       stepNumber++;
     }
 
@@ -1218,9 +1250,12 @@ program
       console.log(chalk.green('\n🎉 GitHub 연동 완료! 토큰이 자동으로 저장되었습니다.'));
     }
 
-    if (widgetFileCreated && apiRouteFileCreated) {
+    if (isFullstackFramework(framework) && widgetFileCreated && apiRouteFileCreated) {
       console.log(chalk.green('\n🚀 위젯과 API 라우트가 자동으로 설정되었습니다!'));
       console.log(chalk.dim('   npm run dev 후 바로 테스트할 수 있습니다.'));
+    } else if (!isFullstackFramework(framework) && widgetFileCreated) {
+      console.log(chalk.green('\n🚀 위젯이 자동으로 설정되었습니다!'));
+      console.log(chalk.dim('   백엔드 서버 설정 후 테스트할 수 있습니다.'));
     }
 
     console.log(
