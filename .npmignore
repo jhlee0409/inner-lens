@@ -1,0 +1,21 @@
+# Source files (dist is published)
+src/
+scripts/
+
+# Config files
+tsconfig.json
+tsup.config.ts
+.gitignore
+.github/
+
+# Development
+node_modules/
+*.log
+.DS_Store
+coverage/
+*.tsbuildinfo
+
+# Keep these (via package.json files field):
+# - dist/
+# - README.md
+# - LICENSE

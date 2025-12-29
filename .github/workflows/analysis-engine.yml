@@ -1,0 +1,108 @@
+# inner-lens Reusable Analysis Engine
+# This workflow is called by consumer repositories to analyze bug reports
+#
+# Usage in consumer repo:
+#   uses: jhlee0409/inner-lens/.github/workflows/analysis-engine.yml@v1
+#   with:
+#     provider: 'anthropic'
+#   secrets:
+#     ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+#     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+name: inner-lens Analysis Engine
+
+on:
+  workflow_call:
+    inputs:
+      provider:
+        description: 'AI Provider to use (anthropic, openai, google)'
+        required: false
+        type: string
+        default: 'anthropic'
+      max_files:
+        description: 'Maximum number of files to analyze'
+        required: false
+        type: number
+        default: 25
+      max_tokens:
+        description: 'Maximum tokens for AI response'
+        required: false
+        type: number
+        default: 3000
+    secrets:
+      ANTHROPIC_API_KEY:
+        required: false
+        description: 'Anthropic API Key (required if provider is anthropic)'
+      OPENAI_API_KEY:
+        required: false
+        description: 'OpenAI API Key (required if provider is openai)'
+      GOOGLE_GENERATIVE_AI_API_KEY:
+        required: false
+        description: 'Google AI API Key (required if provider is google)'
+      GITHUB_TOKEN:
+        required: true
+        description: 'GitHub token with issues write permission'
+
+jobs:
+  analyze:
+    name: Analyze Bug Report
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - name: Checkout caller repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Checkout inner-lens scripts
+        uses: actions/checkout@v4
+        with:
+          repository: jhlee0409/inner-lens
+          path: .inner-lens
+          sparse-checkout: |
+            scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Install analysis dependencies
+        run: |
+          npm install --no-save \
+            ai@^4.0.0 \
+            @ai-sdk/anthropic@^1.0.0 \
+            @ai-sdk/openai@^1.0.0 \
+            @ai-sdk/google@^1.0.0 \
+            @octokit/rest@^21.0.0 \
+            zod@^3.23.0 \
+            tsx@^4.19.0
+
+      - name: Run analysis
+        env:
+          AI_PROVIDER: ${{ inputs.provider }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          MAX_FILES: ${{ inputs.max_files }}
+          MAX_TOKENS: ${{ inputs.max_tokens }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Provider API Keys - only the relevant one will be used
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+        run: |
+          echo "🔍 inner-lens Analysis Engine"
+          echo "Provider: $AI_PROVIDER"
+          echo "Issue: $REPO_OWNER/$REPO_NAME#$ISSUE_NUMBER"
+          echo ""
+          npx tsx .inner-lens/scripts/analyze-issue.ts
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf .inner-lens
