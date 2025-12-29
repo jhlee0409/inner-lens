@@ -1,5 +1,10 @@
-# inner-lens Reusable Analysis Engine
-# This workflow is called by consumer repositories to analyze bug reports
+# inner-lens Reusable Analysis Engine v2
+# Enhanced with 2025 GitHub Actions best practices:
+# - SHA pinning for supply chain security
+# - Structured AI output with Zod schemas
+# - Chain-of-Thought prompt engineering
+# - Retry logic with exponential backoff
+# - Automatic issue labeling
 #
 # Usage in consumer repo:
 #   uses: jhlee0409/inner-lens/.github/workflows/analysis-engine.yml@v1
@@ -15,20 +20,25 @@ on:
   workflow_call:
     inputs:
       provider:
-        description: 'AI Provider to use (anthropic, openai, google)'
+        description: 'AI Provider (anthropic, openai, google)'
         required: false
         type: string
         default: 'anthropic'
       max_files:
-        description: 'Maximum number of files to analyze'
+        description: 'Maximum files to analyze (5-50)'
         required: false
         type: number
         default: 25
       max_tokens:
-        description: 'Maximum tokens for AI response'
+        description: 'Maximum tokens for AI response (1000-8000)'
         required: false
         type: number
-        default: 3000
+        default: 4000
+      node_version:
+        description: 'Node.js version'
+        required: false
+        type: string
+        default: '20'
     secrets:
       ANTHROPIC_API_KEY:
         required: false
@@ -47,34 +57,48 @@ jobs:
   analyze:
     name: Analyze Bug Report
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
     permissions:
       issues: write
       contents: read
 
     steps:
+      # SHA-pinned actions for supply chain security
+      # Ref: https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
       - name: Checkout caller repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: ${{ inputs.node_version }}
 
       - name: Checkout inner-lens scripts
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: jhlee0409/inner-lens
+          ref: v1
           path: .inner-lens
           sparse-checkout: |
             scripts
           sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Cache npm dependencies
+        uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-inner-lens-${{ hashFiles('.inner-lens/scripts/*.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-inner-lens-
 
       - name: Install analysis dependencies
         run: |
-          npm install --no-save \
+          npm install --no-save --prefer-offline \
             ai@^4.0.0 \
             @ai-sdk/anthropic@^1.0.0 \
             @ai-sdk/openai@^1.0.0 \
@@ -83,7 +107,41 @@ jobs:
             zod@^3.23.0 \
             tsx@^4.19.0
 
+      - name: Validate inputs
+        run: |
+          # Validate provider
+          if [[ ! "${{ inputs.provider }}" =~ ^(anthropic|openai|google)$ ]]; then
+            echo "❌ Invalid provider: ${{ inputs.provider }}"
+            echo "   Valid options: anthropic, openai, google"
+            exit 1
+          fi
+
+          # Validate API key is present for selected provider
+          case "${{ inputs.provider }}" in
+            anthropic)
+              if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+                echo "❌ ANTHROPIC_API_KEY secret is required for anthropic provider"
+                exit 1
+              fi
+              ;;
+            openai)
+              if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
+                echo "❌ OPENAI_API_KEY secret is required for openai provider"
+                exit 1
+              fi
+              ;;
+            google)
+              if [ -z "${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}" ]; then
+                echo "❌ GOOGLE_GENERATIVE_AI_API_KEY secret is required for google provider"
+                exit 1
+              fi
+              ;;
+          esac
+
+          echo "✅ Input validation passed"
+
       - name: Run analysis
+        id: analysis
         env:
           AI_PROVIDER: ${{ inputs.provider }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -97,12 +155,46 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
         run: |
-          echo "🔍 inner-lens Analysis Engine"
-          echo "Provider: $AI_PROVIDER"
-          echo "Issue: $REPO_OWNER/$REPO_NAME#$ISSUE_NUMBER"
+          echo "🔍 inner-lens Analysis Engine v2"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📋 Issue: $REPO_OWNER/$REPO_NAME#$ISSUE_NUMBER"
+          echo "🤖 Provider: $AI_PROVIDER"
+          echo "📁 Max Files: $MAX_FILES"
+          echo "📝 Max Tokens: $MAX_TOKENS"
           echo ""
           npx tsx .inner-lens/scripts/analyze-issue.ts
 
       - name: Cleanup
         if: always()
-        run: rm -rf .inner-lens
+        run: |
+          rm -rf .inner-lens
+          echo "🧹 Cleanup complete"
+
+      - name: Report failure
+        if: failure()
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: `## ⚠️ inner-lens Analysis Failed
+
+            The automated analysis encountered an error. This could be due to:
+            - API rate limiting
+            - Network connectivity issues
+            - Invalid issue format
+
+            A maintainer will review this issue manually.
+
+            <details>
+            <summary>Workflow Details</summary>
+
+            - **Run ID:** ${context.runId}
+            - **Provider:** ${{ inputs.provider }}
+            - **Timestamp:** ${new Date().toISOString()}
+
+            </details>`
+            });
