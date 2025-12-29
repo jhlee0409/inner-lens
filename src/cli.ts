@@ -168,12 +168,20 @@ interface InitOptions {
 }
 
 type AIProvider = 'anthropic' | 'openai' | 'google';
+type Framework = 'nextjs-app' | 'nextjs-pages' | 'vite-react' | 'vite-vue' | 'sveltekit' | 'vanilla';
 
 interface ProviderConfig {
   name: string;
   model: string;
   secretName: string;
   envVar: string;
+}
+
+interface FrameworkConfig {
+  name: string;
+  importPath: string;
+  widgetFile: string;
+  example: string;
 }
 
 const PROVIDER_CONFIGS: Record<AIProvider, ProviderConfig> = {
@@ -196,6 +204,149 @@ const PROVIDER_CONFIGS: Record<AIProvider, ProviderConfig> = {
     envVar: 'GOOGLE_GENERATIVE_AI_API_KEY',
   },
 };
+
+const FRAMEWORK_CONFIGS: Record<Framework, FrameworkConfig> = {
+  'nextjs-app': {
+    name: 'Next.js (App Router)',
+    importPath: 'inner-lens/react',
+    widgetFile: 'app/layout.tsx',
+    example: `import { InnerLensWidget } from 'inner-lens/react';
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        {children}
+        <InnerLensWidget />
+      </body>
+    </html>
+  );
+}`,
+  },
+  'nextjs-pages': {
+    name: 'Next.js (Pages Router)',
+    importPath: 'inner-lens/react',
+    widgetFile: 'pages/_app.tsx',
+    example: `import { InnerLensWidget } from 'inner-lens/react';
+
+export default function App({ Component, pageProps }) {
+  return (
+    <>
+      <Component {...pageProps} />
+      <InnerLensWidget />
+    </>
+  );
+}`,
+  },
+  'vite-react': {
+    name: 'Vite + React',
+    importPath: 'inner-lens/react',
+    widgetFile: 'src/App.tsx',
+    example: `import { InnerLensWidget } from 'inner-lens/react';
+
+function App() {
+  return (
+    <div>
+      {/* Your app content */}
+      <InnerLensWidget />
+    </div>
+  );
+}`,
+  },
+  'vite-vue': {
+    name: 'Vite + Vue',
+    importPath: 'inner-lens/vue',
+    widgetFile: 'src/App.vue',
+    example: `<script setup>
+import { InnerLensWidget } from 'inner-lens/vue';
+</script>
+
+<template>
+  <div>
+    <!-- Your app content -->
+    <InnerLensWidget />
+  </div>
+</template>`,
+  },
+  'sveltekit': {
+    name: 'SvelteKit',
+    importPath: 'inner-lens/vanilla',
+    widgetFile: 'src/routes/+layout.svelte',
+    example: `<script>
+  import { onMount } from 'svelte';
+  import { InnerLensCore } from 'inner-lens';
+
+  onMount(() => {
+    const lens = new InnerLensCore();
+    lens.mount();
+    return () => lens.unmount();
+  });
+</script>
+
+<slot />`,
+  },
+  'vanilla': {
+    name: 'Vanilla JS / Other',
+    importPath: 'inner-lens/vanilla',
+    widgetFile: 'index.html',
+    example: `<script type="module">
+  import 'inner-lens/vanilla';
+  // Widget auto-initializes!
+</script>`,
+  },
+};
+
+/**
+ * Detect the frontend framework from project files
+ */
+async function detectFramework(cwd: string): Promise<Framework | null> {
+  try {
+    const packageJsonPath = path.join(cwd, 'package.json');
+    if (!(await fs.pathExists(packageJsonPath))) return null;
+
+    const pkg = await fs.readJson(packageJsonPath);
+    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+
+    // Check for Next.js
+    if (deps['next']) {
+      // Check if using App Router
+      if (await fs.pathExists(path.join(cwd, 'app')) ||
+          await fs.pathExists(path.join(cwd, 'src', 'app'))) {
+        return 'nextjs-app';
+      }
+      return 'nextjs-pages';
+    }
+
+    // Check for SvelteKit
+    if (deps['@sveltejs/kit']) {
+      return 'sveltekit';
+    }
+
+    // Check for Vite + Vue
+    if (deps['vite'] && deps['vue']) {
+      return 'vite-vue';
+    }
+
+    // Check for Vite + React
+    if (deps['vite'] && (deps['react'] || deps['@vitejs/plugin-react'])) {
+      return 'vite-react';
+    }
+
+    // Check for standalone React (CRA, etc.)
+    if (deps['react']) {
+      return 'vite-react'; // Use React pattern
+    }
+
+    // Check for standalone Vue
+    if (deps['vue']) {
+      return 'vite-vue';
+    }
+
+    return 'vanilla';
+  } catch {
+    return null;
+  }
+}
 
 const program = new Command();
 
@@ -237,7 +388,7 @@ program
 
     let repository: string;
     let provider: AIProvider;
-
+    let framework: Framework;
     let githubToken: string | null = null;
 
     if (options.yes) {
@@ -246,6 +397,8 @@ program
         ? options.provider as AIProvider
         : 'anthropic';
       repository = detectedRepo || 'owner/repo';
+      const detected = await detectFramework(cwd);
+      framework = detected || 'nextjs-app';
     } else {
       // Interactive setup
       console.log(chalk.bold.cyan('  Step 1/4: GitHub 연동\n'));
@@ -414,7 +567,56 @@ program
         repository = repoAnswer.repository;
       }
 
-      console.log('\n' + chalk.bold.cyan('  Step 2/4: AI Provider\n'));
+      console.log('\n' + chalk.bold.cyan('  Step 2/3: 프레임워크\n'));
+
+      // Detect framework
+      const detectedFramework = await detectFramework(cwd);
+      let framework: Framework;
+
+      if (detectedFramework) {
+        console.log(chalk.dim(`  감지된 프레임워크: ${FRAMEWORK_CONFIGS[detectedFramework].name}\n`));
+
+        const frameworkConfirmAnswer = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'useDetected',
+            message: `${FRAMEWORK_CONFIGS[detectedFramework].name} 맞나요?`,
+            default: true,
+          },
+        ]);
+
+        if (frameworkConfirmAnswer.useDetected) {
+          framework = detectedFramework;
+        } else {
+          const frameworkSelectAnswer = await inquirer.prompt([
+            {
+              type: 'list',
+              name: 'framework',
+              message: '프레임워크 선택:',
+              choices: Object.entries(FRAMEWORK_CONFIGS).map(([key, config]) => ({
+                name: config.name,
+                value: key,
+              })),
+            },
+          ]);
+          framework = frameworkSelectAnswer.framework as Framework;
+        }
+      } else {
+        const frameworkSelectAnswer = await inquirer.prompt([
+          {
+            type: 'list',
+            name: 'framework',
+            message: '프레임워크 선택:',
+            choices: Object.entries(FRAMEWORK_CONFIGS).map(([key, config]) => ({
+              name: config.name,
+              value: key,
+            })),
+          },
+        ]);
+        framework = frameworkSelectAnswer.framework as Framework;
+      }
+
+      console.log('\n' + chalk.bold.cyan('  Step 3/3: AI Provider\n'));
       console.log(chalk.dim('  버그 리포트 분석에 사용할 AI를 선택하세요.\n'));
 
       const providerAnswer = await inquirer.prompt([
@@ -441,10 +643,11 @@ program
       ]);
       provider = providerAnswer.provider as AIProvider;
 
-      console.log('\n' + chalk.bold.cyan('  Step 3/4: 파일 생성\n'));
+      console.log('\n' + chalk.bold.cyan('  파일 생성 중...\n'));
     }
 
     const providerConfig = PROVIDER_CONFIGS[provider];
+    const frameworkConfig = FRAMEWORK_CONFIGS[framework];
 
     // Check if .github/workflows directory exists
     const workflowsDir = path.join(cwd, '.github', 'workflows');
@@ -467,41 +670,9 @@ program
     await fs.writeFile(workflowPath, workflowContent);
     console.log(chalk.green('  ✓ ') + 'Created ' + chalk.cyan('.github/workflows/inner-lens.yml'));
 
-    // Create API route template
-    const apiRouteDir = path.join(cwd, 'app', 'api', 'inner-lens', 'report');
-    const srcApiRouteDir = path.join(cwd, 'src', 'app', 'api', 'inner-lens', 'report');
-
-    // Check if using src directory
-    const useSrcDir = await fs.pathExists(path.join(cwd, 'src', 'app'));
-    const targetApiDir = useSrcDir ? srcApiRouteDir : apiRouteDir;
-
-    await fs.ensureDir(targetApiDir);
-
-    const apiRouteContent = generateApiRoute(repository);
-    const apiRoutePath = path.join(targetApiDir, 'route.ts');
-
-    // Only create if doesn't exist
-    if (!(await fs.pathExists(apiRoutePath))) {
-      await fs.writeFile(apiRoutePath, apiRouteContent);
-      console.log(
-        chalk.green('  ✓ ') +
-          'Created ' +
-          chalk.cyan(
-            useSrcDir
-              ? 'src/app/api/inner-lens/report/route.ts'
-              : 'app/api/inner-lens/report/route.ts'
-          )
-      );
-    } else {
-      console.log(
-        chalk.yellow('  ⊘ ') +
-          chalk.dim('Skipped API route (already exists)')
-      );
-    }
-
     // Save GitHub token to .env.local if obtained
     if (githubToken) {
-      console.log('\n' + chalk.bold.cyan('  Step 4/4: 환경변수 저장\n'));
+      console.log(chalk.bold.cyan('  환경변수 저장\n'));
 
       const envLocalPath = path.join(cwd, '.env.local');
       let envContent = '';
@@ -559,18 +730,20 @@ program
       stepNumber++;
     }
 
-    // Step: Add Widget
-    console.log(chalk.bold.white(`\n  ${stepNumber}. 위젯 추가\n`));
-    console.log(chalk.dim('     ') + chalk.gray('// app/layout.tsx'));
-    console.log(chalk.dim('     ') + chalk.green("import { InnerLensWidget } from 'inner-lens/react';"));
+    // Step: Add Widget (framework-specific)
+    console.log(chalk.bold.white(`\n  ${stepNumber}. 위젯 추가 (${frameworkConfig.name})\n`));
+    console.log(chalk.dim('     ') + chalk.gray(`// ${frameworkConfig.widgetFile}`));
     console.log();
-    console.log(chalk.dim('     ') + chalk.gray('// return 안에:'));
-    console.log(chalk.dim('     ') + chalk.yellow('<InnerLensWidget />'));
+    // Print the example code with proper indentation
+    const exampleLines = frameworkConfig.example.split('\n');
+    for (const line of exampleLines) {
+      console.log(chalk.dim('     ') + chalk.cyan(line));
+    }
     stepNumber++;
 
     // Step: Test
     console.log(chalk.bold.white(`\n  ${stepNumber}. 테스트\n`));
-    console.log(chalk.dim('     ') + '앱 실행 후 우측 하단 버그 리포트 버튼 클릭!');
+    console.log(chalk.dim('     ') + 'npm run dev → 우측 하단 버그 리포트 버튼 클릭!');
 
     console.log('\n' + chalk.bold('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
 
@@ -605,22 +778,12 @@ program
       hasErrors = true;
     }
 
-    // Check API route
-    const apiRoutePaths = [
-      path.join(cwd, 'app', 'api', 'inner-lens', 'report', 'route.ts'),
-      path.join(cwd, 'src', 'app', 'api', 'inner-lens', 'report', 'route.ts'),
-    ];
-
-    const apiRouteExists = await Promise.any(
-      apiRoutePaths.map((p) => fs.pathExists(p).then((exists) => (exists ? p : Promise.reject())))
-    ).catch(() => null);
-
-    if (apiRouteExists) {
-      console.log(chalk.green('  ✓ ') + 'API route found');
+    // Detect framework
+    const detectedFramework = await detectFramework(cwd);
+    if (detectedFramework) {
+      console.log(chalk.green('  ✓ ') + `Framework detected: ${FRAMEWORK_CONFIGS[detectedFramework].name}`);
     } else {
-      console.log(chalk.red('  ✗ ') + 'API route not found');
-      console.log(chalk.dim('    → Run: npx inner-lens init'));
-      hasErrors = true;
+      console.log(chalk.yellow('  ⊘ ') + 'Could not detect framework');
     }
 
     // Check package.json for inner-lens dependency
@@ -835,24 +998,6 @@ Provide:
           main().catch(console.error);
           SCRIPT
           npx tsx analyze.mts
-`;
-}
-
-// Generate API route
-function generateApiRoute(repository: string): string {
-  return `import { createFetchHandler } from 'inner-lens/server';
-
-// Configure the bug report handler
-export const POST = createFetchHandler({
-  githubToken: process.env.GITHUB_TOKEN!,
-  repository: '${repository}',
-  defaultLabels: ['bug', 'inner-lens'],
-});
-
-// Health check endpoint
-export const GET = () => {
-  return Response.json({ status: 'ok', endpoint: 'inner-lens report' });
-};
 `;
 }
 
