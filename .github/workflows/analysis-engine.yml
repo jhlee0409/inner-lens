@@ -12,7 +12,6 @@
 #     provider: 'anthropic'
 #   secrets:
 #     ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-#     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 name: inner-lens Analysis Engine
 
@@ -49,9 +48,7 @@ on:
       GOOGLE_GENERATIVE_AI_API_KEY:
         required: false
         description: 'Google AI API Key (required if provider is google)'
-      GITHUB_TOKEN:
-        required: true
-        description: 'GitHub token with issues write permission'
+      # Note: GITHUB_TOKEN is automatically available, no need to pass it
 
 jobs:
   analyze:
@@ -149,7 +146,7 @@ jobs:
           REPO_NAME: ${{ github.event.repository.name }}
           MAX_FILES: ${{ inputs.max_files }}
           MAX_TOKENS: ${{ inputs.max_tokens }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           # Provider API Keys - only the relevant one will be used
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -174,7 +171,7 @@ jobs:
         if: failure()
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ github.token }}
           script: |
             await github.rest.issues.createComment({
               owner: context.repo.owner,
