@@ -304,6 +304,101 @@ server.listen(3000);
 
 </details>
 
+### 🚀 Serverless Deployment (Frontend-Only)
+
+백엔드 서버가 없는 프론트엔드 프로젝트(Vite, Vanilla JS 등)를 위한 서버리스 배포 옵션입니다.
+
+<details>
+<summary><b>☁️ Cloudflare Workers</b></summary>
+
+```bash
+# 1. 템플릿 복사
+npx degit jhlee0409/inner-lens/templates/cloudflare-worker my-bug-reporter
+cd my-bug-reporter
+
+# 2. 의존성 설치
+npm install
+
+# 3. 환경변수 설정
+# wrangler.toml에서 GITHUB_REPOSITORY 설정
+# Cloudflare Dashboard에서 GITHUB_TOKEN secret 추가
+
+# 4. 배포
+npx wrangler deploy
+```
+
+위젯 설정:
+```tsx
+<InnerLensWidget
+  endpoint="https://your-worker.workers.dev/report"
+/>
+```
+
+</details>
+
+<details>
+<summary><b>▲ Vercel Functions</b></summary>
+
+```bash
+# 1. API 폴더 생성 및 파일 복사
+mkdir -p api/inner-lens
+npx degit jhlee0409/inner-lens/templates/vercel/api/inner-lens api/inner-lens
+
+# 2. 환경변수 설정 (Vercel Dashboard)
+# - GITHUB_TOKEN: GitHub Personal Access Token
+# - GITHUB_REPOSITORY: owner/repo
+
+# 3. 배포
+vercel
+```
+
+위젯 설정:
+```tsx
+<InnerLensWidget
+  endpoint="/api/inner-lens/report"
+/>
+```
+
+</details>
+
+<details>
+<summary><b>◆ Netlify Functions</b></summary>
+
+```bash
+# 1. Functions 폴더 생성 및 파일 복사
+mkdir -p netlify/functions
+npx degit jhlee0409/inner-lens/templates/netlify/netlify/functions netlify/functions
+
+# 2. 환경변수 설정 (Netlify Dashboard)
+# - GITHUB_TOKEN: GitHub Personal Access Token
+# - GITHUB_REPOSITORY: owner/repo
+
+# 3. 배포
+netlify deploy --prod
+```
+
+위젯 설정:
+```tsx
+<InnerLensWidget
+  endpoint="/.netlify/functions/inner-lens-report"
+/>
+```
+
+</details>
+
+<details>
+<summary><b>🔧 기존 백엔드 서버 사용</b></summary>
+
+Express, Fastify 등 기존 백엔드가 있다면 `inner-lens/server` 패키지를 사용하세요:
+
+```bash
+npm install inner-lens
+```
+
+위 "Backend Setup" 섹션의 프레임워크별 가이드를 참조하세요.
+
+</details>
+
 ---
 
 ## 🛠️ CLI Setup
