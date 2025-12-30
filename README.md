@@ -388,6 +388,45 @@ npx create-inner-lens -y
 npx inner-lens check
 ```
 
+### Manual Workflow Setup
+
+If you prefer to set up the workflow manually without the CLI:
+
+1. Create `.github/workflows/inner-lens.yml`:
+
+```yaml
+name: inner-lens Analysis
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  analyze:
+    if: contains(github.event.issue.labels.*.name, 'inner-lens')
+    uses: jhlee0409/inner-lens/.github/workflows/analysis-engine.yml@v1
+    with:
+      provider: 'anthropic'  # or 'openai', 'google'
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+```
+
+2. Add your AI provider's API key to GitHub Secrets.
+
+### Reusable Workflow Options
+
+| Input | Type | Default | Description |
+|-------|------|---------|-------------|
+| `provider` | `string` | `anthropic` | AI provider (`anthropic`, `openai`, `google`) |
+| `max_files` | `number` | `25` | Maximum files to analyze (5-50) |
+| `max_tokens` | `number` | `4000` | Maximum tokens for AI response |
+| `node_version` | `string` | `20` | Node.js version |
+
+**Required Secrets by Provider:**
+- `anthropic`: `ANTHROPIC_API_KEY`
+- `openai`: `OPENAI_API_KEY`
+- `google`: `GOOGLE_GENERATIVE_AI_API_KEY`
+
 ---
 
 ## ⚙️ Configuration

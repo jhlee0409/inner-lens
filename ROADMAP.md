@@ -60,8 +60,9 @@
 - [x] README에 devOnly 기본값 명시 ✅ 2025-12-30
 
 ### 3.4 GitHub Actions Reusable Workflow
-- [ ] 재사용 가능한 워크플로우 작성
-- [ ] 사용 가이드 추가
+- [x] 재사용 가능한 워크플로우 이미 구현됨 (analysis-engine.yml) ✅ 2025-12-30
+- [x] README에 Manual Workflow Setup 가이드 추가 ✅ 2025-12-30
+- [x] Reusable Workflow Options 문서화 ✅ 2025-12-30
 
 ---
 
@@ -80,3 +81,5 @@
 | 2025-12-30 | Phase 2.1 완료: CLI Clack 마이그레이션 (inquirer → @clack/prompts) |
 | 2025-12-30 | Phase 2.2 완료: npx create-inner-lens 지원 추가 |
 | 2025-12-30 | Phase 3.1-3.3 완료: 문서화 개선, 에러 메시지 개선, devOnly 명확화 |
+| 2025-12-30 | Phase 3.4 완료: Reusable Workflow 문서화 |
+| 2025-12-30 | **모든 Phase 완료!** 🎉 |
