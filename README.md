@@ -309,9 +309,7 @@ server.listen(3000);
 백엔드 서버가 없는 프론트엔드 프로젝트(Vite, Vanilla JS 등)를 위한 서버리스 배포 옵션입니다.
 
 <details>
-<summary><b>☁️ Cloudflare Workers (권장)</b></summary>
-
-**무료 티어:** 100,000 요청/일 — 독립적으로 배포 가능
+<summary><b>☁️ Cloudflare Workers</b></summary>
 
 ```bash
 # 1. 템플릿 복사
@@ -341,8 +339,6 @@ npx wrangler deploy
 <details>
 <summary><b>▲ Vercel Functions</b></summary>
 
-**무료 티어:** 100시간/월 — 프론트엔드와 함께 배포
-
 ```bash
 # 1. API 폴더 생성 및 파일 복사
 mkdir -p api/inner-lens
@@ -367,8 +363,6 @@ vercel
 
 <details>
 <summary><b>◆ Netlify Functions</b></summary>
-
-**무료 티어:** 125,000 요청/월 — 프론트엔드와 함께 배포
 
 ```bash
 # 1. Functions 폴더 생성 및 파일 복사
