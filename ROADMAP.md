@@ -35,9 +35,10 @@
 - [x] 테스트 (138개 모두 통과) ✅ 2025-12-30
 
 ### 2.2 npm create inner-lens 지원
-- [ ] package.json bin 필드에 create-inner-lens 추가
-- [ ] 또는 별도 create-inner-lens 패키지 검토
-- [ ] README에 사용법 추가
+- [x] package.json bin 필드에 create-inner-lens 추가 ✅ 2025-12-30
+- [x] src/create.ts 래퍼 스크립트 생성 ✅ 2025-12-30
+- [x] tsup.config.ts에 create 빌드 추가 ✅ 2025-12-30
+- [x] README에 사용법 추가 ✅ 2025-12-30
 
 ---
 
@@ -77,3 +78,4 @@
 | 2025-12-30 | 초기 ROADMAP 생성 |
 | 2025-12-30 | Phase 1 완료: templates 삭제, README 정리, 편의 옵션 추가 |
 | 2025-12-30 | Phase 2.1 완료: CLI Clack 마이그레이션 (inquirer → @clack/prompts) |
+| 2025-12-30 | Phase 2.2 완료: npx create-inner-lens 지원 추가 |

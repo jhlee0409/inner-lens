@@ -27,7 +27,8 @@
   ],
   "type": "module",
   "bin": {
-    "inner-lens": "./dist/cli.cjs"
+    "inner-lens": "./dist/cli.cjs",
+    "create-inner-lens": "./dist/create.cjs"
   },
   "exports": {
     ".": {

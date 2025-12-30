@@ -12,7 +12,7 @@ inner-lens is an open-source developer tool that integrates seamlessly into **an
 ## ✨ Features
 
 - **🌐 Universal Framework Support** — Works with React, Vue, Svelte, vanilla JS, and more
-- **🚀 Zero-Config Setup** — One command to get started: `npx inner-lens init`
+- **🚀 Zero-Config Setup** — One command to get started: `npx create-inner-lens`
 - **🤖 Universal LLM Support** — Choose from Anthropic (Claude), OpenAI (GPT-4o), or Google (Gemini)
 - **🔒 Security-First** — Automatic masking of emails, API keys, tokens, and PII
 - **📱 Lightweight Widget** — Clean, accessible UI with zero external CSS dependencies
@@ -329,6 +329,10 @@ export default {
 Initialize GitHub Actions workflow:
 
 ```bash
+# Option 1: Using create command
+npx create-inner-lens
+
+# Option 2: Using inner-lens CLI
 npx inner-lens init
 ```
 
@@ -341,13 +345,13 @@ This interactive CLI will:
 
 ```bash
 # Initialize with specific provider
-npx inner-lens init --provider anthropic
+npx create-inner-lens --provider anthropic
 
 # Eject mode (full workflow source)
-npx inner-lens init --eject
+npx create-inner-lens --eject
 
 # Skip prompts, use defaults
-npx inner-lens init -y
+npx create-inner-lens -y
 
 # Check configuration
 npx inner-lens check
