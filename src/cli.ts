@@ -1012,9 +1012,45 @@ program
       // Fullstack frameworks (Next.js, SvelteKit) have built-in API routes
       if (isFullstackFramework(framework)) {
         backendFramework = await detectBackendFramework(cwd, framework);
+      } else {
+        // Frontend-only frameworks: ask where to deploy backend
+        console.log('\n' + chalk.bold.cyan('  Step 4/4: 백엔드 배포\n'));
+        console.log(chalk.dim('  프론트엔드 전용 프레임워크입니다. 백엔드를 어디에 배포하시나요?\n'));
+
+        const backendDeployAnswer = await inquirer.prompt([
+          {
+            type: 'list',
+            name: 'deploy',
+            message: '백엔드 배포 방법:',
+            choices: [
+              {
+                name: `${chalk.yellow('●')} Cloudflare Workers ${chalk.dim('(독립 배포, 무료 10만/일)')}`,
+                value: 'cloudflare'
+              },
+              {
+                name: `${chalk.cyan('●')} Vercel ${chalk.dim('(프론트와 함께 배포)')}`,
+                value: 'vercel'
+              },
+              {
+                name: `${chalk.cyan('●')} Netlify ${chalk.dim('(프론트와 함께 배포)')}`,
+                value: 'netlify'
+              },
+              {
+                name: `${chalk.dim('●')} 기존 백엔드 서버 사용 ${chalk.dim('(Express, Fastify 등)')}`,
+                value: 'existing'
+              },
+              {
+                name: `${chalk.dim('●')} 나중에 설정`,
+                value: 'skip'
+              },
+            ],
+            default: 'cloudflare',
+          },
+        ]);
+
+        // Store the deployment choice for later use in Next Steps
+        (options as InitOptions & { backendDeploy?: string }).backendDeploy = backendDeployAnswer.deploy;
       }
-      // Frontend-only frameworks don't need backend file generation
-      // Backend setup will be shown in Next Steps
 
       // Ask whether to generate files
       console.log('\n' + chalk.bold.cyan('  파일 자동 생성\n'));
@@ -1229,24 +1265,82 @@ program
 
     // Step: Backend setup - only for frontend-only frameworks
     if (!isFullstackFramework(framework)) {
-      console.log(chalk.bold.white(`\n  ${stepNumber}. 백엔드 설정 (서버리스 추천)\n`));
-      console.log(chalk.dim('     프론트엔드 전용 프레임워크입니다. 아래 방법 중 선택하세요:\n'));
+      const backendDeploy = (options as InitOptions & { backendDeploy?: string }).backendDeploy || 'cloudflare';
 
-      // Cloudflare Workers (recommended)
-      console.log(chalk.bold.cyan('     [추천] Cloudflare Workers (무료 10만 요청/일)'));
-      console.log(chalk.dim('     ') + chalk.gray('# 1-click 배포:'));
-      console.log(chalk.dim('     ') + chalk.cyan('npx degit jhlee0409/inner-lens/templates/cloudflare-worker inner-lens-api'));
-      console.log(chalk.dim('     ') + chalk.cyan('cd inner-lens-api && npm install'));
-      console.log(chalk.dim('     ') + chalk.cyan('npx wrangler secret put GITHUB_TOKEN'));
-      console.log(chalk.dim('     ') + chalk.cyan('npm run deploy'));
-      console.log();
+      console.log(chalk.bold.white(`\n  ${stepNumber}. 백엔드 설정\n`));
 
-      // Alternative: Express/Fastify
-      console.log(chalk.dim('     [대안] 기존 백엔드 서버가 있다면:'));
-      console.log(chalk.dim('     ') + chalk.gray('// Express, Fastify, Hono 등'));
-      console.log(chalk.dim('     ') + chalk.cyan(`import { createExpressHandler } from 'inner-lens/server';`));
-      console.log();
-      console.log(chalk.dim('     📚 가이드: ') + chalk.cyan('https://github.com/jhlee0409/inner-lens#backend-setup'));
+      switch (backendDeploy) {
+        case 'cloudflare':
+          console.log(chalk.bold.yellow('     Cloudflare Workers (무료 10만 요청/일)\n'));
+          console.log(chalk.dim('     ') + chalk.gray('# 1. 템플릿 복사:'));
+          console.log(chalk.dim('     ') + chalk.cyan('npx degit jhlee0409/inner-lens/templates/cloudflare-worker inner-lens-api'));
+          console.log(chalk.dim('     ') + chalk.cyan('cd inner-lens-api && npm install'));
+          console.log();
+          console.log(chalk.dim('     ') + chalk.gray('# 2. 환경변수 설정:'));
+          console.log(chalk.dim('     ') + chalk.cyan('npx wrangler secret put GITHUB_TOKEN'));
+          console.log(chalk.dim('     ') + chalk.gray('# wrangler.toml에서 GITHUB_REPOSITORY 설정'));
+          console.log();
+          console.log(chalk.dim('     ') + chalk.gray('# 3. 배포:'));
+          console.log(chalk.dim('     ') + chalk.cyan('npm run deploy'));
+          console.log();
+          console.log(chalk.dim('     ') + chalk.gray('# 4. 위젯에 endpoint 설정:'));
+          console.log(chalk.dim('     ') + chalk.cyan('<InnerLensWidget endpoint="https://inner-lens-api.YOUR.workers.dev" />'));
+          break;
+
+        case 'vercel':
+          console.log(chalk.bold.cyan('     Vercel Serverless Function\n'));
+          console.log(chalk.dim('     ') + chalk.gray('# 1. API 폴더 생성:'));
+          console.log(chalk.dim('     ') + chalk.cyan('mkdir -p api/inner-lens'));
+          console.log(chalk.dim('     ') + chalk.cyan('npx degit jhlee0409/inner-lens/templates/vercel/api/inner-lens api/inner-lens'));
+          console.log();
+          console.log(chalk.dim('     ') + chalk.gray('# 2. Vercel 환경변수 설정:'));
+          console.log(chalk.dim('     ') + chalk.cyan('vercel env add GITHUB_TOKEN'));
+          console.log(chalk.dim('     ') + chalk.cyan('vercel env add GITHUB_REPOSITORY'));
+          console.log();
+          console.log(chalk.dim('     ') + chalk.gray('# 3. 배포:'));
+          console.log(chalk.dim('     ') + chalk.cyan('vercel'));
+          console.log();
+          console.log(chalk.dim('     ') + chalk.gray('# 4. 위젯 설정 (상대 경로):'));
+          console.log(chalk.dim('     ') + chalk.cyan('<InnerLensWidget endpoint="/api/inner-lens/report" />'));
+          break;
+
+        case 'netlify':
+          console.log(chalk.bold.cyan('     Netlify Function\n'));
+          console.log(chalk.dim('     ') + chalk.gray('# 1. 함수 폴더 생성:'));
+          console.log(chalk.dim('     ') + chalk.cyan('mkdir -p netlify/functions'));
+          console.log(chalk.dim('     ') + chalk.cyan('npx degit jhlee0409/inner-lens/templates/netlify/netlify/functions netlify/functions'));
+          console.log();
+          console.log(chalk.dim('     ') + chalk.gray('# 2. Netlify 환경변수 설정:'));
+          console.log(chalk.dim('     ') + chalk.gray('# Netlify Dashboard > Site settings > Environment variables'));
+          console.log(chalk.dim('     ') + chalk.cyan('GITHUB_TOKEN=ghp_xxxx'));
+          console.log(chalk.dim('     ') + chalk.cyan(`GITHUB_REPOSITORY=${repository}`));
+          console.log();
+          console.log(chalk.dim('     ') + chalk.gray('# 3. 배포:'));
+          console.log(chalk.dim('     ') + chalk.cyan('netlify deploy --prod'));
+          console.log();
+          console.log(chalk.dim('     ') + chalk.gray('# 4. 위젯 설정:'));
+          console.log(chalk.dim('     ') + chalk.cyan('<InnerLensWidget endpoint="/.netlify/functions/inner-lens-report" />'));
+          break;
+
+        case 'existing':
+          console.log(chalk.bold.dim('     기존 백엔드 서버 사용\n'));
+          console.log(chalk.dim('     ') + chalk.gray('// Express 예시:'));
+          console.log(chalk.dim('     ') + chalk.cyan(`import { createExpressHandler } from 'inner-lens/server';`));
+          console.log(chalk.dim('     ') + chalk.cyan(`app.post('/api/inner-lens/report', createExpressHandler({`));
+          console.log(chalk.dim('     ') + chalk.cyan(`  githubToken: process.env.GITHUB_TOKEN,`));
+          console.log(chalk.dim('     ') + chalk.cyan(`  repository: '${repository}',`));
+          console.log(chalk.dim('     ') + chalk.cyan(`}));`));
+          console.log();
+          console.log(chalk.dim('     ') + chalk.gray('// 지원 프레임워크: Express, Fastify, Hono, Koa, Node HTTP'));
+          break;
+
+        case 'skip':
+        default:
+          console.log(chalk.dim('     나중에 설정하시려면 아래 가이드를 참고하세요:\n'));
+          console.log(chalk.dim('     📚 ') + chalk.cyan('https://github.com/jhlee0409/inner-lens#backend-setup'));
+          break;
+      }
+
       stepNumber++;
     }
 
