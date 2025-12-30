@@ -12,7 +12,7 @@ inner-lens is an open-source developer tool that integrates seamlessly into **an
 ## ✨ Features
 
 - **🌐 Universal Framework Support** — Works with React, Vue, Svelte, vanilla JS, and more
-- **🚀 Zero-Config Setup** — One command to get started: `npx inner-lens init`
+- **🚀 Zero-Config Setup** — One command to get started: `npx create-inner-lens`
 - **🤖 Universal LLM Support** — Choose from Anthropic (Claude), OpenAI (GPT-4o), or Google (Gemini)
 - **🔒 Security-First** — Automatic masking of emails, API keys, tokens, and PII
 - **📱 Lightweight Widget** — Clean, accessible UI with zero external CSS dependencies
@@ -24,6 +24,37 @@ inner-lens is an open-source developer tool that integrates seamlessly into **an
 ```bash
 npm install inner-lens
 ```
+
+## ⚡ 30-Second Setup
+
+```bash
+# 1. Run the setup wizard
+npx create-inner-lens
+
+# 2. Add widget to your app (React example)
+```
+
+```tsx
+import { InnerLensWidget } from 'inner-lens/react';
+
+export default function App() {
+  return (
+    <>
+      <YourApp />
+      <InnerLensWidget />
+    </>
+  );
+}
+```
+
+```bash
+# 3. Start your app - that's it!
+npm run dev
+```
+
+> 💡 The CLI wizard auto-generates the API route and GitHub Actions workflow for you.
+
+---
 
 ## 🚀 Quick Start
 
@@ -184,79 +215,60 @@ const { open, close, isOpen } = useInnerLens({
 
 ## 🖥️ Backend Setup
 
-Choose your backend framework:
+버그 리포트를 GitHub Issue로 전송하려면 백엔드 API가 필요합니다.
 
-<details>
-<summary><b>Next.js App Router</b></summary>
+### Web Fetch API (권장)
+
+Next.js, Vercel, Netlify, Cloudflare Workers, Hono, Bun, Deno 등 Web Standards를 지원하는 환경:
 
 ```ts
-// app/api/inner-lens/report/route.ts
+// Next.js: app/api/inner-lens/report/route.ts
+// Vercel: api/inner-lens/report.ts
+// Cloudflare Workers: src/index.ts
 import { createFetchHandler } from 'inner-lens/server';
 
 export const POST = createFetchHandler({
   githubToken: process.env.GITHUB_TOKEN!,
-  repository: process.env.GITHUB_REPOSITORY!,
+  repository: 'owner/repo', // 또는 process.env.GITHUB_REPOSITORY
 });
 ```
 
-</details>
+### 환경변수
+
+| 변수 | 설명 |
+|------|------|
+| `GITHUB_TOKEN` | [Personal Access Token](https://github.com/settings/tokens/new) (repo 권한 필요) |
+| `GITHUB_REPOSITORY` | `owner/repo` 형식 (선택) |
 
 <details>
-<summary><b>Express</b></summary>
+<summary><b>다른 프레임워크 (Express, Fastify, Koa, Node.js)</b></summary>
 
+**Express:**
 ```ts
 import express from 'express';
 import { createExpressHandler } from 'inner-lens/server';
 
 const app = express();
 app.use(express.json());
-
 app.post('/api/inner-lens/report', createExpressHandler({
   githubToken: process.env.GITHUB_TOKEN!,
   repository: 'owner/repo',
 }));
 ```
 
-</details>
-
-<details>
-<summary><b>Fastify</b></summary>
-
+**Fastify:**
 ```ts
 import Fastify from 'fastify';
 import { createFastifyHandler } from 'inner-lens/server';
 
 const fastify = Fastify();
-
 fastify.post('/api/inner-lens/report', createFastifyHandler({
   githubToken: process.env.GITHUB_TOKEN!,
   repository: 'owner/repo',
 }));
 ```
 
-</details>
-
-<details>
-<summary><b>Hono / Bun / Deno</b></summary>
-
-```ts
-import { Hono } from 'hono';
-import { createFetchHandler } from 'inner-lens/server';
-
-const app = new Hono();
-const handler = createFetchHandler({
-  githubToken: process.env.GITHUB_TOKEN!,
-  repository: 'owner/repo',
-});
-
-app.post('/api/inner-lens/report', (c) => handler(c.req.raw));
-```
-
-</details>
-
-<details>
-<summary><b>Koa</b></summary>
-
+**Koa:**
 ```ts
 import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
@@ -264,12 +276,10 @@ import { createKoaHandler } from 'inner-lens/server';
 
 const app = new Koa();
 app.use(bodyParser());
-
 const handler = createKoaHandler({
   githubToken: process.env.GITHUB_TOKEN!,
   repository: 'owner/repo',
 });
-
 app.use(async (ctx, next) => {
   if (ctx.path === '/api/inner-lens/report' && ctx.method === 'POST') {
     await handler(ctx);
@@ -279,11 +289,7 @@ app.use(async (ctx, next) => {
 });
 ```
 
-</details>
-
-<details>
-<summary><b>Node.js HTTP</b></summary>
-
+**Node.js HTTP:**
 ```ts
 import http from 'http';
 import { createNodeHandler } from 'inner-lens/server';
@@ -292,110 +298,58 @@ const handler = createNodeHandler({
   githubToken: process.env.GITHUB_TOKEN!,
   repository: 'owner/repo',
 });
-
 const server = http.createServer(async (req, res) => {
   if (req.url === '/api/inner-lens/report' && req.method === 'POST') {
     await handler(req, res);
   }
 });
-
 server.listen(3000);
 ```
 
 </details>
 
-### 🚀 Serverless Deployment (Frontend-Only)
-
-백엔드 서버가 없는 프론트엔드 프로젝트(Vite, Vanilla JS 등)를 위한 서버리스 배포 옵션입니다.
-
 <details>
-<summary><b>☁️ Cloudflare Workers</b></summary>
+<summary><b>Cloudflare Workers 전체 예시</b></summary>
 
-```bash
-# 1. 템플릿 복사
-npx degit jhlee0409/inner-lens/templates/cloudflare-worker my-bug-reporter
-cd my-bug-reporter
+```ts
+// src/index.ts
+import { createFetchHandler } from 'inner-lens/server';
 
-# 2. 의존성 설치
-npm install
+interface Env {
+  GITHUB_TOKEN: string;
+  GITHUB_REPOSITORY: string;
+}
 
-# 3. 환경변수 설정
-# wrangler.toml에서 GITHUB_REPOSITORY 설정
-# Cloudflare Dashboard에서 GITHUB_TOKEN secret 추가
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    // CORS preflight
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
+      });
+    }
 
-# 4. 배포
-npx wrangler deploy
+    if (request.method === 'POST') {
+      const handler = createFetchHandler({
+        githubToken: env.GITHUB_TOKEN,
+        repository: env.GITHUB_REPOSITORY,
+      });
+      const response = await handler(request);
+
+      // CORS 헤더 추가
+      const headers = new Headers(response.headers);
+      headers.set('Access-Control-Allow-Origin', '*');
+      return new Response(response.body, { status: response.status, headers });
+    }
+
+    return new Response('Method not allowed', { status: 405 });
+  },
+};
 ```
-
-위젯 설정:
-```tsx
-<InnerLensWidget
-  endpoint="https://your-worker.workers.dev/report"
-/>
-```
-
-</details>
-
-<details>
-<summary><b>▲ Vercel Functions</b></summary>
-
-```bash
-# 1. API 폴더 생성 및 파일 복사
-mkdir -p api/inner-lens
-npx degit jhlee0409/inner-lens/templates/vercel/api/inner-lens api/inner-lens
-
-# 2. 환경변수 설정 (Vercel Dashboard)
-# - GITHUB_TOKEN: GitHub Personal Access Token
-# - GITHUB_REPOSITORY: owner/repo
-
-# 3. 배포
-vercel
-```
-
-위젯 설정:
-```tsx
-<InnerLensWidget
-  endpoint="/api/inner-lens/report"
-/>
-```
-
-</details>
-
-<details>
-<summary><b>◆ Netlify Functions</b></summary>
-
-```bash
-# 1. Functions 폴더 생성 및 파일 복사
-mkdir -p netlify/functions
-npx degit jhlee0409/inner-lens/templates/netlify/netlify/functions netlify/functions
-
-# 2. 환경변수 설정 (Netlify Dashboard)
-# - GITHUB_TOKEN: GitHub Personal Access Token
-# - GITHUB_REPOSITORY: owner/repo
-
-# 3. 배포
-netlify deploy --prod
-```
-
-위젯 설정:
-```tsx
-<InnerLensWidget
-  endpoint="/.netlify/functions/inner-lens-report"
-/>
-```
-
-</details>
-
-<details>
-<summary><b>🔧 기존 백엔드 서버 사용</b></summary>
-
-Express, Fastify 등 기존 백엔드가 있다면 `inner-lens/server` 패키지를 사용하세요:
-
-```bash
-npm install inner-lens
-```
-
-위 "Backend Setup" 섹션의 프레임워크별 가이드를 참조하세요.
 
 </details>
 
@@ -406,6 +360,10 @@ npm install inner-lens
 Initialize GitHub Actions workflow:
 
 ```bash
+# Option 1: Using create command
+npx create-inner-lens
+
+# Option 2: Using inner-lens CLI
 npx inner-lens init
 ```
 
@@ -418,17 +376,56 @@ This interactive CLI will:
 
 ```bash
 # Initialize with specific provider
-npx inner-lens init --provider anthropic
+npx create-inner-lens --provider anthropic
 
 # Eject mode (full workflow source)
-npx inner-lens init --eject
+npx create-inner-lens --eject
 
 # Skip prompts, use defaults
-npx inner-lens init -y
+npx create-inner-lens -y
 
 # Check configuration
 npx inner-lens check
 ```
+
+### Manual Workflow Setup
+
+If you prefer to set up the workflow manually without the CLI:
+
+1. Create `.github/workflows/inner-lens.yml`:
+
+```yaml
+name: inner-lens Analysis
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  analyze:
+    if: contains(github.event.issue.labels.*.name, 'inner-lens')
+    uses: jhlee0409/inner-lens/.github/workflows/analysis-engine.yml@v1
+    with:
+      provider: 'anthropic'  # or 'openai', 'google'
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+```
+
+2. Add your AI provider's API key to GitHub Secrets.
+
+### Reusable Workflow Options
+
+| Input | Type | Default | Description |
+|-------|------|---------|-------------|
+| `provider` | `string` | `anthropic` | AI provider (`anthropic`, `openai`, `google`) |
+| `max_files` | `number` | `25` | Maximum files to analyze (5-50) |
+| `max_tokens` | `number` | `4000` | Maximum tokens for AI response |
+| `node_version` | `string` | `20` | Node.js version |
+
+**Required Secrets by Provider:**
+- `anthropic`: `ANTHROPIC_API_KEY`
+- `openai`: `OPENAI_API_KEY`
+- `google`: `GOOGLE_GENERATIVE_AI_API_KEY`
 
 ---
 
@@ -447,8 +444,11 @@ npx inner-lens check
 | `styles.buttonColor` | `string` | `#6366f1` | Button color |
 | `styles.buttonPosition` | `string` | `bottom-right` | Button position |
 | `disabled` | `boolean` | `false` | Disable widget |
+| `devOnly` | `boolean` | `true` | **Auto-disable in production** (checks `NODE_ENV` and `import.meta.env.PROD`) |
 | `onSuccess` | `function` | - | Success callback |
 | `onError` | `function` | - | Error callback |
+
+> ⚠️ **Note:** `devOnly: true` (default) automatically disables the widget in production. Set `devOnly: false` to enable bug reporting in production environments.
 
 ---
 
@@ -505,6 +505,119 @@ inner-lens automatically masks sensitive data before submission:
 | `handleBugReport` | Core handler (framework-agnostic) |
 | `validateBugReport` | Validate payload |
 | `createGitHubIssue` | Create GitHub issue |
+
+---
+
+## 🔧 Troubleshooting
+
+### Widget doesn't appear
+
+1. **Check if widget is disabled:** By default, the widget is enabled. Check `disabled` prop.
+2. **Check console for errors:** Look for any JavaScript errors in browser console.
+3. **Verify import path:** Make sure you're using the correct import for your framework:
+   - React: `inner-lens/react`
+   - Vue: `inner-lens/vue`
+   - Vanilla: `inner-lens/vanilla` or `inner-lens`
+
+### Bug report submission fails
+
+1. **Check API endpoint:** Ensure `endpoint` matches your API route path.
+2. **Verify GITHUB_TOKEN:** Check that the token has `repo` scope.
+3. **Check CORS:** If using a separate backend, configure CORS headers.
+
+```bash
+# Verify configuration
+npx inner-lens check
+```
+
+### GitHub issue not created
+
+1. **Token permissions:** GITHUB_TOKEN needs `repo` scope for private repos, `public_repo` for public.
+2. **Repository format:** Use `owner/repo` format (e.g., `jhlee0409/inner-lens`).
+3. **Rate limits:** Check GitHub API rate limits if submitting many reports.
+
+### AI analysis not running
+
+1. **Check workflow file:** Ensure `.github/workflows/inner-lens.yml` exists.
+2. **Verify secrets:** Add `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `GOOGLE_GENERATIVE_AI_API_KEY` to GitHub Secrets.
+3. **Check issue labels:** Analysis only runs on issues with `inner-lens` label.
+
+---
+
+## ❓ FAQ
+
+<details>
+<summary><b>How does sensitive data masking work?</b></summary>
+
+inner-lens automatically masks common sensitive patterns before sending to AI:
+- Email addresses → `[EMAIL]`
+- API keys (OpenAI, Anthropic, etc.) → `[API_KEY]`
+- Bearer tokens → `[BEARER_TOKEN]`
+- Credit card numbers → `[CREDIT_CARD]`
+- And more...
+
+Masking happens on both client-side (before submission) and server-side (before AI analysis).
+
+</details>
+
+<details>
+<summary><b>Can I use inner-lens in production?</b></summary>
+
+Yes! inner-lens is designed for production use. You can:
+- Set `disabled={process.env.NODE_ENV === 'production'}` to disable in production
+- Or keep it enabled for real user bug reports
+
+</details>
+
+<details>
+<summary><b>Which AI provider should I choose?</b></summary>
+
+| Provider | Model | Best For |
+|----------|-------|----------|
+| Anthropic | Claude Sonnet 4 | Best code understanding (recommended) |
+| OpenAI | GPT-4o | Fast, versatile |
+| Google | Gemini 2.0 Flash | Cost-effective |
+
+</details>
+
+<details>
+<summary><b>Does inner-lens work with SSR/SSG?</b></summary>
+
+Yes! The widget only renders on the client side. For frameworks with SSR:
+- **Next.js:** Use `'use client'` directive or dynamic import
+- **Nuxt:** The Vue component is SSR-safe
+- **SvelteKit:** Mount the widget in `onMount`
+
+</details>
+
+<details>
+<summary><b>Can I customize the widget appearance?</b></summary>
+
+Yes! Use the `styles` prop or convenience options:
+
+```tsx
+<InnerLensWidget
+  position="bottom-left"
+  buttonColor="#10b981"
+  buttonText="Report Issue"
+  dialogTitle="Found a bug?"
+/>
+```
+
+</details>
+
+<details>
+<summary><b>How do I deploy the backend?</b></summary>
+
+For frontend-only frameworks (Vite, CRA), deploy a serverless function:
+
+- **Cloudflare Workers:** Free 100k requests/day
+- **Vercel Serverless:** Integrates with Vercel projects
+- **Netlify Functions:** Integrates with Netlify projects
+
+See [Backend Setup](#️-backend-setup) for code examples.
+
+</details>
 
 ---
 

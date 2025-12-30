@@ -53,6 +53,66 @@ export interface InnerLensCoreConfig {
    */
   styles?: StyleConfig;
 
+  // ============================================
+  // Convenience Options (mapped to styles)
+  // ============================================
+
+  /**
+   * Button position (convenience option, maps to styles.buttonPosition)
+   * @default 'bottom-right'
+   */
+  position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+
+  /**
+   * Button color (convenience option, maps to styles.buttonColor)
+   * @default '#6366f1'
+   */
+  buttonColor?: string;
+
+  // ============================================
+  // UI Text Customization
+  // ============================================
+
+  /**
+   * Trigger button aria-label and title
+   * @default 'Report a bug'
+   */
+  buttonText?: string;
+
+  /**
+   * Dialog title text
+   * @default 'Report an Issue'
+   */
+  dialogTitle?: string;
+
+  /**
+   * Textarea label text
+   * @default 'Describe the issue'
+   */
+  dialogDescription?: string;
+
+  /**
+   * Submit button text
+   * @default 'Submit Report'
+   */
+  submitText?: string;
+
+  /**
+   * Cancel button text
+   * @default 'Cancel'
+   */
+  cancelText?: string;
+
+  /**
+   * Success message title
+   * @default 'Report Submitted'
+   */
+  successMessage?: string;
+
+  // ============================================
+  // Callbacks
+  // ============================================
+
   /**
    * Callback when report is successfully submitted
    */
@@ -119,6 +179,12 @@ export class InnerLensCore {
       | 'maskSensitiveData'
       | 'disabled'
       | 'devOnly'
+      | 'buttonText'
+      | 'dialogTitle'
+      | 'dialogDescription'
+      | 'submitText'
+      | 'cancelText'
+      | 'successMessage'
     >
   > &
     InnerLensCoreConfig;
@@ -135,6 +201,13 @@ export class InnerLensCore {
   private mounted = false;
 
   constructor(config: InnerLensCoreConfig = {}) {
+    // Map convenience options to styles
+    const mergedStyles: StyleConfig = {
+      ...config.styles,
+      buttonPosition: config.position ?? config.styles?.buttonPosition ?? 'bottom-right',
+      buttonColor: config.buttonColor ?? config.styles?.buttonColor ?? '#6366f1',
+    };
+
     this.config = {
       endpoint: '/api/inner-lens/report',
       labels: ['bug', 'inner-lens'],
@@ -143,7 +216,15 @@ export class InnerLensCore {
       maskSensitiveData: true,
       disabled: false,
       devOnly: true,
+      // UI Text defaults
+      buttonText: 'Report a bug',
+      dialogTitle: 'Report an Issue',
+      dialogDescription: 'Describe the issue',
+      submitText: 'Submit Report',
+      cancelText: 'Cancel',
+      successMessage: 'Report Submitted',
       ...config,
+      styles: mergedStyles,
     };
   }
 
@@ -153,13 +234,27 @@ export class InnerLensCore {
   private isDisabledByEnvironment(): boolean {
     if (this.config.disabled) return true;
     if (this.config.devOnly) {
+      let isProduction = false;
+
       // Check for Vite's import.meta.env.PROD
       // @ts-expect-error import.meta.env is Vite-specific
       if (typeof import.meta !== 'undefined' && import.meta.env?.PROD) {
-        return true;
+        isProduction = true;
       }
       // Check for Node.js / webpack / other bundlers
       if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
+        isProduction = true;
+      }
+
+      if (isProduction) {
+        // Log info message for developers checking console
+        if (typeof console !== 'undefined' && console.info) {
+          console.info(
+            '[inner-lens] Widget disabled in production (devOnly: true). ' +
+            'Set devOnly: false to enable in production. ' +
+            'See: https://github.com/jhlee0409/inner-lens#-configuration'
+          );
+        }
         return true;
       }
     }
@@ -302,8 +397,8 @@ export class InnerLensCore {
       <button
         type="button"
         id="inner-lens-trigger"
-        aria-label="Report a bug"
-        title="Report a bug"
+        aria-label="${this.escapeHtml(this.config.buttonText)}"
+        title="${this.escapeHtml(this.config.buttonText)}"
         style="${this.styleToString(styles.triggerButton)}"
       >
         ${this.getBugIcon()}
@@ -341,8 +436,8 @@ export class InnerLensCore {
       <button
         type="button"
         id="inner-lens-trigger"
-        aria-label="Report a bug"
-        title="Report a bug"
+        aria-label="${this.escapeHtml(this.config.buttonText)}"
+        title="${this.escapeHtml(this.config.buttonText)}"
         style="${this.styleToString(styles.triggerButton)}"
       >
         ${this.getBugIcon()}
@@ -357,7 +452,7 @@ export class InnerLensCore {
         <div id="inner-lens-dialog" style="${this.styleToString(styles.dialog)}">
           <div style="${this.styleToString(styles.header)}">
             <h2 id="inner-lens-title" style="${this.styleToString(styles.headerTitle)}">
-              Report an Issue
+              ${this.escapeHtml(this.config.dialogTitle)}
             </h2>
             <button
               type="button"
@@ -384,7 +479,7 @@ export class InnerLensCore {
           ${this.getCheckIcon()}
         </div>
         <h3 style="${this.styleToString({ ...styles.headerTitle, marginBottom: '8px' })}">
-          Report Submitted
+          ${this.escapeHtml(this.config.successMessage)}
         </h3>
         <p style="color: #4b5563; font-size: 14px; margin-bottom: 16px;">
           Thank you for your feedback! Our team will look into this.
@@ -410,7 +505,7 @@ export class InnerLensCore {
     return `
       <div style="${this.styleToString(styles.content)}">
         <label style="${this.styleToString(styles.label)}" for="inner-lens-description">
-          Describe the issue
+          ${this.escapeHtml(this.config.dialogDescription)}
         </label>
         <textarea
           id="inner-lens-description"
@@ -433,7 +528,7 @@ export class InnerLensCore {
           id="inner-lens-cancel"
           style="${this.styleToString(styles.cancelButton)}"
         >
-          Cancel
+          ${this.escapeHtml(this.config.cancelText)}
         </button>
         <button
           type="button"
@@ -450,7 +545,7 @@ export class InnerLensCore {
                   <span style="${this.styleToString(styles.spinner)}" aria-hidden="true"></span>
                   Submitting...
                 </span>`
-              : 'Submit Report'
+              : this.escapeHtml(this.config.submitText)
           }
         </button>
       </div>

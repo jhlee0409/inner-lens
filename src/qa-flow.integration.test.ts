@@ -275,9 +275,10 @@ describe('QA Issue Flow Integration Tests', () => {
     it('should reject invalid repository format', async () => {
       const invalidConfig = { ...mockConfig, repository: 'invalid-format' };
 
-      await expect(createGitHubIssue(validQAReport, invalidConfig)).rejects.toThrow(
-        'Invalid repository format'
-      );
+      const result = await createGitHubIssue(validQAReport, invalidConfig);
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('Invalid repository format');
     });
   });
 

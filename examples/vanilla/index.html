@@ -97,15 +97,18 @@
     const widget = new InnerLens({
       endpoint: '/api/bug-report',  // mock 서버 엔드포인트
       repository: 'jhlee0409/inner-lens',
+      // 편의 옵션 (styles로 매핑됨)
       position: 'bottom-right',
+      buttonColor: '#6366f1',
+      // UI 텍스트 커스터마이징
       buttonText: '버그 리포트',
       dialogTitle: '버그 리포트',
       dialogDescription: '발견한 버그를 설명해주세요',
       submitText: '제출',
       cancelText: '취소',
       successMessage: '버그 리포트가 제출되었습니다!',
-      collectLogs: true,
-      collectNetwork: true,
+      // 기능 옵션
+      captureConsoleLogs: true,
       maskSensitiveData: true,
     });
 

@@ -1,6 +1,6 @@
 import { Command } from 'commander';
+import * as p from '@clack/prompts';
 import chalk from 'chalk';
-import inquirer from 'inquirer';
 import fs from 'fs-extra';
 import path from 'path';
 import { execSync } from 'child_process';
@@ -31,7 +31,8 @@ interface AccessTokenResponse {
  * https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow
  */
 async function githubDeviceFlow(): Promise<string | null> {
-  console.log(chalk.dim('\n  GitHub OAuth 인증을 시작합니다...\n'));
+  const spinner = p.spinner();
+  spinner.start('GitHub OAuth 인증을 시작합니다...');
 
   try {
     // Step 1: Request device code
@@ -48,33 +49,33 @@ async function githubDeviceFlow(): Promise<string | null> {
     });
 
     if (!deviceCodeRes.ok) {
+      spinner.stop('Device code 요청 실패');
       throw new Error(`Failed to get device code: ${deviceCodeRes.status}`);
     }
 
     const deviceCode = await deviceCodeRes.json() as DeviceCodeResponse;
+    spinner.stop('Device code 생성됨');
 
     // Step 2: Show user code and prompt to open browser
-    console.log(chalk.bold.yellow('  ┌─────────────────────────────────────┐'));
-    console.log(chalk.bold.yellow('  │                                     │'));
-    console.log(chalk.bold.yellow(`  │    코드: ${chalk.bold.white(deviceCode.user_code)}                 │`));
-    console.log(chalk.bold.yellow('  │                                     │'));
-    console.log(chalk.bold.yellow('  └─────────────────────────────────────┘'));
-    console.log();
-    console.log(chalk.dim('  아래 URL에서 위 코드를 입력하세요:'));
-    console.log(chalk.cyan(`  ${deviceCode.verification_uri}`));
-    console.log();
+    p.note(
+      `코드: ${chalk.bold.yellow(deviceCode.user_code)}\n\n` +
+      `아래 URL에서 위 코드를 입력하세요:\n` +
+      chalk.cyan(deviceCode.verification_uri),
+      'GitHub 인증'
+    );
 
     // Try to open browser automatically
     try {
       const openCommand = process.platform === 'darwin' ? 'open' :
                          process.platform === 'win32' ? 'start' : 'xdg-open';
       execSync(`${openCommand} ${deviceCode.verification_uri}`, { stdio: 'ignore' });
-      console.log(chalk.dim('  브라우저가 자동으로 열렸습니다.'));
+      p.log.info('브라우저가 자동으로 열렸습니다.');
     } catch {
-      console.log(chalk.dim('  브라우저를 수동으로 열어주세요.'));
+      p.log.info('브라우저를 수동으로 열어주세요.');
     }
 
-    console.log(chalk.dim('\n  인증 대기 중... (Ctrl+C로 취소)\n'));
+    const pollSpinner = p.spinner();
+    pollSpinner.start('인증 대기 중... (Ctrl+C로 취소)');
 
     // Step 3: Poll for access token
     const interval = (deviceCode.interval || 5) * 1000;
@@ -99,13 +100,12 @@ async function githubDeviceFlow(): Promise<string | null> {
       const tokenData = await tokenRes.json() as AccessTokenResponse;
 
       if (tokenData.access_token) {
-        console.log(chalk.green('  ✓ ') + 'GitHub 인증 성공!\n');
+        pollSpinner.stop('GitHub 인증 성공!');
         return tokenData.access_token;
       }
 
       if (tokenData.error === 'authorization_pending') {
         // Still waiting for user
-        process.stdout.write(chalk.dim('.'));
         continue;
       }
 
@@ -116,24 +116,24 @@ async function githubDeviceFlow(): Promise<string | null> {
       }
 
       if (tokenData.error === 'expired_token') {
-        console.log(chalk.red('\n  ✗ ') + '인증 시간이 만료되었습니다. 다시 시도해주세요.');
+        pollSpinner.stop('인증 시간이 만료되었습니다.');
         return null;
       }
 
       if (tokenData.error === 'access_denied') {
-        console.log(chalk.red('\n  ✗ ') + '인증이 거부되었습니다.');
+        pollSpinner.stop('인증이 거부되었습니다.');
         return null;
       }
 
       // Unknown error
-      console.log(chalk.red('\n  ✗ ') + `오류: ${tokenData.error_description || tokenData.error}`);
+      pollSpinner.stop(`오류: ${tokenData.error_description || tokenData.error}`);
       return null;
     }
 
-    console.log(chalk.red('\n  ✗ ') + '인증 시간이 만료되었습니다.');
+    pollSpinner.stop('인증 시간이 만료되었습니다.');
     return null;
   } catch (error) {
-    console.log(chalk.red('\n  ✗ ') + `OAuth 오류: ${error instanceof Error ? error.message : error}`);
+    p.log.error(`OAuth 오류: ${error instanceof Error ? error.message : error}`);
     return null;
   }
 }
@@ -717,7 +717,7 @@ const program = new Command();
 program
   .name('inner-lens')
   .description(
-    chalk.bold('🔍 inner-lens') +
+    chalk.bold('inner-lens') +
       ' - Self-Debugging QA Agent\n' +
       chalk.dim('   Zero-config bug reporting with AI-powered analysis')
   )
@@ -730,8 +730,7 @@ program
   .option('-p, --provider <provider>', 'AI provider (anthropic, openai, google)')
   .option('-y, --yes', 'Skip prompts and use defaults')
   .action(async (options: InitOptions) => {
-    console.log('\n' + chalk.bold.magenta('🔍 inner-lens Setup Wizard'));
-    console.log(chalk.dim('   버그 리포트 위젯 + AI 분석 자동 설정\n'));
+    p.intro(chalk.bgMagenta.white(' inner-lens Setup Wizard '));
 
     const cwd = process.cwd();
 
@@ -756,6 +755,7 @@ program
     let backendFramework: BackendFramework | null = null;
     let githubToken: string | null = null;
     let generateFiles = true;
+    let backendDeploy: string = 'cloudflare';
 
     if (options.yes) {
       // Skip all prompts
@@ -768,38 +768,33 @@ program
       backendFramework = await detectBackendFramework(cwd, framework);
     } else {
       // Interactive setup
-      console.log(chalk.bold.cyan('  Step 1/4: GitHub 연동\n'));
+      // Step 1: GitHub Integration
+      p.log.step(chalk.bold('Step 1/4: GitHub 연동'));
 
-      const authMethodAnswer = await inquirer.prompt([
-        {
-          type: 'list',
-          name: 'authMethod',
-          message: 'GitHub 연동 방식:',
-          choices: [
-            {
-              name: `${chalk.green('●')} GitHub 로그인 (OAuth) ${chalk.dim('- 권장')}`,
-              value: 'oauth'
-            },
-            {
-              name: `${chalk.yellow('●')} 토큰 직접 입력 ${chalk.dim('(PAT)')}`,
-              value: 'manual'
-            },
-            {
-              name: `${chalk.dim('●')} 나중에 설정`,
-              value: 'skip'
-            },
-          ],
-          default: 'oauth',
-        },
-      ]);
+      const authMethod = await p.select({
+        message: 'GitHub 연동 방식:',
+        options: [
+          { value: 'oauth', label: 'GitHub 로그인 (OAuth)', hint: '권장' },
+          { value: 'manual', label: '토큰 직접 입력 (PAT)' },
+          { value: 'skip', label: '나중에 설정' },
+        ],
+        initialValue: 'oauth',
+      });
 
-      if (authMethodAnswer.authMethod === 'oauth') {
+      if (p.isCancel(authMethod)) {
+        p.cancel('설정이 취소되었습니다.');
+        process.exit(0);
+      }
+
+      if (authMethod === 'oauth') {
         githubToken = await githubDeviceFlow();
 
         if (githubToken) {
           // Fetch user's repos and let them choose
-          console.log(chalk.dim('  레포지토리 목록을 가져오는 중...'));
+          const repoSpinner = p.spinner();
+          repoSpinner.start('레포지토리 목록을 가져오는 중...');
           const repos = await fetchUserRepos(githubToken);
+          repoSpinner.stop('레포지토리 목록 로드 완료');
 
           if (repos.length > 0) {
             // Add detected repo to the list if not already there
@@ -807,273 +802,266 @@ program
               ? [detectedRepo, ...repos]
               : repos;
 
-            const repoSelectAnswer = await inquirer.prompt([
-              {
-                type: 'list',
-                name: 'repository',
-                message: '레포지토리 선택:',
-                choices: [
-                  ...repoChoices.map(r => ({ name: r, value: r })),
-                  { name: chalk.dim('직접 입력...'), value: '__custom__' },
-                ],
-                default: detectedRepo || repos[0],
-              },
-            ]);
+            const selectedRepo = await p.select({
+              message: '레포지토리 선택:',
+              options: [
+                ...repoChoices.map(r => ({ value: r, label: r })),
+                { value: '__custom__', label: '직접 입력...' },
+              ],
+              initialValue: detectedRepo || repos[0],
+            });
 
-            if (repoSelectAnswer.repository === '__custom__') {
-              const customRepoAnswer = await inquirer.prompt([
-                {
-                  type: 'input',
-                  name: 'repository',
-                  message: 'GitHub repository (owner/repo):',
-                  validate: (input: string) => {
-                    if (!input || !input.includes('/')) {
-                      return 'owner/repo 형식으로 입력하세요';
-                    }
-                    return true;
-                  },
+            if (p.isCancel(selectedRepo)) {
+              p.cancel('설정이 취소되었습니다.');
+              process.exit(0);
+            }
+
+            if (selectedRepo === '__custom__') {
+              const customRepo = await p.text({
+                message: 'GitHub repository (owner/repo):',
+                validate: (value) => {
+                  if (!value || !value.includes('/')) {
+                    return 'owner/repo 형식으로 입력하세요';
+                  }
                 },
-              ]);
-              repository = customRepoAnswer.repository;
+              });
+
+              if (p.isCancel(customRepo)) {
+                p.cancel('설정이 취소되었습니다.');
+                process.exit(0);
+              }
+
+              repository = customRepo;
             } else {
-              repository = repoSelectAnswer.repository;
+              repository = selectedRepo;
             }
           } else {
             // No repos found, ask for manual input
-            const repoAnswer = await inquirer.prompt([
-              {
-                type: 'input',
-                name: 'repository',
-                message: 'GitHub repository (owner/repo):',
-                default: detectedRepo || undefined,
-                validate: (input: string) => {
-                  if (!input || !input.includes('/')) {
-                    return 'owner/repo 형식으로 입력하세요';
-                  }
-                  return true;
-                },
+            const inputRepo = await p.text({
+              message: 'GitHub repository (owner/repo):',
+              placeholder: detectedRepo || 'owner/repo',
+              initialValue: detectedRepo,
+              validate: (value) => {
+                if (!value || !value.includes('/')) {
+                  return 'owner/repo 형식으로 입력하세요';
+                }
               },
-            ]);
-            repository = repoAnswer.repository;
+            });
+
+            if (p.isCancel(inputRepo)) {
+              p.cancel('설정이 취소되었습니다.');
+              process.exit(0);
+            }
+
+            repository = inputRepo;
           }
         } else {
           // OAuth failed, fall back to manual
-          console.log(chalk.yellow('  OAuth 인증 실패. 수동 설정으로 진행합니다.\n'));
-          const repoAnswer = await inquirer.prompt([
-            {
-              type: 'input',
-              name: 'repository',
-              message: 'GitHub repository (owner/repo):',
-              default: detectedRepo || undefined,
-              validate: (input: string) => {
-                if (!input || !input.includes('/')) {
-                  return 'owner/repo 형식으로 입력하세요';
-                }
-                return true;
-              },
-            },
-          ]);
-          repository = repoAnswer.repository;
-        }
-      } else if (authMethodAnswer.authMethod === 'manual') {
-        console.log(chalk.bold.cyan('\n  Step 1-1/4: GitHub Repository\n'));
+          p.log.warn('OAuth 인증 실패. 수동 설정으로 진행합니다.');
 
-        const repoAnswer = await inquirer.prompt([
-          {
-            type: 'input',
-            name: 'repository',
+          const inputRepo = await p.text({
             message: 'GitHub repository (owner/repo):',
-            default: detectedRepo || undefined,
-            validate: (input: string) => {
-              if (!input || !input.includes('/')) {
+            placeholder: detectedRepo || 'owner/repo',
+            initialValue: detectedRepo,
+            validate: (value) => {
+              if (!value || !value.includes('/')) {
                 return 'owner/repo 형식으로 입력하세요';
               }
-              return true;
             },
-          },
-        ]);
-        repository = repoAnswer.repository;
+          });
 
-        console.log(chalk.bold.cyan('\n  Step 1-2/4: GitHub Token\n'));
-        console.log(chalk.dim('  GitHub Personal Access Token을 입력하세요.'));
-        console.log(chalk.dim('  생성: https://github.com/settings/tokens/new?scopes=repo\n'));
+          if (p.isCancel(inputRepo)) {
+            p.cancel('설정이 취소되었습니다.');
+            process.exit(0);
+          }
 
-        const tokenAnswer = await inquirer.prompt([
-          {
-            type: 'password',
-            name: 'token',
-            message: 'GitHub Token:',
-            mask: '*',
-            validate: (input: string) => {
-              if (!input || input.length < 10) {
-                return '유효한 토큰을 입력하세요';
-              }
-              return true;
-            },
+          repository = inputRepo;
+        }
+      } else if (authMethod === 'manual') {
+        const inputRepo = await p.text({
+          message: 'GitHub repository (owner/repo):',
+          placeholder: detectedRepo || 'owner/repo',
+          initialValue: detectedRepo,
+          validate: (value) => {
+            if (!value || !value.includes('/')) {
+              return 'owner/repo 형식으로 입력하세요';
+            }
           },
-        ]);
-        githubToken = tokenAnswer.token;
+        });
+
+        if (p.isCancel(inputRepo)) {
+          p.cancel('설정이 취소되었습니다.');
+          process.exit(0);
+        }
+
+        repository = inputRepo;
+
+        p.note(
+          'GitHub Personal Access Token을 입력하세요.\n' +
+          `생성: ${chalk.cyan('https://github.com/settings/tokens/new?scopes=repo')}`,
+          'GitHub Token'
+        );
+
+        const inputToken = await p.password({
+          message: 'GitHub Token:',
+          validate: (value) => {
+            if (!value || value.length < 10) {
+              return '유효한 토큰을 입력하세요';
+            }
+          },
+        });
+
+        if (p.isCancel(inputToken)) {
+          p.cancel('설정이 취소되었습니다.');
+          process.exit(0);
+        }
+
+        githubToken = inputToken;
       } else {
         // Skip - just get repo
-        console.log(chalk.bold.cyan('\n  Step 1-1/4: GitHub Repository\n'));
-
-        const repoAnswer = await inquirer.prompt([
-          {
-            type: 'input',
-            name: 'repository',
-            message: 'GitHub repository (owner/repo):',
-            default: detectedRepo || undefined,
-            validate: (input: string) => {
-              if (!input || !input.includes('/')) {
-                return 'owner/repo 형식으로 입력하세요';
-              }
-              return true;
-            },
+        const inputRepo = await p.text({
+          message: 'GitHub repository (owner/repo):',
+          placeholder: detectedRepo || 'owner/repo',
+          initialValue: detectedRepo,
+          validate: (value) => {
+            if (!value || !value.includes('/')) {
+              return 'owner/repo 형식으로 입력하세요';
+            }
           },
-        ]);
-        repository = repoAnswer.repository;
+        });
+
+        if (p.isCancel(inputRepo)) {
+          p.cancel('설정이 취소되었습니다.');
+          process.exit(0);
+        }
+
+        repository = inputRepo;
       }
 
-      console.log('\n' + chalk.bold.cyan('  Step 2/3: 프레임워크\n'));
+      // Step 2: Framework Detection
+      p.log.step(chalk.bold('Step 2/4: 프레임워크'));
 
-      // Detect framework
       const detectedFramework = await detectFramework(cwd);
 
       if (detectedFramework) {
-        console.log(chalk.dim(`  감지된 프레임워크: ${FRAMEWORK_CONFIGS[detectedFramework].name}\n`));
+        p.log.info(`감지된 프레임워크: ${FRAMEWORK_CONFIGS[detectedFramework].name}`);
 
-        const frameworkConfirmAnswer = await inquirer.prompt([
-          {
-            type: 'confirm',
-            name: 'useDetected',
-            message: `${FRAMEWORK_CONFIGS[detectedFramework].name} 맞나요?`,
-            default: true,
-          },
-        ]);
+        const useDetected = await p.confirm({
+          message: `${FRAMEWORK_CONFIGS[detectedFramework].name} 맞나요?`,
+          initialValue: true,
+        });
 
-        if (frameworkConfirmAnswer.useDetected) {
+        if (p.isCancel(useDetected)) {
+          p.cancel('설정이 취소되었습니다.');
+          process.exit(0);
+        }
+
+        if (useDetected) {
           framework = detectedFramework;
         } else {
-          const frameworkSelectAnswer = await inquirer.prompt([
-            {
-              type: 'list',
-              name: 'framework',
-              message: '프레임워크 선택:',
-              choices: Object.entries(FRAMEWORK_CONFIGS).map(([key, config]) => ({
-                name: config.name,
-                value: key,
-              })),
-            },
-          ]);
-          framework = frameworkSelectAnswer.framework as Framework;
+          const selectedFramework = await p.select({
+            message: '프레임워크 선택:',
+            options: Object.entries(FRAMEWORK_CONFIGS).map(([key, config]) => ({
+              value: key,
+              label: config.name,
+            })),
+          });
+
+          if (p.isCancel(selectedFramework)) {
+            p.cancel('설정이 취소되었습니다.');
+            process.exit(0);
+          }
+
+          framework = selectedFramework as Framework;
         }
       } else {
-        const frameworkSelectAnswer = await inquirer.prompt([
-          {
-            type: 'list',
-            name: 'framework',
-            message: '프레임워크 선택:',
-            choices: Object.entries(FRAMEWORK_CONFIGS).map(([key, config]) => ({
-              name: config.name,
-              value: key,
-            })),
-          },
-        ]);
-        framework = frameworkSelectAnswer.framework as Framework;
+        const selectedFramework = await p.select({
+          message: '프레임워크 선택:',
+          options: Object.entries(FRAMEWORK_CONFIGS).map(([key, config]) => ({
+            value: key,
+            label: config.name,
+          })),
+        });
+
+        if (p.isCancel(selectedFramework)) {
+          p.cancel('설정이 취소되었습니다.');
+          process.exit(0);
+        }
+
+        framework = selectedFramework as Framework;
       }
 
-      console.log('\n' + chalk.bold.cyan('  Step 3/3: AI Provider\n'));
-      console.log(chalk.dim('  버그 리포트 분석에 사용할 AI를 선택하세요.\n'));
+      // Step 3: AI Provider
+      p.log.step(chalk.bold('Step 3/4: AI Provider'));
 
-      const providerAnswer = await inquirer.prompt([
-        {
-          type: 'list',
-          name: 'provider',
-          message: 'AI Provider 선택:',
-          choices: [
-            {
-              name: `${chalk.magenta('●')} Anthropic ${chalk.dim('(Claude Sonnet 4 - 추천)')}`,
-              value: 'anthropic'
-            },
-            {
-              name: `${chalk.green('●')} OpenAI ${chalk.dim('(GPT-4o)')}`,
-              value: 'openai'
-            },
-            {
-              name: `${chalk.blue('●')} Google ${chalk.dim('(Gemini 2.0 Flash)')}`,
-              value: 'google'
-            },
-          ],
-          default: 'anthropic',
-        },
-      ]);
-      provider = providerAnswer.provider as AIProvider;
+      const selectedProvider = await p.select({
+        message: 'AI Provider 선택:',
+        options: [
+          { value: 'anthropic', label: 'Anthropic (Claude Sonnet 4)', hint: '추천' },
+          { value: 'openai', label: 'OpenAI (GPT-4o)' },
+          { value: 'google', label: 'Google (Gemini 2.0 Flash)' },
+        ],
+        initialValue: 'anthropic',
+      });
+
+      if (p.isCancel(selectedProvider)) {
+        p.cancel('설정이 취소되었습니다.');
+        process.exit(0);
+      }
+
+      provider = selectedProvider as AIProvider;
 
       // Fullstack frameworks (Next.js, SvelteKit) have built-in API routes
       if (isFullstackFramework(framework)) {
         backendFramework = await detectBackendFramework(cwd, framework);
       } else {
         // Frontend-only frameworks: ask where to deploy backend
-        console.log('\n' + chalk.bold.cyan('  Step 4/4: 백엔드 배포\n'));
-        console.log(chalk.dim('  프론트엔드 전용 프레임워크입니다. 백엔드를 어디에 배포하시나요?\n'));
+        p.log.step(chalk.bold('Step 4/4: 백엔드 배포'));
 
-        const backendDeployAnswer = await inquirer.prompt([
-          {
-            type: 'list',
-            name: 'deploy',
-            message: '백엔드 배포 방법:',
-            choices: [
-              {
-                name: `${chalk.yellow('●')} Cloudflare Workers ${chalk.dim('(독립 배포, 무료 10만/일)')}`,
-                value: 'cloudflare'
-              },
-              {
-                name: `${chalk.cyan('●')} Vercel ${chalk.dim('(프론트와 함께 배포)')}`,
-                value: 'vercel'
-              },
-              {
-                name: `${chalk.cyan('●')} Netlify ${chalk.dim('(프론트와 함께 배포)')}`,
-                value: 'netlify'
-              },
-              {
-                name: `${chalk.dim('●')} 기존 백엔드 서버 사용 ${chalk.dim('(Express, Fastify 등)')}`,
-                value: 'existing'
-              },
-              {
-                name: `${chalk.dim('●')} 나중에 설정`,
-                value: 'skip'
-              },
-            ],
-            default: 'cloudflare',
-          },
-        ]);
+        const selectedBackend = await p.select({
+          message: '백엔드 배포 방법:',
+          options: [
+            { value: 'cloudflare', label: 'Cloudflare Workers', hint: '독립 배포, 무료 10만/일' },
+            { value: 'vercel', label: 'Vercel', hint: '프론트와 함께 배포' },
+            { value: 'netlify', label: 'Netlify', hint: '프론트와 함께 배포' },
+            { value: 'existing', label: '기존 백엔드 서버 사용', hint: 'Express, Fastify 등' },
+            { value: 'skip', label: '나중에 설정' },
+          ],
+          initialValue: 'cloudflare',
+        });
 
-        // Store the deployment choice for later use in Next Steps
-        (options as InitOptions & { backendDeploy?: string }).backendDeploy = backendDeployAnswer.deploy;
+        if (p.isCancel(selectedBackend)) {
+          p.cancel('설정이 취소되었습니다.');
+          process.exit(0);
+        }
+
+        backendDeploy = selectedBackend;
       }
 
       // Ask whether to generate files
-      console.log('\n' + chalk.bold.cyan('  파일 자동 생성\n'));
-
       const generateMessage = isFullstackFramework(framework)
         ? '위젯 파일과 API 라우트를 자동으로 생성할까요?'
         : '위젯 파일을 자동으로 생성할까요?';
 
-      const generateAnswer = await inquirer.prompt([
-        {
-          type: 'confirm',
-          name: 'generate',
-          message: generateMessage,
-          default: true,
-        },
-      ]);
-      generateFiles = generateAnswer.generate;
+      const shouldGenerate = await p.confirm({
+        message: generateMessage,
+        initialValue: true,
+      });
 
-      console.log('\n' + chalk.bold.cyan('  파일 생성 중...\n'));
+      if (p.isCancel(shouldGenerate)) {
+        p.cancel('설정이 취소되었습니다.');
+        process.exit(0);
+      }
+
+      generateFiles = shouldGenerate;
     }
 
     const providerConfig = PROVIDER_CONFIGS[provider];
     const frameworkConfig = FRAMEWORK_CONFIGS[framework];
+
+    // Generate files with spinner
+    const generateSpinner = p.spinner();
+    generateSpinner.start('파일 생성 중...');
 
     // Check if .github/workflows directory exists
     const workflowsDir = path.join(cwd, '.github', 'workflows');
@@ -1087,19 +1075,15 @@ program
     let workflowContent: string;
 
     if (options.eject) {
-      console.log(chalk.yellow('  ⚠️  Eject mode: Generating standalone workflow...\n'));
       workflowContent = generateEjectedWorkflow(provider, providerConfig);
     } else {
       workflowContent = generateReusableWorkflow(provider, providerConfig);
     }
 
     await fs.writeFile(workflowPath, workflowContent);
-    console.log(chalk.green('  ✓ ') + 'Created ' + chalk.cyan('.github/workflows/inner-lens.yml'));
 
     // Save GitHub token to .env.local if obtained
     if (githubToken) {
-      console.log(chalk.bold.cyan('  환경변수 저장\n'));
-
       const envLocalPath = path.join(cwd, '.env.local');
       let envContent = '';
 
@@ -1117,7 +1101,6 @@ program
       }
 
       await fs.writeFile(envLocalPath, envContent);
-      console.log(chalk.green('  ✓ ') + 'GITHUB_TOKEN saved to ' + chalk.cyan('.env.local'));
 
       // Add .env.local to .gitignore if not already there
       const gitignorePath = path.join(cwd, '.gitignore');
@@ -1125,7 +1108,6 @@ program
         const gitignoreContent = await fs.readFile(gitignorePath, 'utf-8');
         if (!gitignoreContent.includes('.env.local')) {
           await fs.appendFile(gitignorePath, '\n.env.local\n');
-          console.log(chalk.green('  ✓ ') + 'Added .env.local to ' + chalk.cyan('.gitignore'));
         }
       }
     }
@@ -1154,9 +1136,6 @@ program
           await fs.ensureDir(path.dirname(fullWidgetPath));
           await fs.writeFile(fullWidgetPath, newContent);
           widgetFileCreated = true;
-          console.log(chalk.green('  ✓ ') + 'Created/Updated ' + chalk.cyan(widgetFilePath));
-        } else if (existingContent?.includes('InnerLensWidget') || existingContent?.includes('InnerLensCore')) {
-          console.log(chalk.yellow('  ⊘ ') + chalk.dim(`Widget already exists in ${widgetFilePath}`));
         }
       }
 
@@ -1179,9 +1158,6 @@ program
           await fs.ensureDir(path.dirname(fullApiRoutePath));
           await fs.writeFile(fullApiRoutePath, apiRouteContent);
           apiRouteFileCreated = true;
-          console.log(chalk.green('  ✓ ') + 'Created ' + chalk.cyan(apiRouteFilePath));
-        } else {
-          console.log(chalk.yellow('  ⊘ ') + chalk.dim(`API route already exists at ${apiRouteFilePath}`));
         }
       }
 
@@ -1195,206 +1171,168 @@ program
       if (!envContent.includes('GITHUB_REPOSITORY=')) {
         envContent = envContent.trim() + (envContent ? '\n' : '') + `GITHUB_REPOSITORY=${repository}\n`;
         await fs.writeFile(envLocalPath, envContent);
-        console.log(chalk.green('  ✓ ') + 'Added GITHUB_REPOSITORY to ' + chalk.cyan('.env.local'));
       }
     }
 
-    // Print next steps with clear instructions
-    console.log('\n' + chalk.bold.green('✅ Setup Complete!\n'));
-    console.log(chalk.bold('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
+    generateSpinner.stop('파일 생성 완료');
 
-    // Print generated files summary
-    if (generateFiles && (widgetFileCreated || apiRouteFileCreated)) {
-      console.log(chalk.bold('\n📁 생성된 파일:\n'));
-      if (widgetFileCreated) {
-        console.log(chalk.green('  ✓ ') + chalk.cyan(widgetFilePath) + chalk.dim(' (위젯)'));
-      }
-      if (apiRouteFileCreated) {
-        console.log(chalk.green('  ✓ ') + chalk.cyan(apiRouteFilePath) + chalk.dim(' (API 라우트)'));
-      }
-    }
+    // Show generated files
+    const generatedFiles: string[] = ['.github/workflows/inner-lens.yml'];
+    if (githubToken) generatedFiles.push('.env.local (GITHUB_TOKEN)');
+    if (widgetFileCreated) generatedFiles.push(widgetFilePath);
+    if (apiRouteFileCreated) generatedFiles.push(apiRouteFilePath);
 
-    console.log(chalk.bold('\n📋 Next Steps:\n'));
+    p.note(generatedFiles.map(f => `  ${chalk.green('+')} ${f}`).join('\n'), '생성된 파일');
 
+    // Build next steps
+    const nextSteps: string[] = [];
     let stepNumber = 1;
 
-    // Step: GitHub Secrets (for AI provider)
-    console.log(chalk.bold.white(`  ${stepNumber}. GitHub Secrets 설정\n`));
-    console.log(chalk.dim('     GitHub repository → Settings → Secrets → Actions\n'));
-    if (!githubToken) {
-      console.log(`     ${chalk.yellow('GITHUB_TOKEN')}     ${chalk.dim('(repo scope 필요)')}`);
-    }
-    console.log(`     ${chalk.yellow(providerConfig.secretName)}`);
-    console.log();
-    console.log(chalk.dim('     링크: ') + chalk.cyan(`https://github.com/${repository}/settings/secrets/actions`));
+    // GitHub Secrets
+    nextSteps.push(
+      `${chalk.bold(`${stepNumber}. GitHub Secrets 설정`)}\n` +
+      `   GitHub repository → Settings → Secrets → Actions\n` +
+      (githubToken ? '' : `   ${chalk.yellow('GITHUB_TOKEN')} (repo scope 필요)\n`) +
+      `   ${chalk.yellow(providerConfig.secretName)}\n` +
+      `   ${chalk.dim(`링크: https://github.com/${repository}/settings/secrets/actions`)}`
+    );
     stepNumber++;
 
-    // Step: Environment Variable (only if not already set)
+    // Environment Variable (only if not already set)
     if (!githubToken) {
-      console.log(chalk.bold.white(`\n  ${stepNumber}. 환경변수 설정 (.env.local)\n`));
-      console.log(chalk.dim('     ') + chalk.gray('# .env.local'));
-      console.log(chalk.dim('     ') + chalk.green('GITHUB_TOKEN=') + chalk.gray('ghp_xxxxxxxxxxxx'));
+      nextSteps.push(
+        `${chalk.bold(`${stepNumber}. 환경변수 설정 (.env.local)`)}\n` +
+        `   ${chalk.gray('# .env.local')}\n` +
+        `   ${chalk.green('GITHUB_TOKEN=')}${chalk.gray('ghp_xxxxxxxxxxxx')}`
+      );
       stepNumber++;
     }
 
-    // Step: Add Widget (framework-specific) - only if not generated
+    // Widget (if not generated)
     if (!widgetFileCreated) {
-      console.log(chalk.bold.white(`\n  ${stepNumber}. 위젯 추가 (${frameworkConfig.name})\n`));
-      console.log(chalk.dim('     ') + chalk.gray(`// ${frameworkConfig.widgetFile}`));
-      console.log();
-      // Print the example code with proper indentation
-      const exampleLines = frameworkConfig.example.split('\n');
-      for (const line of exampleLines) {
-        console.log(chalk.dim('     ') + chalk.cyan(line));
-      }
+      nextSteps.push(
+        `${chalk.bold(`${stepNumber}. 위젯 추가 (${frameworkConfig.name})`)}\n` +
+        `   ${chalk.gray(`// ${frameworkConfig.widgetFile}`)}\n` +
+        frameworkConfig.example.split('\n').map(l => `   ${chalk.cyan(l)}`).join('\n')
+      );
       stepNumber++;
     }
 
-    // Step: Add API Route - only for fullstack frameworks if not generated
+    // API Route (for fullstack, if not generated)
     if (isFullstackFramework(framework) && !apiRouteFileCreated && backendFramework) {
       const backendConfig = BACKEND_CONFIGS[backendFramework];
-      console.log(chalk.bold.white(`\n  ${stepNumber}. API 라우트 추가 (${backendConfig.name})\n`));
-      console.log(chalk.dim('     ') + chalk.gray(`// ${backendConfig.apiRouteFile}`));
-      console.log();
-      const routeLines = backendConfig.apiRouteTemplate.split('\n');
-      for (const line of routeLines) {
-        console.log(chalk.dim('     ') + chalk.cyan(line));
-      }
+      nextSteps.push(
+        `${chalk.bold(`${stepNumber}. API 라우트 추가 (${backendConfig.name})`)}\n` +
+        `   ${chalk.gray(`// ${backendConfig.apiRouteFile}`)}\n` +
+        backendConfig.apiRouteTemplate.split('\n').map(l => `   ${chalk.cyan(l)}`).join('\n')
+      );
       stepNumber++;
     }
 
-    // Step: Backend setup - only for frontend-only frameworks
+    // Backend setup (for frontend-only)
     if (!isFullstackFramework(framework)) {
-      const backendDeploy = (options as InitOptions & { backendDeploy?: string }).backendDeploy || 'cloudflare';
-
-      console.log(chalk.bold.white(`\n  ${stepNumber}. 백엔드 설정\n`));
+      let backendInstructions = '';
 
       switch (backendDeploy) {
         case 'cloudflare':
-          console.log(chalk.bold.yellow('     Cloudflare Workers (무료 10만 요청/일)\n'));
-          console.log(chalk.dim('     ') + chalk.gray('# 1. 템플릿 복사:'));
-          console.log(chalk.dim('     ') + chalk.cyan('npx degit jhlee0409/inner-lens/templates/cloudflare-worker inner-lens-api'));
-          console.log(chalk.dim('     ') + chalk.cyan('cd inner-lens-api && npm install'));
-          console.log();
-          console.log(chalk.dim('     ') + chalk.gray('# 2. 환경변수 설정:'));
-          console.log(chalk.dim('     ') + chalk.cyan('npx wrangler secret put GITHUB_TOKEN'));
-          console.log(chalk.dim('     ') + chalk.gray('# wrangler.toml에서 GITHUB_REPOSITORY 설정'));
-          console.log();
-          console.log(chalk.dim('     ') + chalk.gray('# 3. 배포:'));
-          console.log(chalk.dim('     ') + chalk.cyan('npm run deploy'));
-          console.log();
-          console.log(chalk.dim('     ') + chalk.gray('# 4. 위젯에 endpoint 설정:'));
-          console.log(chalk.dim('     ') + chalk.cyan('<InnerLensWidget endpoint="https://inner-lens-api.YOUR.workers.dev" />'));
+          backendInstructions =
+            `${chalk.bold.yellow('Cloudflare Workers')} (무료 10만 요청/일)\n\n` +
+            `   README.md의 Serverless 배포 섹션을 참고하세요:\n` +
+            `   ${chalk.cyan('https://github.com/jhlee0409/inner-lens#serverless-deployment')}`;
           break;
-
         case 'vercel':
-          console.log(chalk.bold.cyan('     Vercel Serverless Function\n'));
-          console.log(chalk.dim('     ') + chalk.gray('# 1. API 폴더 생성:'));
-          console.log(chalk.dim('     ') + chalk.cyan('mkdir -p api/inner-lens'));
-          console.log(chalk.dim('     ') + chalk.cyan('npx degit jhlee0409/inner-lens/templates/vercel/api/inner-lens api/inner-lens'));
-          console.log();
-          console.log(chalk.dim('     ') + chalk.gray('# 2. Vercel 환경변수 설정:'));
-          console.log(chalk.dim('     ') + chalk.cyan('vercel env add GITHUB_TOKEN'));
-          console.log(chalk.dim('     ') + chalk.cyan('vercel env add GITHUB_REPOSITORY'));
-          console.log();
-          console.log(chalk.dim('     ') + chalk.gray('# 3. 배포:'));
-          console.log(chalk.dim('     ') + chalk.cyan('vercel'));
-          console.log();
-          console.log(chalk.dim('     ') + chalk.gray('# 4. 위젯 설정 (상대 경로):'));
-          console.log(chalk.dim('     ') + chalk.cyan('<InnerLensWidget endpoint="/api/inner-lens/report" />'));
+          backendInstructions =
+            `${chalk.bold.cyan('Vercel Serverless Function')}\n\n` +
+            `   README.md의 Serverless 배포 섹션을 참고하세요:\n` +
+            `   ${chalk.cyan('https://github.com/jhlee0409/inner-lens#serverless-deployment')}`;
           break;
-
         case 'netlify':
-          console.log(chalk.bold.cyan('     Netlify Function\n'));
-          console.log(chalk.dim('     ') + chalk.gray('# 1. 함수 폴더 생성:'));
-          console.log(chalk.dim('     ') + chalk.cyan('mkdir -p netlify/functions'));
-          console.log(chalk.dim('     ') + chalk.cyan('npx degit jhlee0409/inner-lens/templates/netlify/netlify/functions netlify/functions'));
-          console.log();
-          console.log(chalk.dim('     ') + chalk.gray('# 2. Netlify 환경변수 설정:'));
-          console.log(chalk.dim('     ') + chalk.gray('# Netlify Dashboard > Site settings > Environment variables'));
-          console.log(chalk.dim('     ') + chalk.cyan('GITHUB_TOKEN=ghp_xxxx'));
-          console.log(chalk.dim('     ') + chalk.cyan(`GITHUB_REPOSITORY=${repository}`));
-          console.log();
-          console.log(chalk.dim('     ') + chalk.gray('# 3. 배포:'));
-          console.log(chalk.dim('     ') + chalk.cyan('netlify deploy --prod'));
-          console.log();
-          console.log(chalk.dim('     ') + chalk.gray('# 4. 위젯 설정:'));
-          console.log(chalk.dim('     ') + chalk.cyan('<InnerLensWidget endpoint="/.netlify/functions/inner-lens-report" />'));
+          backendInstructions =
+            `${chalk.bold.cyan('Netlify Function')}\n\n` +
+            `   README.md의 Serverless 배포 섹션을 참고하세요:\n` +
+            `   ${chalk.cyan('https://github.com/jhlee0409/inner-lens#serverless-deployment')}`;
           break;
-
         case 'existing':
-          console.log(chalk.bold.dim('     기존 백엔드 서버 사용\n'));
-          console.log(chalk.dim('     ') + chalk.gray('// Express 예시:'));
-          console.log(chalk.dim('     ') + chalk.cyan(`import { createExpressHandler } from 'inner-lens/server';`));
-          console.log(chalk.dim('     ') + chalk.cyan(`app.post('/api/inner-lens/report', createExpressHandler({`));
-          console.log(chalk.dim('     ') + chalk.cyan(`  githubToken: process.env.GITHUB_TOKEN,`));
-          console.log(chalk.dim('     ') + chalk.cyan(`  repository: '${repository}',`));
-          console.log(chalk.dim('     ') + chalk.cyan(`}));`));
-          console.log();
-          console.log(chalk.dim('     ') + chalk.gray('// 지원 프레임워크: Express, Fastify, Hono, Koa, Node HTTP'));
+          backendInstructions =
+            `${chalk.bold.dim('기존 백엔드 서버 사용')}\n\n` +
+            `   ${chalk.gray('// Express 예시:')}\n` +
+            `   ${chalk.cyan(`import { createExpressHandler } from 'inner-lens/server';`)}\n` +
+            `   ${chalk.cyan(`app.post('/api/inner-lens/report', createExpressHandler({`)}\n` +
+            `   ${chalk.cyan(`  githubToken: process.env.GITHUB_TOKEN,`)}\n` +
+            `   ${chalk.cyan(`  repository: '${repository}',`)}\n` +
+            `   ${chalk.cyan(`}));`)}\n\n` +
+            `   ${chalk.gray('// 지원 프레임워크: Express, Fastify, Hono, Koa, Node HTTP')}`;
           break;
-
-        case 'skip':
         default:
-          console.log(chalk.dim('     나중에 설정하시려면 아래 가이드를 참고하세요:\n'));
-          console.log(chalk.dim('     📚 ') + chalk.cyan('https://github.com/jhlee0409/inner-lens#backend-setup'));
-          break;
+          backendInstructions =
+            `나중에 설정하시려면 아래 가이드를 참고하세요:\n` +
+            `   ${chalk.cyan('https://github.com/jhlee0409/inner-lens#backend-setup')}`;
       }
 
+      nextSteps.push(
+        `${chalk.bold(`${stepNumber}. 백엔드 설정`)}\n` +
+        `   ${backendInstructions}`
+      );
       stepNumber++;
     }
 
-    // Step: Test
-    console.log(chalk.bold.white(`\n  ${stepNumber}. 테스트\n`));
-    console.log(chalk.dim('     ') + 'npm run dev → 우측 하단 버그 리포트 버튼 클릭!');
+    // Test
+    nextSteps.push(
+      `${chalk.bold(`${stepNumber}. 테스트`)}\n` +
+      `   npm run dev → 우측 하단 버그 리포트 버튼 클릭!`
+    );
 
-    console.log('\n' + chalk.bold('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
+    p.note(nextSteps.join('\n\n'), 'Next Steps');
 
+    // Final message
     if (githubToken) {
-      console.log(chalk.green('\n🎉 GitHub 연동 완료! 토큰이 자동으로 저장되었습니다.'));
+      p.log.success('GitHub 연동 완료! 토큰이 자동으로 저장되었습니다.');
     }
 
     if (isFullstackFramework(framework) && widgetFileCreated && apiRouteFileCreated) {
-      console.log(chalk.green('\n🚀 위젯과 API 라우트가 자동으로 설정되었습니다!'));
-      console.log(chalk.dim('   npm run dev 후 바로 테스트할 수 있습니다.'));
+      p.log.success('위젯과 API 라우트가 자동으로 설정되었습니다!');
+      p.log.info('npm run dev 후 바로 테스트할 수 있습니다.');
     } else if (!isFullstackFramework(framework) && widgetFileCreated) {
-      console.log(chalk.green('\n🚀 위젯이 자동으로 설정되었습니다!'));
-      console.log(chalk.dim('   백엔드 서버 설정 후 테스트할 수 있습니다.'));
+      p.log.success('위젯이 자동으로 설정되었습니다!');
+      p.log.info('백엔드 서버 설정 후 테스트할 수 있습니다.');
     }
 
-    console.log(
-      chalk.dim('\n📚 Documentation: ') +
-        chalk.cyan('https://github.com/jhlee0409/inner-lens')
+    p.outro(
+      `Documentation: ${chalk.cyan('https://github.com/jhlee0409/inner-lens')}`
     );
-    console.log();
   });
 
 program
   .command('check')
   .description('Verify inner-lens configuration')
   .action(async () => {
-    console.log('\n' + chalk.bold.magenta('🔍 inner-lens Configuration Check\n'));
+    p.intro(chalk.bgMagenta.white(' inner-lens Configuration Check '));
 
     const cwd = process.cwd();
-    let hasErrors = false;
-    let hasWarnings = false;
+    const results: { label: string; status: 'success' | 'warn' | 'error'; message?: string }[] = [];
 
     // Check workflow file
     const workflowPath = path.join(cwd, '.github', 'workflows', 'inner-lens.yml');
     if (await fs.pathExists(workflowPath)) {
-      console.log(chalk.green('  ✓ ') + 'GitHub workflow found');
+      results.push({ label: 'GitHub workflow', status: 'success' });
     } else {
-      console.log(chalk.red('  ✗ ') + 'GitHub workflow not found');
-      console.log(chalk.dim('    → Run: npx inner-lens init'));
-      hasErrors = true;
+      results.push({
+        label: 'GitHub workflow',
+        status: 'error',
+        message: 'Run: npx inner-lens init',
+      });
     }
 
     // Detect framework
     const detectedFramework = await detectFramework(cwd);
     if (detectedFramework) {
-      console.log(chalk.green('  ✓ ') + `Framework detected: ${FRAMEWORK_CONFIGS[detectedFramework].name}`);
+      results.push({
+        label: 'Framework',
+        status: 'success',
+        message: FRAMEWORK_CONFIGS[detectedFramework].name,
+      });
     } else {
-      console.log(chalk.yellow('  ⊘ ') + 'Could not detect framework');
+      results.push({ label: 'Framework', status: 'warn', message: 'Could not detect' });
     }
 
     // Check package.json for inner-lens dependency
@@ -1403,11 +1341,13 @@ program
       const packageJson = await fs.readJson(packageJsonPath);
       const deps = { ...packageJson.dependencies, ...packageJson.devDependencies };
       if (deps['inner-lens']) {
-        console.log(chalk.green('  ✓ ') + 'inner-lens is installed');
+        results.push({ label: 'inner-lens package', status: 'success' });
       } else {
-        console.log(chalk.yellow('  ⊘ ') + 'inner-lens not in package.json');
-        console.log(chalk.dim('    → Run: npm install inner-lens'));
-        hasWarnings = true;
+        results.push({
+          label: 'inner-lens package',
+          status: 'warn',
+          message: 'Run: npm install inner-lens',
+        });
       }
     }
 
@@ -1416,25 +1356,42 @@ program
     if (await fs.pathExists(envLocalPath)) {
       const envContent = await fs.readFile(envLocalPath, 'utf-8');
       if (envContent.includes('GITHUB_TOKEN')) {
-        console.log(chalk.green('  ✓ ') + 'GITHUB_TOKEN found in .env.local');
+        results.push({ label: 'GITHUB_TOKEN', status: 'success' });
       } else {
-        console.log(chalk.yellow('  ⊘ ') + 'GITHUB_TOKEN not found in .env.local');
-        console.log(chalk.dim('    → Add: GITHUB_TOKEN=ghp_xxxxx'));
-        hasWarnings = true;
+        results.push({
+          label: 'GITHUB_TOKEN',
+          status: 'warn',
+          message: 'Add to .env.local',
+        });
       }
     } else {
-      console.log(chalk.yellow('  ⊘ ') + '.env.local not found');
-      console.log(chalk.dim('    → Create .env.local with GITHUB_TOKEN'));
-      hasWarnings = true;
+      results.push({
+        label: '.env.local',
+        status: 'warn',
+        message: 'Create with GITHUB_TOKEN',
+      });
     }
 
-    console.log('');
+    // Display results
+    for (const result of results) {
+      if (result.status === 'success') {
+        p.log.success(`${result.label}${result.message ? `: ${result.message}` : ''}`);
+      } else if (result.status === 'warn') {
+        p.log.warn(`${result.label}${result.message ? ` - ${result.message}` : ''}`);
+      } else {
+        p.log.error(`${result.label}${result.message ? ` - ${result.message}` : ''}`);
+      }
+    }
+
+    const hasErrors = results.some(r => r.status === 'error');
+    const hasWarnings = results.some(r => r.status === 'warn');
+
     if (hasErrors) {
-      console.log(chalk.red('❌ Configuration issues found.\n'));
+      p.outro(chalk.red('Configuration issues found.'));
     } else if (hasWarnings) {
-      console.log(chalk.yellow('⚠️  Some warnings. Check the items above.\n'));
+      p.outro(chalk.yellow('Some warnings. Check the items above.'));
     } else {
-      console.log(chalk.green('✅ All checks passed!\n'));
+      p.outro(chalk.green('All checks passed!'));
     }
   });
 

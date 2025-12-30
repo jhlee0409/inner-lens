@@ -109,4 +109,22 @@ export default defineConfig([
     },
     outExtension: () => ({ js: '.cjs' }),
   },
+  // create-inner-lens wrapper (for npx create-inner-lens)
+  {
+    entry: {
+      create: 'src/create.ts',
+    },
+    format: ['cjs'],
+    dts: false,
+    splitting: false,
+    sourcemap: false,
+    clean: false,
+    treeshake: true,
+    minify: false,
+    target: 'node18',
+    banner: {
+      js: '#!/usr/bin/env node',
+    },
+    outExtension: () => ({ js: '.cjs' }),
+  },
 ]);
