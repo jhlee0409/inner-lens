@@ -47,16 +47,57 @@ export interface IssueCreatorConfig {
 }
 
 /**
+ * Error messages with troubleshooting hints
+ */
+const ERROR_MESSAGES = {
+  INVALID_REPO_FORMAT: (repo: string) =>
+    `Invalid repository format: "${repo}". Expected "owner/repo" format (e.g., "jhlee0409/inner-lens"). ` +
+    `See: https://github.com/jhlee0409/inner-lens#troubleshooting`,
+
+  MISSING_TOKEN:
+    'GITHUB_TOKEN is not configured. Create a token at https://github.com/settings/tokens/new?scopes=repo ' +
+    'and add it to your environment variables. See: https://github.com/jhlee0409/inner-lens#-backend-setup',
+
+  TOKEN_UNAUTHORIZED:
+    'GITHUB_TOKEN is invalid or expired. Generate a new token at https://github.com/settings/tokens/new?scopes=repo',
+
+  REPO_NOT_FOUND: (repo: string) =>
+    `Repository "${repo}" not found. Check that the repository exists and your token has access. ` +
+    `For private repos, ensure the token has "repo" scope.`,
+
+  RATE_LIMITED:
+    'GitHub API rate limit exceeded. Wait a few minutes and try again, or use an authenticated token for higher limits.',
+
+  NETWORK_ERROR: (message: string) =>
+    `Network error connecting to GitHub: ${message}. Check your internet connection and try again.`,
+
+  INTERNAL_ERROR: (message: string) =>
+    `Internal server error: ${message}. If this persists, please report at https://github.com/jhlee0409/inner-lens/issues`,
+};
+
+/**
  * Creates a GitHub issue from a bug report
  */
 export async function createGitHubIssue(
   payload: BugReportPayload,
   config: IssueCreatorConfig
 ): Promise<BugReportResponse> {
+  // Validate token
+  if (!config.githubToken) {
+    return {
+      success: false,
+      message: ERROR_MESSAGES.MISSING_TOKEN,
+    };
+  }
+
+  // Validate repository format
   const [owner, repo] = config.repository.split('/');
 
-  if (!owner || !repo) {
-    throw new Error('Invalid repository format. Expected "owner/repo".');
+  if (!owner || !repo || config.repository.split('/').length !== 2) {
+    return {
+      success: false,
+      message: ERROR_MESSAGES.INVALID_REPO_FORMAT(config.repository),
+    };
   }
 
   const octokit = new Octokit({
@@ -117,11 +158,55 @@ ${formattedLogs || 'No logs captured'}
       issueNumber: response.data.number,
     };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Failed to create GitHub issue';
+    // Handle specific GitHub API errors
+    if (error instanceof Error) {
+      const errorMessage = error.message.toLowerCase();
+
+      // Unauthorized (401) - invalid token
+      if (errorMessage.includes('bad credentials') || errorMessage.includes('401')) {
+        return {
+          success: false,
+          message: ERROR_MESSAGES.TOKEN_UNAUTHORIZED,
+        };
+      }
+
+      // Not Found (404) - repo doesn't exist or no access
+      if (errorMessage.includes('not found') || errorMessage.includes('404')) {
+        return {
+          success: false,
+          message: ERROR_MESSAGES.REPO_NOT_FOUND(config.repository),
+        };
+      }
+
+      // Rate Limited (403)
+      if (errorMessage.includes('rate limit') || errorMessage.includes('403')) {
+        return {
+          success: false,
+          message: ERROR_MESSAGES.RATE_LIMITED,
+        };
+      }
+
+      // Network errors
+      if (
+        errorMessage.includes('enotfound') ||
+        errorMessage.includes('econnrefused') ||
+        errorMessage.includes('network')
+      ) {
+        return {
+          success: false,
+          message: ERROR_MESSAGES.NETWORK_ERROR(error.message),
+        };
+      }
+
+      return {
+        success: false,
+        message: ERROR_MESSAGES.INTERNAL_ERROR(error.message),
+      };
+    }
+
     return {
       success: false,
-      message,
+      message: ERROR_MESSAGES.INTERNAL_ERROR('Unknown error occurred'),
     };
   }
 }

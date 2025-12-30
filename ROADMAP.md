@@ -45,19 +45,19 @@
 ## Phase 3: UX 개선 (P2)
 
 ### 3.1 문서화 개선
-- [ ] Quick Start 섹션 강화 (30초 설정)
-- [ ] 트러블슈팅 섹션 추가
-- [ ] FAQ 추가
+- [x] Quick Start 섹션 강화 (30초 설정) ✅ 2025-12-30
+- [x] 트러블슈팅 섹션 추가 ✅ 2025-12-30
+- [x] FAQ 추가 ✅ 2025-12-30
 
 ### 3.2 에러 메시지 개선
-- [ ] GITHUB_TOKEN 미설정 에러 메시지 개선
-- [ ] GITHUB_REPOSITORY 형식 오류 메시지 개선
-- [ ] 네트워크 오류 메시지 개선
-- [ ] 해결 방법 + 문서 링크 포함
+- [x] GITHUB_TOKEN 미설정 에러 메시지 개선 ✅ 2025-12-30
+- [x] GITHUB_REPOSITORY 형식 오류 메시지 개선 ✅ 2025-12-30
+- [x] 네트워크 오류 메시지 개선 ✅ 2025-12-30
+- [x] 해결 방법 + 문서 링크 포함 ✅ 2025-12-30
 
 ### 3.3 devOnly 동작 명확화
-- [ ] 프로덕션에서 위젯 비활성화 시 콘솔 경고 추가
-- [ ] README에 devOnly 기본값 명시
+- [x] 프로덕션에서 위젯 비활성화 시 콘솔 info 메시지 추가 ✅ 2025-12-30
+- [x] README에 devOnly 기본값 명시 ✅ 2025-12-30
 
 ### 3.4 GitHub Actions Reusable Workflow
 - [ ] 재사용 가능한 워크플로우 작성
@@ -79,3 +79,4 @@
 | 2025-12-30 | Phase 1 완료: templates 삭제, README 정리, 편의 옵션 추가 |
 | 2025-12-30 | Phase 2.1 완료: CLI Clack 마이그레이션 (inquirer → @clack/prompts) |
 | 2025-12-30 | Phase 2.2 완료: npx create-inner-lens 지원 추가 |
+| 2025-12-30 | Phase 3.1-3.3 완료: 문서화 개선, 에러 메시지 개선, devOnly 명확화 |

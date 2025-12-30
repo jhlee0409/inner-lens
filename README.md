@@ -25,6 +25,37 @@ inner-lens is an open-source developer tool that integrates seamlessly into **an
 npm install inner-lens
 ```
 
+## ⚡ 30-Second Setup
+
+```bash
+# 1. Run the setup wizard
+npx create-inner-lens
+
+# 2. Add widget to your app (React example)
+```
+
+```tsx
+import { InnerLensWidget } from 'inner-lens/react';
+
+export default function App() {
+  return (
+    <>
+      <YourApp />
+      <InnerLensWidget />
+    </>
+  );
+}
+```
+
+```bash
+# 3. Start your app - that's it!
+npm run dev
+```
+
+> 💡 The CLI wizard auto-generates the API route and GitHub Actions workflow for you.
+
+---
+
 ## 🚀 Quick Start
 
 ### Choose Your Framework
@@ -374,8 +405,11 @@ npx inner-lens check
 | `styles.buttonColor` | `string` | `#6366f1` | Button color |
 | `styles.buttonPosition` | `string` | `bottom-right` | Button position |
 | `disabled` | `boolean` | `false` | Disable widget |
+| `devOnly` | `boolean` | `true` | **Auto-disable in production** (checks `NODE_ENV` and `import.meta.env.PROD`) |
 | `onSuccess` | `function` | - | Success callback |
 | `onError` | `function` | - | Error callback |
+
+> ⚠️ **Note:** `devOnly: true` (default) automatically disables the widget in production. Set `devOnly: false` to enable bug reporting in production environments.
 
 ---
 
@@ -432,6 +466,119 @@ inner-lens automatically masks sensitive data before submission:
 | `handleBugReport` | Core handler (framework-agnostic) |
 | `validateBugReport` | Validate payload |
 | `createGitHubIssue` | Create GitHub issue |
+
+---
+
+## 🔧 Troubleshooting
+
+### Widget doesn't appear
+
+1. **Check if widget is disabled:** By default, the widget is enabled. Check `disabled` prop.
+2. **Check console for errors:** Look for any JavaScript errors in browser console.
+3. **Verify import path:** Make sure you're using the correct import for your framework:
+   - React: `inner-lens/react`
+   - Vue: `inner-lens/vue`
+   - Vanilla: `inner-lens/vanilla` or `inner-lens`
+
+### Bug report submission fails
+
+1. **Check API endpoint:** Ensure `endpoint` matches your API route path.
+2. **Verify GITHUB_TOKEN:** Check that the token has `repo` scope.
+3. **Check CORS:** If using a separate backend, configure CORS headers.
+
+```bash
+# Verify configuration
+npx inner-lens check
+```
+
+### GitHub issue not created
+
+1. **Token permissions:** GITHUB_TOKEN needs `repo` scope for private repos, `public_repo` for public.
+2. **Repository format:** Use `owner/repo` format (e.g., `jhlee0409/inner-lens`).
+3. **Rate limits:** Check GitHub API rate limits if submitting many reports.
+
+### AI analysis not running
+
+1. **Check workflow file:** Ensure `.github/workflows/inner-lens.yml` exists.
+2. **Verify secrets:** Add `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `GOOGLE_GENERATIVE_AI_API_KEY` to GitHub Secrets.
+3. **Check issue labels:** Analysis only runs on issues with `inner-lens` label.
+
+---
+
+## ❓ FAQ
+
+<details>
+<summary><b>How does sensitive data masking work?</b></summary>
+
+inner-lens automatically masks common sensitive patterns before sending to AI:
+- Email addresses → `[EMAIL]`
+- API keys (OpenAI, Anthropic, etc.) → `[API_KEY]`
+- Bearer tokens → `[BEARER_TOKEN]`
+- Credit card numbers → `[CREDIT_CARD]`
+- And more...
+
+Masking happens on both client-side (before submission) and server-side (before AI analysis).
+
+</details>
+
+<details>
+<summary><b>Can I use inner-lens in production?</b></summary>
+
+Yes! inner-lens is designed for production use. You can:
+- Set `disabled={process.env.NODE_ENV === 'production'}` to disable in production
+- Or keep it enabled for real user bug reports
+
+</details>
+
+<details>
+<summary><b>Which AI provider should I choose?</b></summary>
+
+| Provider | Model | Best For |
+|----------|-------|----------|
+| Anthropic | Claude Sonnet 4 | Best code understanding (recommended) |
+| OpenAI | GPT-4o | Fast, versatile |
+| Google | Gemini 2.0 Flash | Cost-effective |
+
+</details>
+
+<details>
+<summary><b>Does inner-lens work with SSR/SSG?</b></summary>
+
+Yes! The widget only renders on the client side. For frameworks with SSR:
+- **Next.js:** Use `'use client'` directive or dynamic import
+- **Nuxt:** The Vue component is SSR-safe
+- **SvelteKit:** Mount the widget in `onMount`
+
+</details>
+
+<details>
+<summary><b>Can I customize the widget appearance?</b></summary>
+
+Yes! Use the `styles` prop or convenience options:
+
+```tsx
+<InnerLensWidget
+  position="bottom-left"
+  buttonColor="#10b981"
+  buttonText="Report Issue"
+  dialogTitle="Found a bug?"
+/>
+```
+
+</details>
+
+<details>
+<summary><b>How do I deploy the backend?</b></summary>
+
+For frontend-only frameworks (Vite, CRA), deploy a serverless function:
+
+- **Cloudflare Workers:** Free 100k requests/day
+- **Vercel Serverless:** Integrates with Vercel projects
+- **Netlify Functions:** Integrates with Netlify projects
+
+See [Backend Setup](#️-backend-setup) for code examples.
+
+</details>
 
 ---
 
