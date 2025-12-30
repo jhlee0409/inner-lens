@@ -184,79 +184,60 @@ const { open, close, isOpen } = useInnerLens({
 
 ## 🖥️ Backend Setup
 
-Choose your backend framework:
+버그 리포트를 GitHub Issue로 전송하려면 백엔드 API가 필요합니다.
 
-<details>
-<summary><b>Next.js App Router</b></summary>
+### Web Fetch API (권장)
+
+Next.js, Vercel, Netlify, Cloudflare Workers, Hono, Bun, Deno 등 Web Standards를 지원하는 환경:
 
 ```ts
-// app/api/inner-lens/report/route.ts
+// Next.js: app/api/inner-lens/report/route.ts
+// Vercel: api/inner-lens/report.ts
+// Cloudflare Workers: src/index.ts
 import { createFetchHandler } from 'inner-lens/server';
 
 export const POST = createFetchHandler({
   githubToken: process.env.GITHUB_TOKEN!,
-  repository: process.env.GITHUB_REPOSITORY!,
+  repository: 'owner/repo', // 또는 process.env.GITHUB_REPOSITORY
 });
 ```
 
-</details>
+### 환경변수
+
+| 변수 | 설명 |
+|------|------|
+| `GITHUB_TOKEN` | [Personal Access Token](https://github.com/settings/tokens/new) (repo 권한 필요) |
+| `GITHUB_REPOSITORY` | `owner/repo` 형식 (선택) |
 
 <details>
-<summary><b>Express</b></summary>
+<summary><b>다른 프레임워크 (Express, Fastify, Koa, Node.js)</b></summary>
 
+**Express:**
 ```ts
 import express from 'express';
 import { createExpressHandler } from 'inner-lens/server';
 
 const app = express();
 app.use(express.json());
-
 app.post('/api/inner-lens/report', createExpressHandler({
   githubToken: process.env.GITHUB_TOKEN!,
   repository: 'owner/repo',
 }));
 ```
 
-</details>
-
-<details>
-<summary><b>Fastify</b></summary>
-
+**Fastify:**
 ```ts
 import Fastify from 'fastify';
 import { createFastifyHandler } from 'inner-lens/server';
 
 const fastify = Fastify();
-
 fastify.post('/api/inner-lens/report', createFastifyHandler({
   githubToken: process.env.GITHUB_TOKEN!,
   repository: 'owner/repo',
 }));
 ```
 
-</details>
-
-<details>
-<summary><b>Hono / Bun / Deno</b></summary>
-
-```ts
-import { Hono } from 'hono';
-import { createFetchHandler } from 'inner-lens/server';
-
-const app = new Hono();
-const handler = createFetchHandler({
-  githubToken: process.env.GITHUB_TOKEN!,
-  repository: 'owner/repo',
-});
-
-app.post('/api/inner-lens/report', (c) => handler(c.req.raw));
-```
-
-</details>
-
-<details>
-<summary><b>Koa</b></summary>
-
+**Koa:**
 ```ts
 import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
@@ -264,12 +245,10 @@ import { createKoaHandler } from 'inner-lens/server';
 
 const app = new Koa();
 app.use(bodyParser());
-
 const handler = createKoaHandler({
   githubToken: process.env.GITHUB_TOKEN!,
   repository: 'owner/repo',
 });
-
 app.use(async (ctx, next) => {
   if (ctx.path === '/api/inner-lens/report' && ctx.method === 'POST') {
     await handler(ctx);
@@ -279,11 +258,7 @@ app.use(async (ctx, next) => {
 });
 ```
 
-</details>
-
-<details>
-<summary><b>Node.js HTTP</b></summary>
-
+**Node.js HTTP:**
 ```ts
 import http from 'http';
 import { createNodeHandler } from 'inner-lens/server';
@@ -292,110 +267,58 @@ const handler = createNodeHandler({
   githubToken: process.env.GITHUB_TOKEN!,
   repository: 'owner/repo',
 });
-
 const server = http.createServer(async (req, res) => {
   if (req.url === '/api/inner-lens/report' && req.method === 'POST') {
     await handler(req, res);
   }
 });
-
 server.listen(3000);
 ```
 
 </details>
 
-### 🚀 Serverless Deployment (Frontend-Only)
-
-백엔드 서버가 없는 프론트엔드 프로젝트(Vite, Vanilla JS 등)를 위한 서버리스 배포 옵션입니다.
-
 <details>
-<summary><b>☁️ Cloudflare Workers</b></summary>
+<summary><b>Cloudflare Workers 전체 예시</b></summary>
 
-```bash
-# 1. 템플릿 복사
-npx degit jhlee0409/inner-lens/templates/cloudflare-worker my-bug-reporter
-cd my-bug-reporter
+```ts
+// src/index.ts
+import { createFetchHandler } from 'inner-lens/server';
 
-# 2. 의존성 설치
-npm install
+interface Env {
+  GITHUB_TOKEN: string;
+  GITHUB_REPOSITORY: string;
+}
 
-# 3. 환경변수 설정
-# wrangler.toml에서 GITHUB_REPOSITORY 설정
-# Cloudflare Dashboard에서 GITHUB_TOKEN secret 추가
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    // CORS preflight
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
+      });
+    }
 
-# 4. 배포
-npx wrangler deploy
+    if (request.method === 'POST') {
+      const handler = createFetchHandler({
+        githubToken: env.GITHUB_TOKEN,
+        repository: env.GITHUB_REPOSITORY,
+      });
+      const response = await handler(request);
+
+      // CORS 헤더 추가
+      const headers = new Headers(response.headers);
+      headers.set('Access-Control-Allow-Origin', '*');
+      return new Response(response.body, { status: response.status, headers });
+    }
+
+    return new Response('Method not allowed', { status: 405 });
+  },
+};
 ```
-
-위젯 설정:
-```tsx
-<InnerLensWidget
-  endpoint="https://your-worker.workers.dev/report"
-/>
-```
-
-</details>
-
-<details>
-<summary><b>▲ Vercel Functions</b></summary>
-
-```bash
-# 1. API 폴더 생성 및 파일 복사
-mkdir -p api/inner-lens
-npx degit jhlee0409/inner-lens/templates/vercel/api/inner-lens api/inner-lens
-
-# 2. 환경변수 설정 (Vercel Dashboard)
-# - GITHUB_TOKEN: GitHub Personal Access Token
-# - GITHUB_REPOSITORY: owner/repo
-
-# 3. 배포
-vercel
-```
-
-위젯 설정:
-```tsx
-<InnerLensWidget
-  endpoint="/api/inner-lens/report"
-/>
-```
-
-</details>
-
-<details>
-<summary><b>◆ Netlify Functions</b></summary>
-
-```bash
-# 1. Functions 폴더 생성 및 파일 복사
-mkdir -p netlify/functions
-npx degit jhlee0409/inner-lens/templates/netlify/netlify/functions netlify/functions
-
-# 2. 환경변수 설정 (Netlify Dashboard)
-# - GITHUB_TOKEN: GitHub Personal Access Token
-# - GITHUB_REPOSITORY: owner/repo
-
-# 3. 배포
-netlify deploy --prod
-```
-
-위젯 설정:
-```tsx
-<InnerLensWidget
-  endpoint="/.netlify/functions/inner-lens-report"
-/>
-```
-
-</details>
-
-<details>
-<summary><b>🔧 기존 백엔드 서버 사용</b></summary>
-
-Express, Fastify 등 기존 백엔드가 있다면 `inner-lens/server` 패키지를 사용하세요:
-
-```bash
-npm install inner-lens
-```
-
-위 "Backend Setup" 섹션의 프레임워크별 가이드를 참조하세요.
 
 </details>
 
