@@ -61,7 +61,8 @@ inner-lens/
 │   └── analyze-issue.ts     # AI analysis engine (GitHub Actions)
 ├── .github/workflows/
 │   ├── test.yml             # CI: tests + build
-│   └── analysis-engine.yml  # AI analysis on new issues
+│   ├── analyze-issues.yml   # Trigger: runs analysis on new bug issues
+│   └── analysis-engine.yml  # Reusable: AI analysis engine (called by analyze-issues.yml)
 ├── tsup.config.ts           # Build configuration (7 separate builds)
 ├── vitest.config.ts         # Test configuration
 └── tsconfig.json            # TypeScript configuration
@@ -271,10 +272,17 @@ Edit `scripts/analyze-issue.ts`:
 - Uploads coverage to Codecov (Node 20 only)
 - Uses SHA-pinned GitHub Actions for security
 
-### analysis-engine.yml
-- Triggers on new issues with `inner-lens` label
-- Runs AI analysis and posts comment
-- Adds severity/category labels
+### analyze-issues.yml (Trigger Workflow)
+- Triggers on new issues with `bug` label or when `inner-lens` label is added
+- Calls the reusable `analysis-engine.yml` workflow
+- Configures AI provider and parameters
+
+### analysis-engine.yml (Reusable Workflow)
+- Reusable workflow (`workflow_call`) for AI analysis
+- Can be called from this repo or external repos
+- Runs Chain-of-Thought AI analysis and posts comment
+- Adds severity/category labels based on analysis
+- External usage: `uses: jhlee0409/inner-lens/.github/workflows/analysis-engine.yml@v1`
 
 ## Important Considerations
 

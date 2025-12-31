@@ -1,0 +1,58 @@
+# Trigger workflow for inner-lens AI Analysis
+# This workflow triggers the reusable analysis-engine when issues are created/labeled
+
+name: Analyze Issues
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  check-trigger:
+    name: Check Trigger Conditions
+    runs-on: ubuntu-latest
+    outputs:
+      should_analyze: ${{ steps.check.outputs.should_analyze }}
+    steps:
+      - name: Check if analysis should run
+        id: check
+        run: |
+          # Run analysis if:
+          # 1. Issue was just opened with 'bug' label, OR
+          # 2. Issue was labeled with 'inner-lens' label
+
+          EVENT_NAME="${{ github.event.action }}"
+          LABELS='${{ toJson(github.event.issue.labels.*.name) }}'
+          ADDED_LABEL="${{ github.event.label.name }}"
+
+          echo "Event: $EVENT_NAME"
+          echo "Labels: $LABELS"
+          echo "Added label: $ADDED_LABEL"
+
+          SHOULD_ANALYZE="false"
+
+          # Case 1: Issue opened with 'bug' label
+          if [[ "$EVENT_NAME" == "opened" ]] && echo "$LABELS" | grep -q '"bug"'; then
+            echo "✅ New bug issue opened"
+            SHOULD_ANALYZE="true"
+          fi
+
+          # Case 2: 'inner-lens' label was added
+          if [[ "$EVENT_NAME" == "labeled" ]] && [[ "$ADDED_LABEL" == "inner-lens" ]]; then
+            echo "✅ inner-lens label added"
+            SHOULD_ANALYZE="true"
+          fi
+
+          echo "should_analyze=$SHOULD_ANALYZE" >> $GITHUB_OUTPUT
+
+  analyze:
+    name: Run Analysis
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should_analyze == 'true'
+    uses: ./.github/workflows/analysis-engine.yml
+    with:
+      provider: 'anthropic'
+      max_files: 25
+      max_tokens: 4000
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
