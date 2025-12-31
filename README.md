@@ -164,7 +164,9 @@ const { open, close, isOpen } = useInnerLens({
 </details>
 
 <details>
-<summary><b>🔶 Svelte</b></summary>
+<summary><b>🔶 Svelte / SvelteKit</b> <i>(via vanilla wrapper)</i></summary>
+
+Svelte uses the framework-agnostic vanilla wrapper:
 
 ```svelte
 <script>
@@ -185,16 +187,20 @@ const { open, close, isOpen } = useInnerLens({
     widget?.unmount();
   });
 </script>
+
+<slot />
 ```
 
 </details>
 
 <details>
-<summary><b>🚀 Astro</b></summary>
+<summary><b>🚀 Astro</b> <i>(via vanilla wrapper)</i></summary>
+
+Astro uses the framework-agnostic vanilla wrapper in a client-side script:
 
 ```astro
 ---
-// For client-side hydration
+// No server-side code needed
 ---
 
 <script>
@@ -208,6 +214,8 @@ const { open, close, isOpen } = useInnerLens({
   widget.mount();
 </script>
 ```
+
+> **Tip:** For Astro with React islands, you can also use `inner-lens/react` in React components.
 
 </details>
 
@@ -441,12 +449,39 @@ jobs:
 | `captureConsoleLogs` | `boolean` | `true` | Capture console.error/warn |
 | `maxLogEntries` | `number` | `50` | Max logs to capture |
 | `maskSensitiveData` | `boolean` | `true` | Auto-mask PII |
-| `styles.buttonColor` | `string` | `#6366f1` | Button color |
-| `styles.buttonPosition` | `string` | `bottom-right` | Button position |
 | `disabled` | `boolean` | `false` | Disable widget |
 | `devOnly` | `boolean` | `true` | **Auto-disable in production** (checks `NODE_ENV` and `import.meta.env.PROD`) |
-| `onSuccess` | `function` | - | Success callback |
+| `onSuccess` | `function` | - | Success callback with issue URL |
 | `onError` | `function` | - | Error callback |
+
+### Styling Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `position` | `string` | `bottom-right` | Button position (`bottom-right`, `bottom-left`, `top-right`, `top-left`) |
+| `buttonColor` | `string` | `#6366f1` | Button background color |
+| `styles.buttonColor` | `string` | `#6366f1` | Same as above (legacy) |
+| `styles.buttonPosition` | `string` | `bottom-right` | Same as above (legacy) |
+
+### UI Text Customization
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `buttonText` | `string` | `Report a bug` | Trigger button aria-label and title |
+| `dialogTitle` | `string` | `Report an Issue` | Dialog header title |
+| `dialogDescription` | `string` | `Describe the issue` | Textarea label text |
+| `submitText` | `string` | `Submit Report` | Submit button text |
+| `cancelText` | `string` | `Cancel` | Cancel button text |
+| `successMessage` | `string` | `Report Submitted` | Success state title |
+
+### Lifecycle Callbacks
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `onOpen` | `() => void` | Called when dialog opens |
+| `onClose` | `() => void` | Called when dialog closes |
+| `onSuccess` | `(issueUrl?: string) => void` | Called on successful submission |
+| `onError` | `(error: Error) => void` | Called on submission error |
 
 > ⚠️ **Note:** `devOnly: true` (default) automatically disables the widget in production. Set `devOnly: false` to enable bug reporting in production environments.
 
@@ -462,11 +497,27 @@ inner-lens automatically masks sensitive data before submission:
 |---------|---------------|
 | Email addresses | `[EMAIL_REDACTED]` |
 | Bearer tokens | `Bearer [TOKEN_REDACTED]` |
-| API keys (OpenAI, Anthropic, etc.) | `[API_KEY_REDACTED]` |
+| Authorization headers | `[AUTH_REDACTED]` |
 | JWTs | `[JWT_REDACTED]` |
 | Credit card numbers | `[CARD_REDACTED]` |
+| SSN (US Social Security) | `[SSN_REDACTED]` |
+| Phone numbers | `[PHONE_REDACTED]` |
+| IPv4 addresses | `[IP_REDACTED]` |
 | Database URLs | `[DATABASE_URL_REDACTED]` |
-| Private keys | `[PRIVATE_KEY_REDACTED]` |
+| Private keys (PEM) | `[PRIVATE_KEY_REDACTED]` |
+
+**Provider-Specific API Keys:**
+
+| Provider | Replaced With |
+|----------|---------------|
+| OpenAI (`sk-...`) | `[OPENAI_KEY_REDACTED]` |
+| Anthropic (`sk-ant-...`) | `[ANTHROPIC_KEY_REDACTED]` |
+| Google (`AIza...`) | `[GOOGLE_KEY_REDACTED]` |
+| AWS Access Key (`AKIA...`) | `[AWS_KEY_REDACTED]` |
+| AWS Secret Key | `[AWS_SECRET_REDACTED]` |
+| GitHub Token (`ghp_...`) | `[GITHUB_TOKEN_REDACTED]` |
+| Stripe (`sk_live_...`) | `[STRIPE_KEY_REDACTED]` |
+| Generic secrets/passwords | `[SECRET_REDACTED]` |
 
 ---
 
@@ -635,13 +686,18 @@ See [Backend Setup](#️-backend-setup) for code examples.
 
 ## 🤝 Contributing
 
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details.
+
 ```bash
 git clone https://github.com/jhlee0409/inner-lens.git
 cd inner-lens
 npm install
-npm run build
-npm run dev  # Watch mode
+npm run test     # Run tests
+npm run build    # Build all packages
+npm run dev      # Watch mode
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for coding standards, PR process, and more.
 
 ---
 
