@@ -21,42 +21,28 @@ inner-lens is an open-source developer tool that integrates seamlessly into **an
 
 ## 📦 Installation
 
+Choose one of the following setup methods:
+
+### Option A: Automated Setup (Recommended)
+
+```bash
+# The CLI wizard installs the package, generates API routes, and sets up GitHub Actions
+npx create-inner-lens
+```
+
+### Option B: Manual Installation
+
 ```bash
 npm install inner-lens
 ```
 
-## ⚡ 30-Second Setup
-
-```bash
-# 1. Run the setup wizard
-npx create-inner-lens
-
-# 2. Add widget to your app (React example)
-```
-
-```tsx
-import { InnerLensWidget } from 'inner-lens/react';
-
-export default function App() {
-  return (
-    <>
-      <YourApp />
-      <InnerLensWidget />
-    </>
-  );
-}
-```
-
-```bash
-# 3. Start your app - that's it!
-npm run dev
-```
-
-> 💡 The CLI wizard auto-generates the API route and GitHub Actions workflow for you.
+> 💡 **Option A vs B**: Use Option A if you want a guided setup that configures everything automatically. Use Option B if you prefer manual control or are adding to an existing project.
 
 ---
 
 ## 🚀 Quick Start
+
+After installation, add the widget to your app:
 
 ### Choose Your Framework
 
@@ -223,11 +209,11 @@ Astro uses the framework-agnostic vanilla wrapper in a client-side script:
 
 ## 🖥️ Backend Setup
 
-버그 리포트를 GitHub Issue로 전송하려면 백엔드 API가 필요합니다.
+A backend API is required to send bug reports to GitHub Issues.
 
-### Web Fetch API (권장)
+### Web Fetch API (Recommended)
 
-Next.js, Vercel, Netlify, Cloudflare Workers, Hono, Bun, Deno 등 Web Standards를 지원하는 환경:
+For environments supporting Web Standards (Next.js, Vercel, Netlify, Cloudflare Workers, Hono, Bun, Deno):
 
 ```ts
 // Next.js: app/api/inner-lens/report/route.ts
@@ -237,19 +223,19 @@ import { createFetchHandler } from 'inner-lens/server';
 
 export const POST = createFetchHandler({
   githubToken: process.env.GITHUB_TOKEN!,
-  repository: 'owner/repo', // 또는 process.env.GITHUB_REPOSITORY
+  repository: 'owner/repo', // or process.env.GITHUB_REPOSITORY
 });
 ```
 
-### 환경변수
+### Environment Variables
 
-| 변수 | 설명 |
-|------|------|
-| `GITHUB_TOKEN` | [Personal Access Token](https://github.com/settings/tokens/new) (repo 권한 필요) |
-| `GITHUB_REPOSITORY` | `owner/repo` 형식 (선택) |
+| Variable | Description |
+|----------|-------------|
+| `GITHUB_TOKEN` | [Personal Access Token](https://github.com/settings/tokens/new) (requires `repo` scope) |
+| `GITHUB_REPOSITORY` | `owner/repo` format (optional) |
 
 <details>
-<summary><b>다른 프레임워크 (Express, Fastify, Koa, Node.js)</b></summary>
+<summary><b>Other Frameworks (Express, Fastify, Koa, Node.js)</b></summary>
 
 **Express:**
 ```ts
@@ -317,7 +303,7 @@ server.listen(3000);
 </details>
 
 <details>
-<summary><b>Cloudflare Workers 전체 예시</b></summary>
+<summary><b>Cloudflare Workers Full Example</b></summary>
 
 ```ts
 // src/index.ts
@@ -348,7 +334,7 @@ export default {
       });
       const response = await handler(request);
 
-      // CORS 헤더 추가
+      // Add CORS headers
       const headers = new Headers(response.headers);
       headers.set('Access-Control-Allow-Origin', '*');
       return new Response(response.body, { status: response.status, headers });
@@ -450,7 +436,7 @@ jobs:
 | `maxLogEntries` | `number` | `50` | Max logs to capture |
 | `maskSensitiveData` | `boolean` | `true` | Auto-mask PII |
 | `disabled` | `boolean` | `false` | Disable widget |
-| `devOnly` | `boolean` | `true` | **Auto-disable in production** (checks `NODE_ENV` and `import.meta.env.PROD`) |
+| `devOnly` | `boolean` | `true` | **Auto-disable in production** — When `true`, widget is hidden if `NODE_ENV === 'production'` or `import.meta.env.PROD === true`. Set to `false` to enable in production. |
 | `onSuccess` | `function` | - | Success callback with issue URL |
 | `onError` | `function` | - | Error callback |
 
@@ -460,8 +446,18 @@ jobs:
 |--------|------|---------|-------------|
 | `position` | `string` | `bottom-right` | Button position (`bottom-right`, `bottom-left`, `top-right`, `top-left`) |
 | `buttonColor` | `string` | `#6366f1` | Button background color |
-| `styles.buttonColor` | `string` | `#6366f1` | Same as above (legacy) |
-| `styles.buttonPosition` | `string` | `bottom-right` | Same as above (legacy) |
+
+<details>
+<summary><b>Deprecated Options</b></summary>
+
+The following options still work but are deprecated. Use the top-level options above instead:
+
+| Option | Use Instead |
+|--------|-------------|
+| `styles.buttonColor` | `buttonColor` |
+| `styles.buttonPosition` | `position` |
+
+</details>
 
 ### UI Text Customization
 
@@ -483,7 +479,10 @@ jobs:
 | `onSuccess` | `(issueUrl?: string) => void` | Called on successful submission |
 | `onError` | `(error: Error) => void` | Called on submission error |
 
-> ⚠️ **Note:** `devOnly: true` (default) automatically disables the widget in production. Set `devOnly: false` to enable bug reporting in production environments.
+> ⚠️ **Production Usage:** By default (`devOnly: true`), the widget is automatically hidden in production. To enable bug reporting from real users in production:
+> ```tsx
+> <InnerLensWidget devOnly={false} />
+> ```
 
 ---
 
@@ -601,11 +600,11 @@ npx inner-lens check
 <summary><b>How does sensitive data masking work?</b></summary>
 
 inner-lens automatically masks common sensitive patterns before sending to AI:
-- Email addresses → `[EMAIL]`
-- API keys (OpenAI, Anthropic, etc.) → `[API_KEY]`
-- Bearer tokens → `[BEARER_TOKEN]`
-- Credit card numbers → `[CREDIT_CARD]`
-- And more...
+- Email addresses → `[EMAIL_REDACTED]`
+- API keys (OpenAI, Anthropic, etc.) → `[OPENAI_KEY_REDACTED]`, `[ANTHROPIC_KEY_REDACTED]`
+- Bearer tokens → `Bearer [TOKEN_REDACTED]`
+- Credit card numbers → `[CARD_REDACTED]`
+- And more (see [Security](#-security) section for full list)
 
 Masking happens on both client-side (before submission) and server-side (before AI analysis).
 
@@ -614,9 +613,12 @@ Masking happens on both client-side (before submission) and server-side (before 
 <details>
 <summary><b>Can I use inner-lens in production?</b></summary>
 
-Yes! inner-lens is designed for production use. You can:
-- Set `disabled={process.env.NODE_ENV === 'production'}` to disable in production
-- Or keep it enabled for real user bug reports
+Yes! inner-lens is designed for production use. By default, the widget is hidden in production (`devOnly: true`). To enable it:
+
+```tsx
+// Enable bug reporting from real users in production
+<InnerLensWidget devOnly={false} />
+```
 
 </details>
 
