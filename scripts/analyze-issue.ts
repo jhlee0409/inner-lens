@@ -36,8 +36,12 @@ interface AnalysisConfig {
 
 // Structured output schema for analysis
 const AnalysisResultSchema = z.object({
-  severity: z.enum(['critical', 'high', 'medium', 'low']),
-  category: z.enum(['runtime_error', 'logic_error', 'performance', 'security', 'ui_ux', 'configuration', 'unknown']),
+  // Validity check - MUST be evaluated first
+  isValidReport: z.boolean().describe('Whether this is a valid, actionable bug report with sufficient information'),
+  invalidReason: z.string().optional().describe('If isValidReport is false, explain why (e.g., "No error logs or reproduction steps provided", "Description too vague to analyze")'),
+
+  severity: z.enum(['critical', 'high', 'medium', 'low', 'none']),
+  category: z.enum(['runtime_error', 'logic_error', 'performance', 'security', 'ui_ux', 'configuration', 'invalid_report', 'unknown']),
   rootCause: z.object({
     summary: z.string().describe('One-line summary of the root cause'),
     explanation: z.string().describe('Detailed explanation of why the bug occurred'),
@@ -284,7 +288,42 @@ const SYSTEM_PROMPT = `You are an expert Security-First QA Engineer analyzing bu
 3. NEVER include PII (emails, names, IPs) in your response
 4. If you detect sensitive data, note that it was redacted
 
-## ANALYSIS METHODOLOGY (Chain-of-Thought)
+## STEP 0: VALIDATE REPORT (MANDATORY - DO THIS FIRST)
+
+Before any analysis, you MUST determine if this is a valid, actionable bug report.
+
+### Mark as INVALID (isValidReport: false) if ANY of these are true:
+1. **No evidence of actual error**: No error messages, no stack traces, no console logs, AND description is vague
+2. **Insufficient information**: Description is less than 10 words or just says "error" without details
+3. **Cannot reproduce**: No reproduction steps AND no logs AND no specific error description
+4. **False/Test report**: Description appears to be a test, placeholder, or intentionally fake
+5. **Feature request disguised as bug**: User is requesting new functionality, not reporting broken existing functionality
+6. **User error, not bug**: The described behavior is actually expected/correct behavior
+
+### Signs of INVALID reports:
+- "No logs captured" + vague description like "에러" or "doesn't work"
+- Description only contains generic words without specific symptoms
+- No URL context + no logs + no error messages
+- Description doesn't match any actual code behavior
+
+### Mark as VALID (isValidReport: true) only if:
+- There are actual error logs/stack traces, OR
+- Description clearly explains what went wrong with specific details, OR
+- There are network request failures shown, OR
+- Description includes reproduction steps
+
+**If the report is INVALID:**
+- Set isValidReport: false
+- Set invalidReason: explain why (be specific)
+- Set severity: "none"
+- Set category: "invalid_report"
+- Set confidence: 0
+- rootCause.summary: "Unable to analyze - insufficient information"
+- Keep other fields minimal/empty
+
+**Only proceed with full analysis if isValidReport: true**
+
+## ANALYSIS METHODOLOGY (Chain-of-Thought) - Only for VALID reports
 
 ### Step 1: UNDERSTAND
 - Read the bug report carefully
@@ -316,7 +355,9 @@ const SYSTEM_PROMPT = `You are an expert Security-First QA Engineer analyzing bu
 - Be specific and actionable, not generic
 - Reference actual file names and code from the context
 - Provide working code snippets, not pseudocode
-- Explain WHY the fix works, not just WHAT to change`;
+- Explain WHY the fix works, not just WHAT to change
+- DO NOT fabricate issues that don't exist in the code
+- If you cannot find evidence of a bug, say so honestly`;
 
 const USER_PROMPT_TEMPLATE = (
   title: string,
@@ -377,20 +418,71 @@ async function withRetry<T>(
 // ============================================
 
 function formatAnalysisComment(result: AnalysisResult, provider: string, filesAnalyzed: number): string {
-  const severityEmoji = {
+  // Handle invalid reports first
+  if (!result.isValidReport) {
+    return `## 🔍 inner-lens Analysis
+
+⚪ **Report Status:** INSUFFICIENT INFORMATION
+
+---
+
+### ❓ Unable to Analyze
+
+This bug report does not contain enough information for automated analysis.
+
+**Reason:** ${result.invalidReason || 'The report lacks sufficient details, error logs, or reproduction steps.'}
+
+---
+
+### 📝 What We Need
+
+To analyze this issue, please provide:
+
+1. **Error messages or stack traces** - Copy the exact error from the console
+2. **Steps to reproduce** - What actions lead to this bug?
+3. **Expected vs actual behavior** - What should happen vs what actually happens?
+4. **Console logs** - Enable log capture in inner-lens widget
+
+---
+
+### 🔄 Next Steps
+
+- **Update this issue** with more details, OR
+- **Submit a new report** with the inner-lens widget (ensure console logging is enabled)
+
+---
+
+<details>
+<summary>Analysis Metadata</summary>
+
+| Field | Value |
+|-------|-------|
+| Status | Invalid/Insufficient |
+| Provider | ${provider} |
+| Files Scanned | ${filesAnalyzed} |
+| Timestamp | ${new Date().toISOString()} |
+
+</details>
+
+*This analysis was generated by [inner-lens](https://github.com/jhlee0409/inner-lens).*`;
+  }
+
+  const severityEmoji: Record<string, string> = {
     critical: '🔴',
     high: '🟠',
     medium: '🟡',
     low: '🟢',
+    none: '⚪',
   };
 
-  const categoryLabels = {
+  const categoryLabels: Record<string, string> = {
     runtime_error: 'Runtime Error',
     logic_error: 'Logic Error',
     performance: 'Performance Issue',
     security: 'Security Issue',
     ui_ux: 'UI/UX Issue',
     configuration: 'Configuration Issue',
+    invalid_report: 'Invalid Report',
     unknown: 'Unknown',
   };
 
@@ -551,6 +643,7 @@ async function analyzeIssue(): Promise<void> {
 
     // Create a basic structured result from text
     analysis = {
+      isValidReport: true, // Assume valid if we got this far
       severity: 'medium',
       category: 'unknown',
       rootCause: {
@@ -585,14 +678,21 @@ async function analyzeIssue(): Promise<void> {
   console.log('\n🏷️ Step 7: Adding labels...');
   const labelsToAdd: string[] = [];
 
-  if (analysis.severity === 'critical' || analysis.severity === 'high') {
-    labelsToAdd.push('priority:high');
-  }
-  if (analysis.category === 'security') {
-    labelsToAdd.push('security');
-  }
-  if (analysis.confidence >= 80) {
-    labelsToAdd.push('ai:high-confidence');
+  // Handle invalid reports
+  if (!analysis.isValidReport) {
+    labelsToAdd.push('needs-more-info');
+    console.log('   📋 Report marked as invalid/insufficient');
+  } else {
+    // Only add severity/confidence labels for valid reports
+    if (analysis.severity === 'critical' || analysis.severity === 'high') {
+      labelsToAdd.push('priority:high');
+    }
+    if (analysis.category === 'security') {
+      labelsToAdd.push('security');
+    }
+    if (analysis.confidence >= 80) {
+      labelsToAdd.push('ai:high-confidence');
+    }
   }
 
   if (labelsToAdd.length > 0) {
