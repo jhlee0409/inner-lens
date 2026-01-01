@@ -83,3 +83,55 @@
 | 2025-12-30 | Phase 3.1-3.3 완료: 문서화 개선, 에러 메시지 개선, devOnly 명확화 |
 | 2025-12-30 | Phase 3.4 완료: Reusable Workflow 문서화 |
 | 2025-12-30 | **모든 Phase 완료!** 🎉 |
+| 2025-12-31 | Phase 4 추가: AI 분석 엔진 개선 |
+| 2026-01-01 | Phase 4.4 완료: Import 그래프 추적 (P1-1) |
+
+---
+
+## Phase 4: AI 분석 엔진 개선 (2025-12-31 ~)
+
+> 2025년 Best Practices 기반 버그 분석 플로우 개선
+> 참고: [LLM-based Agents for Bug Fixing](https://arxiv.org/html/2411.10213v2), [RAG for Large-Scale Code Repos](https://www.qodo.ai/blog/rag-for-large-scale-code-repos/)
+
+### 4.0 허위/거짓 제보 필터링
+- [x] `isValidReport` 필드 추가 (AnalysisResultSchema) ✅ 2025-12-31
+- [x] AI 프롬프트에 Step 0: 유효성 검증 추가 ✅ 2025-12-31
+- [x] Invalid 리포트용 별도 코멘트 포맷 ✅ 2025-12-31
+- [x] `needs-more-info` 라벨 자동 추가 ✅ 2025-12-31
+
+### 4.1 스택트레이스 파싱 강화 (P0-1)
+- [x] Node.js/Chrome 스택트레이스 파싱 ✅ 2025-12-31
+- [x] Firefox 스택트레이스 파싱 ✅ 2025-12-31
+- [x] Python 스택트레이스 파싱 ✅ 2025-12-31
+- [x] Webpack/번들러 경로 파싱 ✅ 2025-12-31
+- [x] `extractErrorLocations()` 함수 구현 ✅ 2025-12-31
+- [x] `extractErrorMessages()` 함수 구현 ✅ 2025-12-31
+
+### 4.2 내용 기반 검색 (P0-2)
+- [x] `searchFileContent()` 함수 구현 ✅ 2025-12-31
+- [x] 스택트레이스 파일 매칭 (score +50) ✅ 2025-12-31
+- [x] 함수명 매칭 (score +25) ✅ 2025-12-31
+- [x] 에러 메시지 프래그먼트 매칭 (score +15) ✅ 2025-12-31
+- [x] 키워드 매칭 (score +5 per match, max 20) ✅ 2025-12-31
+- [x] 콘텐츠 스코어 2배 가중치 적용 ✅ 2025-12-31
+
+### 4.3 에러 위치 직접 검색 (P0-3)
+- [x] `readFileWithLineContext()` 함수 구현 ✅ 2025-12-31
+- [x] 에러 라인 >>> 마커 표시 ✅ 2025-12-31
+- [x] `buildCodeContext()` 우선순위 로직 ✅ 2025-12-31
+- [x] 스택트레이스 파일 우선 로드 ✅ 2025-12-31
+
+### 4.4 Import 그래프 추적 (P1-1)
+- [x] TypeScript/JavaScript import 파싱 ✅ 2026-01-01
+- [x] 관련 파일의 의존성 추적 ✅ 2026-01-01
+- [x] 그래프 기반 관련 파일 확장 ✅ 2026-01-01
+
+### 4.5 LLM Re-ranking (P1-2)
+- [ ] 검색 결과를 LLM으로 재정렬
+- [ ] 관련성 점수 재계산
+- [ ] 컨텍스트 품질 검증
+
+### 4.6 테스트 및 검증 (P2)
+- [ ] 스택트레이스 파싱 테스트 케이스
+- [ ] 내용 기반 검색 테스트
+- [ ] 실제 버그 리포트로 E2E 테스트

@@ -135,6 +135,232 @@ function maskSensitiveData(text: string): string {
 }
 
 // ============================================
+// Import Graph Tracking (P1-1)
+// ============================================
+
+interface ImportInfo {
+  source: string;      // The import path as written
+  resolved: string | null;  // Resolved file path (null if not found)
+  isRelative: boolean; // Is it a relative import?
+  type: 'import' | 'require' | 'dynamic'; // Type of import
+}
+
+/**
+ * Parse import statements from TypeScript/JavaScript file content
+ * Supports:
+ * - ES6 imports: import { x } from 'module'
+ * - ES6 default imports: import x from 'module'
+ * - ES6 namespace imports: import * as x from 'module'
+ * - CommonJS: require('module')
+ * - Dynamic imports: import('module')
+ * - Re-exports: export { x } from 'module'
+ */
+function parseImports(content: string): ImportInfo[] {
+  const imports: ImportInfo[] = [];
+  const seenSources = new Set<string>();
+
+  // Pattern 1: ES6 static imports - import ... from 'module'
+  const es6ImportPattern = /import\s+(?:(?:\{[^}]*\}|\*\s+as\s+\w+|\w+(?:\s*,\s*\{[^}]*\})?)\s+from\s+)?['"]([^'"]+)['"]/g;
+  let match;
+  while ((match = es6ImportPattern.exec(content)) !== null) {
+    const source = match[1];
+    if (source && !seenSources.has(source)) {
+      seenSources.add(source);
+      imports.push({
+        source,
+        resolved: null,
+        isRelative: source.startsWith('.') || source.startsWith('/'),
+        type: 'import',
+      });
+    }
+  }
+
+  // Pattern 2: CommonJS require - require('module')
+  const requirePattern = /require\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+  while ((match = requirePattern.exec(content)) !== null) {
+    const source = match[1];
+    if (source && !seenSources.has(source)) {
+      seenSources.add(source);
+      imports.push({
+        source,
+        resolved: null,
+        isRelative: source.startsWith('.') || source.startsWith('/'),
+        type: 'require',
+      });
+    }
+  }
+
+  // Pattern 3: Dynamic imports - import('module')
+  const dynamicImportPattern = /import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+  while ((match = dynamicImportPattern.exec(content)) !== null) {
+    const source = match[1];
+    if (source && !seenSources.has(source)) {
+      seenSources.add(source);
+      imports.push({
+        source,
+        resolved: null,
+        isRelative: source.startsWith('.') || source.startsWith('/'),
+        type: 'dynamic',
+      });
+    }
+  }
+
+  // Pattern 4: Re-exports - export { x } from 'module'
+  const reExportPattern = /export\s+(?:\{[^}]*\}|\*)\s+from\s+['"]([^'"]+)['"]/g;
+  while ((match = reExportPattern.exec(content)) !== null) {
+    const source = match[1];
+    if (source && !seenSources.has(source)) {
+      seenSources.add(source);
+      imports.push({
+        source,
+        resolved: null,
+        isRelative: source.startsWith('.') || source.startsWith('/'),
+        type: 'import',
+      });
+    }
+  }
+
+  return imports;
+}
+
+/**
+ * Resolve import path to actual file path
+ * Handles common resolution patterns:
+ * - Relative paths: ./foo, ../bar
+ * - Extension inference: .ts, .tsx, .js, .jsx
+ * - Index files: ./folder -> ./folder/index.ts
+ * - Path aliases are NOT resolved (would need tsconfig)
+ */
+function resolveImportPath(
+  importSource: string,
+  fromFile: string,
+  baseDir: string
+): string | null {
+  // Skip non-relative imports (npm packages, path aliases)
+  if (!importSource.startsWith('.') && !importSource.startsWith('/')) {
+    return null;
+  }
+
+  const fromDir = path.dirname(fromFile);
+  const extensions = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
+
+  // Calculate the base path
+  let basePath: string;
+  if (importSource.startsWith('/')) {
+    basePath = path.join(baseDir, importSource);
+  } else {
+    basePath = path.join(fromDir, importSource);
+  }
+
+  // Try direct path with extensions
+  for (const ext of extensions) {
+    const fullPath = basePath + ext;
+    if (fs.existsSync(fullPath)) {
+      return fullPath;
+    }
+  }
+
+  // Try index file in directory
+  for (const ext of extensions) {
+    const indexPath = path.join(basePath, `index${ext}`);
+    if (fs.existsSync(indexPath)) {
+      return indexPath;
+    }
+  }
+
+  // Try exact path (already has extension)
+  if (fs.existsSync(basePath)) {
+    return basePath;
+  }
+
+  return null;
+}
+
+/**
+ * Build import graph from relevant files
+ * Returns a map of file -> imported files
+ */
+function buildImportGraph(
+  files: FileInfo[],
+  baseDir: string,
+  maxFilesToParse = 20
+): Map<string, string[]> {
+  const graph = new Map<string, string[]>();
+  const filesToParse = files.slice(0, maxFilesToParse);
+
+  for (const file of filesToParse) {
+    try {
+      const content = fs.readFileSync(file.path, 'utf-8');
+      const imports = parseImports(content);
+
+      const resolvedImports: string[] = [];
+      for (const imp of imports) {
+        if (imp.isRelative) {
+          const resolved = resolveImportPath(imp.source, file.path, baseDir);
+          if (resolved) {
+            resolvedImports.push(resolved);
+          }
+        }
+      }
+
+      if (resolvedImports.length > 0) {
+        graph.set(file.path, resolvedImports);
+      }
+    } catch {
+      // Skip files we can't read
+    }
+  }
+
+  return graph;
+}
+
+/**
+ * Expand file list with imported dependencies
+ * Adds files that are imported by the top relevant files
+ */
+function expandFilesWithImports(
+  files: FileInfo[],
+  importGraph: Map<string, string[]>,
+  maxExpansion = 10
+): FileInfo[] {
+  const existingPaths = new Set(files.map(f => f.path));
+  const newFiles: FileInfo[] = [];
+
+  // Get all imported files that aren't already in our list
+  for (const [sourceFile, imports] of Array.from(importGraph.entries())) {
+    // Get the source file's score to derive imported file scores
+    const sourceFileInfo = files.find(f => f.path === sourceFile);
+    const baseScore = sourceFileInfo?.relevanceScore || 0;
+
+    for (const importedPath of imports) {
+      if (!existingPaths.has(importedPath) && newFiles.length < maxExpansion) {
+        existingPaths.add(importedPath);
+
+        try {
+          const stats = fs.statSync(importedPath);
+          newFiles.push({
+            path: importedPath,
+            size: stats.size,
+            // Imported files get 60% of the importing file's score
+            relevanceScore: Math.floor(baseScore * 0.6),
+            pathScore: 0,
+            contentScore: 0,
+            matchedKeywords: [`imported-by:${path.basename(sourceFile)}`],
+          });
+        } catch {
+          // Skip files we can't stat
+        }
+      }
+    }
+  }
+
+  // Sort new files by derived score
+  newFiles.sort((a, b) => b.relevanceScore - a.relevanceScore);
+
+  return [...files, ...newFiles];
+}
+
+// ============================================
 // Smart File Discovery
 // ============================================
 
@@ -989,7 +1215,7 @@ async function analyzeIssue(): Promise<void> {
 
   // Step 3: Find relevant files using enhanced search
   console.log('\n📂 Step 3: Finding relevant files...');
-  const relevantFiles = findRelevantFiles('.', keywords, errorLocations, errorMessages);
+  let relevantFiles = findRelevantFiles('.', keywords, errorLocations, errorMessages);
   console.log(`   Found ${relevantFiles.length} relevant files`);
 
   if (relevantFiles.length > 0) {
@@ -998,6 +1224,26 @@ async function analyzeIssue(): Promise<void> {
       const matchInfo = f.matchedKeywords.length > 0 ? ` [${f.matchedKeywords.slice(0, 2).join(', ')}]` : '';
       console.log(`   ${i + 1}. ${f.path} (score: ${f.relevanceScore})${matchInfo}`);
     });
+  }
+
+  // Step 3.5: Expand with import graph (P1-1)
+  console.log('\n🔗 Step 3.5: Building import graph...');
+  const importGraph = buildImportGraph(relevantFiles, '.');
+  console.log(`   Parsed imports from ${importGraph.size} files`);
+
+  if (importGraph.size > 0) {
+    const originalCount = relevantFiles.length;
+    relevantFiles = expandFilesWithImports(relevantFiles, importGraph);
+    const addedCount = relevantFiles.length - originalCount;
+
+    if (addedCount > 0) {
+      console.log(`   Added ${addedCount} imported dependencies:`);
+      relevantFiles.slice(originalCount, originalCount + 5).forEach((f) => {
+        console.log(`      + ${f.path} (${f.matchedKeywords[0] || 'dependency'})`);
+      });
+    } else {
+      console.log('   No new dependencies found');
+    }
   }
 
   // Step 4: Build code context with priority on error locations
