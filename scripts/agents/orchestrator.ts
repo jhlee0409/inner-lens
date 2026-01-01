@@ -25,6 +25,7 @@ import type {
 
 import { finderAgent } from './finder.js';
 import { explainerAgent } from './explainer.js';
+import { investigatorAgent } from './investigator.js';
 
 // ============================================
 // Level Determination (Stub for Phase 3)
@@ -121,36 +122,22 @@ async function runExplainer(
 
 /**
  * Investigator Agent - Generates hypotheses (Phase 3, L2 only)
- * Currently returns a placeholder result
+ * Uses Call Graph and code context to form multiple hypotheses
  */
 async function runInvestigator(
-  _context: IssueContext,
-  _finderOutput: FinderOutput,
-  _config?: OrchestratorConfig
+  context: IssueContext,
+  finderOutput: FinderOutput,
+  config?: OrchestratorConfig
 ): Promise<InvestigatorOutput> {
-  const startTime = Date.now();
-
-  // TODO: Phase 3 - Implement actual hypothesis generation
-
-  return {
-    agentName: 'investigator',
-    success: true,
-    duration: Date.now() - startTime,
-    data: {
-      hypotheses: [
-        {
-          id: 'h1',
-          summary: 'Placeholder hypothesis',
-          explanation: 'Investigator agent will be implemented in Phase 3',
-          likelihood: 50,
-          supportingEvidence: [],
-          contraEvidence: [],
-        },
-      ],
-      primaryHypothesis: 'h1',
-      additionalContext: 'Placeholder - Phase 3 pending',
+  // Use the actual Investigator Agent
+  return investigatorAgent.execute(
+    {
+      issueContext: context,
+      level: 2, // Investigator is L2 only
+      finderOutput,
     },
-  };
+    { model: config?.investigatorModel }
+  );
 }
 
 /**

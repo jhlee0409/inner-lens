@@ -93,6 +93,7 @@
 | 2026-01-01 | Phase 4.8 P4-2 완료: 경량 Call Graph 분석 (15개 테스트) |
 | 2026-01-01 | Phase 4.9 P5 시작: Multi-Agent 아키텍처 Phase 1 구현 |
 | 2026-01-01 | Phase 4.9 P5-2 완료: Explainer Agent 구현 |
+| 2026-01-01 | Phase 4.9 P5-3 완료: Level 판단 + Investigator Agent |
 
 ---
 
@@ -229,15 +230,16 @@
 - [x] 신뢰도 calibration 규칙 강화 ✅
 - [x] Orchestrator 연동 ✅
 
-#### Phase 3: Level 판단 + Investigator Agent
-- [ ] Level 자동 판단 로직
+#### Phase 3: Level 판단 + Investigator Agent ✅ 2026-01-01
+- [x] Level 자동 판단 로직 ✅
   - 스택트레이스 유무
   - 설명 길이/품질
   - 에러 타입 분류
-- [ ] Investigator Agent (L2 전용)
-  - 3개 가설 생성
-  - 가설별 증거 수집
+- [x] Investigator Agent (L2 전용) ✅
+  - 2-4개 가설 생성
+  - 가설별 지지/반증 증거 수집
   - 주요 가설 선택
+  - Call Graph 연동
 
 #### Phase 4: Reviewer Agent
 - [ ] Reviewer Agent (L2 전용, 선택적)
