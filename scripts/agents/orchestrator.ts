@@ -24,6 +24,7 @@ import type {
 } from './types.js';
 
 import { finderAgent } from './finder.js';
+import { explainerAgent } from './explainer.js';
 
 // ============================================
 // Level Determination (Stub for Phase 3)
@@ -98,47 +99,24 @@ function extractLevelCriteria(context: IssueContext): LevelCriteria {
 
 /**
  * Explainer Agent - Generates analysis (Phase 2)
- * Currently returns a placeholder result
+ * Uses Chain-of-Thought methodology with evidence-based reasoning
  */
 async function runExplainer(
-  _context: IssueContext,
+  context: IssueContext,
   finderOutput: FinderOutput,
-  _investigatorOutput?: InvestigatorOutput,
-  _config?: OrchestratorConfig
+  investigatorOutput?: InvestigatorOutput,
+  config?: OrchestratorConfig
 ): Promise<ExplainerOutput> {
-  const startTime = Date.now();
-
-  // TODO: Phase 2 - Implement actual LLM analysis
-  // This is a placeholder that will be replaced with actual implementation
-
-  const placeholderAnalysis: AnalysisResult = {
-    isValidReport: true,
-    severity: 'medium',
-    category: 'unknown',
-    rootCause: {
-      summary: 'Analysis pending - Explainer agent not yet implemented',
-      explanation: 'The Explainer agent will be implemented in Phase 2. ' +
-        `Found ${finderOutput.data.relevantFiles.length} relevant files and ` +
-        `${finderOutput.data.codeChunks.length} code chunks.`,
-      affectedFiles: finderOutput.data.relevantFiles.slice(0, 3).map(f => f.path),
+  // Use the actual Explainer Agent
+  return explainerAgent.execute(
+    {
+      issueContext: context,
+      level: 1, // Will be set properly by orchestrator
+      finderOutput,
+      investigatorOutput,
     },
-    suggestedFix: {
-      steps: ['Explainer agent implementation pending'],
-      codeChanges: [],
-    },
-    prevention: ['Wait for Phase 2 implementation'],
-    confidence: 0,
-    additionalContext: 'This is a placeholder result. The actual Explainer agent will be implemented in Phase 2.',
-  };
-
-  return {
-    agentName: 'explainer',
-    success: true,
-    duration: Date.now() - startTime,
-    data: {
-      analysis: placeholderAnalysis,
-    },
-  };
+    { model: config?.explainerModel }
+  );
 }
 
 /**

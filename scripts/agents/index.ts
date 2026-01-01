@@ -61,6 +61,7 @@ export { AnalysisResultSchema } from './types.js';
 
 // Agent exports
 export { finderAgent } from './finder.js';
+export { explainerAgent } from './explainer.js';
 
 // Orchestrator exports
 export {

@@ -92,6 +92,7 @@
 | 2026-01-01 | Phase 4.7 P3-1 완료: AST 기반 코드 청킹 (Regex 경량 구현) |
 | 2026-01-01 | Phase 4.8 P4-2 완료: 경량 Call Graph 분석 (15개 테스트) |
 | 2026-01-01 | Phase 4.9 P5 시작: Multi-Agent 아키텍처 Phase 1 구현 |
+| 2026-01-01 | Phase 4.9 P5-2 완료: Explainer Agent 구현 |
 
 ---
 
@@ -221,10 +222,12 @@
 - `scripts/agents/orchestrator.ts` - Orchestrator 및 Level 판단
 - `scripts/agents/index.ts` - 모듈 export
 
-#### Phase 2: Explainer Agent 프롬프트 강화
-- [ ] 다중 가설 지원 스키마 추가
-- [ ] 증거 체인 강제 (파일:라인 형식 필수)
-- [ ] 신뢰도 calibration 규칙 강화
+#### Phase 2: Explainer Agent 프롬프트 강화 ✅ 2026-01-01
+- [x] Explainer Agent 구현 (`scripts/agents/explainer.ts`) ✅
+- [x] 다중 가설 지원 스키마 추가 ✅
+- [x] 증거 체인 강제 (파일:라인 형식 필수) ✅
+- [x] 신뢰도 calibration 규칙 강화 ✅
+- [x] Orchestrator 연동 ✅
 
 #### Phase 3: Level 판단 + Investigator Agent
 - [ ] Level 자동 판단 로직
