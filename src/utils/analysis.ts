@@ -262,3 +262,144 @@ export function extractKeywords(text: string): string[] {
 
   return [...new Set(keywords)];
 }
+
+// ============================================
+// AST-like Code Chunking (P3-1)
+// ============================================
+
+/**
+ * Represents a logical code chunk (function, class, interface, etc.)
+ */
+export interface CodeChunk {
+  type: 'function' | 'class' | 'interface' | 'type' | 'const' | 'export';
+  name: string;
+  startLine: number;
+  endLine: number;
+  content: string;
+  signature: string;
+}
+
+/**
+ * Extract logical code chunks from TypeScript/JavaScript source
+ * Uses regex patterns to identify function, class, and interface boundaries
+ * This is a lightweight alternative to full AST parsing
+ */
+export function extractCodeChunks(content: string): CodeChunk[] {
+  const lines = content.split('\n');
+  const chunks: CodeChunk[] = [];
+
+  // Track brace depth for finding block ends
+  function findBlockEnd(startIdx: number): number {
+    let depth = 0;
+    let foundOpen = false;
+
+    for (let i = startIdx; i < lines.length; i++) {
+      const line = lines[i] || '';
+      for (const char of line) {
+        if (char === '{') {
+          depth++;
+          foundOpen = true;
+        } else if (char === '}') {
+          depth--;
+          if (foundOpen && depth === 0) {
+            return i;
+          }
+        }
+      }
+    }
+    return lines.length - 1;
+  }
+
+  // Patterns to identify chunk starts
+  const patterns = [
+    // Exported functions: export function name(...) or export async function name(...)
+    { regex: /^export\s+(async\s+)?function\s+(\w+)\s*\(/m, type: 'function' as const, nameGroup: 2 },
+    // Regular functions: function name(...) or async function name(...)
+    { regex: /^(async\s+)?function\s+(\w+)\s*\(/m, type: 'function' as const, nameGroup: 2 },
+    // Arrow functions: const name = (...) => or const name = async (...) =>
+    { regex: /^(?:export\s+)?const\s+(\w+)\s*=\s*(async\s+)?\([^)]*\)\s*(:\s*[^=]+)?\s*=>/m, type: 'function' as const, nameGroup: 1 },
+    // Classes: class Name or export class Name
+    { regex: /^(?:export\s+)?class\s+(\w+)/m, type: 'class' as const, nameGroup: 1 },
+    // Interfaces: interface Name
+    { regex: /^(?:export\s+)?interface\s+(\w+)/m, type: 'interface' as const, nameGroup: 1 },
+    // Type aliases: type Name =
+    { regex: /^(?:export\s+)?type\s+(\w+)\s*=/m, type: 'type' as const, nameGroup: 1 },
+  ];
+
+  const processedLines = new Set<number>();
+
+  for (let i = 0; i < lines.length; i++) {
+    if (processedLines.has(i)) continue;
+
+    const lineContent = (lines[i] || '').trim();
+    if (!lineContent || lineContent.startsWith('//') || lineContent.startsWith('*')) continue;
+
+    for (const pattern of patterns) {
+      const match = lineContent.match(pattern.regex);
+      if (match) {
+        const name = match[pattern.nameGroup] || 'anonymous';
+        const endLine = findBlockEnd(i);
+
+        // Extract the chunk content
+        const chunkLines = lines.slice(i, endLine + 1);
+        const chunkContent = chunkLines.join('\n');
+
+        // Extract signature (first line, cleaned up)
+        const signature = lineContent.replace(/\{.*$/, '').trim();
+
+        chunks.push({
+          type: pattern.type,
+          name,
+          startLine: i + 1, // 1-indexed
+          endLine: endLine + 1,
+          content: chunkContent,
+          signature,
+        });
+
+        // Mark these lines as processed
+        for (let j = i; j <= endLine; j++) {
+          processedLines.add(j);
+        }
+        break;
+      }
+    }
+  }
+
+  return chunks;
+}
+
+/**
+ * Score chunks by relevance to error locations and keywords
+ */
+export function scoreChunk(
+  chunk: CodeChunk,
+  errorLocations: ErrorLocation[],
+  keywords: string[]
+): number {
+  let score = 0;
+
+  // Check if any error location falls within this chunk
+  for (const loc of errorLocations) {
+    if (loc.line && loc.line >= chunk.startLine && loc.line <= chunk.endLine) {
+      score += 100; // High priority for error location match
+    }
+    if (loc.functionName && chunk.name.toLowerCase().includes(loc.functionName.toLowerCase())) {
+      score += 50;
+    }
+  }
+
+  // Check keyword matches
+  const chunkLower = (chunk.name + ' ' + chunk.signature).toLowerCase();
+  for (const keyword of keywords) {
+    if (keyword.length > 2 && chunkLower.includes(keyword.toLowerCase())) {
+      score += 10;
+    }
+  }
+
+  // Boost for exported functions (more likely to be entry points)
+  if (chunk.signature.startsWith('export')) {
+    score += 5;
+  }
+
+  return score;
+}

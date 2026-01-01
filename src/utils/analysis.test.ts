@@ -4,6 +4,9 @@ import {
   extractErrorMessages,
   parseImports,
   extractKeywords,
+  extractCodeChunks,
+  scoreChunk,
+  type CodeChunk,
 } from './analysis';
 
 describe('extractErrorLocations', () => {
@@ -429,5 +432,384 @@ describe('extractKeywords', () => {
     const keywords = extractKeywords(text);
 
     expect(keywords.filter(k => k === 'TypeError')).toHaveLength(1);
+  });
+});
+
+// ============================================
+// Code Chunking Tests (P3-1)
+// ============================================
+
+describe('extractCodeChunks', () => {
+  describe('function extraction', () => {
+    it('extracts regular function declarations', () => {
+      const code = `function processData(input) {
+  return input.map(x => x * 2);
+}`;
+
+      const chunks = extractCodeChunks(code);
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toMatchObject({
+        type: 'function',
+        name: 'processData',
+        startLine: 1,
+        endLine: 3,
+      });
+      expect(chunks[0]?.signature).toContain('function processData');
+    });
+
+    it('extracts async function declarations', () => {
+      const code = `async function fetchData(url) {
+  const response = await fetch(url);
+  return response.json();
+}`;
+
+      const chunks = extractCodeChunks(code);
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toMatchObject({
+        type: 'function',
+        name: 'fetchData',
+      });
+    });
+
+    it('extracts exported function declarations', () => {
+      const code = `export function calculateSum(a, b) {
+  return a + b;
+}`;
+
+      const chunks = extractCodeChunks(code);
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toMatchObject({
+        type: 'function',
+        name: 'calculateSum',
+      });
+      expect(chunks[0]?.signature).toContain('export');
+    });
+
+    it('extracts arrow functions assigned to const', () => {
+      const code = `const handleClick = (event) => {
+  console.log(event);
+  doSomething();
+};`;
+
+      const chunks = extractCodeChunks(code);
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toMatchObject({
+        type: 'function',
+        name: 'handleClick',
+      });
+    });
+
+    it('extracts async arrow functions', () => {
+      const code = `export const loadData = async (id) => {
+  const result = await api.get(id);
+  return result;
+};`;
+
+      const chunks = extractCodeChunks(code);
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toMatchObject({
+        type: 'function',
+        name: 'loadData',
+      });
+    });
+  });
+
+  describe('class extraction', () => {
+    it('extracts class declarations', () => {
+      const code = `class UserService {
+  constructor(db) {
+    this.db = db;
+  }
+
+  async getUser(id) {
+    return this.db.find(id);
+  }
+}`;
+
+      const chunks = extractCodeChunks(code);
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toMatchObject({
+        type: 'class',
+        name: 'UserService',
+        startLine: 1,
+      });
+    });
+
+    it('extracts exported class declarations', () => {
+      const code = `export class ApiClient {
+  private baseUrl: string;
+
+  constructor(baseUrl: string) {
+    this.baseUrl = baseUrl;
+  }
+}`;
+
+      const chunks = extractCodeChunks(code);
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toMatchObject({
+        type: 'class',
+        name: 'ApiClient',
+      });
+      expect(chunks[0]?.signature).toContain('export');
+    });
+  });
+
+  describe('interface extraction', () => {
+    it('extracts interface declarations', () => {
+      const code = `interface UserData {
+  id: number;
+  name: string;
+  email: string;
+}`;
+
+      const chunks = extractCodeChunks(code);
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toMatchObject({
+        type: 'interface',
+        name: 'UserData',
+      });
+    });
+
+    it('extracts exported interface declarations', () => {
+      const code = `export interface Config {
+  apiUrl: string;
+  timeout: number;
+}`;
+
+      const chunks = extractCodeChunks(code);
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toMatchObject({
+        type: 'interface',
+        name: 'Config',
+      });
+    });
+  });
+
+  describe('type extraction', () => {
+    it('extracts type alias declarations', () => {
+      const code = `type UserId = string | number;`;
+
+      const chunks = extractCodeChunks(code);
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toMatchObject({
+        type: 'type',
+        name: 'UserId',
+      });
+    });
+
+    it('extracts exported type alias declarations', () => {
+      const code = `export type UserId = string | number;`;
+
+      const chunks = extractCodeChunks(code);
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toMatchObject({
+        type: 'type',
+        name: 'UserId',
+      });
+      expect(chunks[0]?.signature).toContain('export');
+    });
+
+    it('extracts object type declarations', () => {
+      const code = `type Config = {
+  apiUrl: string;
+  timeout: number;
+};`;
+
+      const chunks = extractCodeChunks(code);
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toMatchObject({
+        type: 'type',
+        name: 'Config',
+      });
+    });
+  });
+
+  describe('multiple chunks', () => {
+    it('extracts multiple declarations from same file', () => {
+      const code = `interface User {
+  id: number;
+  name: string;
+}
+
+function createUser(name: string): User {
+  return { id: Date.now(), name };
+}
+
+class UserRepository {
+  private users: User[] = [];
+
+  add(user: User) {
+    this.users.push(user);
+  }
+}`;
+
+      const chunks = extractCodeChunks(code);
+
+      expect(chunks).toHaveLength(3);
+      expect(chunks.map(c => c.type)).toContain('interface');
+      expect(chunks.map(c => c.type)).toContain('function');
+      expect(chunks.map(c => c.type)).toContain('class');
+    });
+
+    it('correctly identifies line ranges for each chunk', () => {
+      const code = `function first() {
+  return 1;
+}
+
+function second() {
+  return 2;
+}`;
+
+      const chunks = extractCodeChunks(code);
+
+      expect(chunks).toHaveLength(2);
+      expect(chunks[0]).toMatchObject({
+        name: 'first',
+        startLine: 1,
+        endLine: 3,
+      });
+      expect(chunks[1]).toMatchObject({
+        name: 'second',
+        startLine: 5,
+        endLine: 7,
+      });
+    });
+  });
+
+  describe('edge cases', () => {
+    it('returns empty array for empty content', () => {
+      const chunks = extractCodeChunks('');
+      expect(chunks).toHaveLength(0);
+    });
+
+    it('returns empty array for content without functions', () => {
+      const code = `// Just a comment
+const x = 5;
+let y = 10;`;
+
+      const chunks = extractCodeChunks(code);
+      expect(chunks).toHaveLength(0);
+    });
+
+    it('ignores commented code', () => {
+      const code = `// function ignored() { return 1; }
+function actual() {
+  return 2;
+}`;
+
+      const chunks = extractCodeChunks(code);
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]?.name).toBe('actual');
+    });
+
+    it('handles nested braces correctly', () => {
+      const code = `function complex() {
+  if (true) {
+    const obj = { a: 1, b: { c: 2 } };
+    return obj;
+  }
+}`;
+
+      const chunks = extractCodeChunks(code);
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toMatchObject({
+        name: 'complex',
+        startLine: 1,
+        endLine: 6,
+      });
+    });
+  });
+});
+
+describe('scoreChunk', () => {
+  const createChunk = (overrides: Partial<CodeChunk> = {}): CodeChunk => ({
+    type: 'function',
+    name: 'testFunction',
+    startLine: 1,
+    endLine: 10,
+    content: 'function testFunction() {}',
+    signature: 'function testFunction()',
+    ...overrides,
+  });
+
+  it('scores 100 points for error location match within chunk', () => {
+    const chunk = createChunk({ startLine: 5, endLine: 15 });
+    const errorLocations = [{ file: 'test.ts', line: 10 }];
+
+    const score = scoreChunk(chunk, errorLocations, []);
+
+    expect(score).toBe(100);
+  });
+
+  it('scores 50 points for function name match', () => {
+    const chunk = createChunk({ name: 'handleSubmit' });
+    const errorLocations = [{ file: 'test.ts', functionName: 'handleSubmit' }];
+
+    const score = scoreChunk(chunk, errorLocations, []);
+
+    expect(score).toBe(50);
+  });
+
+  it('scores 10 points for keyword match', () => {
+    const chunk = createChunk({ name: 'processUser', signature: 'function processUser()' });
+
+    const score = scoreChunk(chunk, [], ['user']);
+
+    expect(score).toBe(10);
+  });
+
+  it('scores 5 points for exported function', () => {
+    const chunk = createChunk({ signature: 'export function test()' });
+
+    const score = scoreChunk(chunk, [], []);
+
+    expect(score).toBe(5);
+  });
+
+  it('combines multiple score sources', () => {
+    const chunk = createChunk({
+      name: 'handleError',
+      startLine: 10,
+      endLine: 20,
+      signature: 'export function handleError()',
+    });
+    const errorLocations = [
+      { file: 'test.ts', line: 15, functionName: 'handleError' },
+    ];
+
+    const score = scoreChunk(chunk, errorLocations, ['error', 'handle']);
+
+    // 100 (line match) + 50 (function name) + 10 (error keyword) + 10 (handle keyword) + 5 (export)
+    expect(score).toBe(175);
+  });
+
+  it('returns 0 for no matches', () => {
+    const chunk = createChunk({ name: 'unrelated', signature: 'function unrelated()' });
+
+    const score = scoreChunk(chunk, [], []);
+
+    expect(score).toBe(0);
+  });
+
+  it('ignores short keywords', () => {
+    const chunk = createChunk({ name: 'abc', signature: 'function abc()' });
+
+    const score = scoreChunk(chunk, [], ['ab', 'a', 'bc']);
+
+    expect(score).toBe(0); // Short keywords (<=2 chars) should be ignored
   });
 });
