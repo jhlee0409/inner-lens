@@ -305,8 +305,20 @@ server.listen(3000);
 <details>
 <summary><b>Cloudflare Workers Full Example</b></summary>
 
+> **Important:** `inner-lens/server` uses `@octokit/rest` which requires Node.js APIs. You must enable the `nodejs_compat` compatibility flag.
+
+**1. Create `wrangler.toml` in your project root:**
+
+```toml
+name = "inner-lens-worker"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+```
+
+**2. Create `src/index.ts`:**
+
 ```ts
-// src/index.ts
 import { createFetchHandler } from 'inner-lens/server';
 
 interface Env {
@@ -343,6 +355,14 @@ export default {
     return new Response('Method not allowed', { status: 405 });
   },
 };
+```
+
+**3. Set environment variables:**
+
+```bash
+# Using wrangler CLI
+wrangler secret put GITHUB_TOKEN
+wrangler secret put GITHUB_REPOSITORY
 ```
 
 </details>
