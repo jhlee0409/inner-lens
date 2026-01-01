@@ -63,6 +63,7 @@ export { AnalysisResultSchema } from './types.js';
 export { finderAgent } from './finder.js';
 export { explainerAgent } from './explainer.js';
 export { investigatorAgent } from './investigator.js';
+export { reviewerAgent } from './reviewer.js';
 
 // Orchestrator exports
 export {

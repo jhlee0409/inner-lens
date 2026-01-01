@@ -26,6 +26,7 @@ import type {
 import { finderAgent } from './finder.js';
 import { explainerAgent } from './explainer.js';
 import { investigatorAgent } from './investigator.js';
+import { reviewerAgent } from './reviewer.js';
 
 // ============================================
 // Level Determination (Stub for Phase 3)
@@ -142,33 +143,26 @@ async function runInvestigator(
 
 /**
  * Reviewer Agent - Validates analysis (Phase 4, L2 only)
- * Currently returns a placeholder result
+ * Reviews and adjusts confidence based on evidence quality
  */
 async function runReviewer(
-  _context: IssueContext,
-  _finderOutput: FinderOutput,
+  context: IssueContext,
+  finderOutput: FinderOutput,
   explainerOutput: ExplainerOutput,
-  _investigatorOutput?: InvestigatorOutput,
-  _config?: OrchestratorConfig
+  investigatorOutput?: InvestigatorOutput,
+  config?: OrchestratorConfig
 ): Promise<ReviewerOutput> {
-  const startTime = Date.now();
-
-  // TODO: Phase 4 - Implement actual review/validation
-
-  return {
-    agentName: 'reviewer',
-    success: true,
-    duration: Date.now() - startTime,
-    data: {
-      review: {
-        approved: true,
-        confidenceAdjustment: 0,
-        issues: [],
-        suggestions: ['Reviewer agent will be implemented in Phase 4'],
-      },
-      finalAnalysis: explainerOutput.data.analysis,
+  // Use the actual Reviewer Agent
+  return reviewerAgent.execute(
+    {
+      issueContext: context,
+      level: 2, // Reviewer is L2 only
+      finderOutput,
+      explainerOutput,
+      investigatorOutput,
     },
-  };
+    { model: config?.reviewerModel }
+  );
 }
 
 // ============================================
