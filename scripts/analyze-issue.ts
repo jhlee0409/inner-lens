@@ -929,7 +929,8 @@ function extractKeywords(text: string): string[] {
   const keywords: string[] = [];
 
   // File paths
-  const filePathPattern = /(?:[\w-]+\/)*[\w-]+\.(ts|tsx|js|jsx|py|go|rs|java|kt)/g;
+  // tsx/jsx before ts/js to prevent partial matches
+  const filePathPattern = /(?:[\w-]+\/)*[\w-]+\.(tsx|ts|jsx|js|py|go|rs|java|kt)/g;
   keywords.push(...(text.match(filePathPattern) || []));
 
   // Error types
