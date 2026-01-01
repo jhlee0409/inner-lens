@@ -56,7 +56,7 @@ describe('extractErrorLocations', () => {
         line: 10,
         column: 5,
       });
-      expect(locations[0].functionName).toBeUndefined();
+      expect(locations[0]?.functionName).toBeUndefined();
     });
   });
 
