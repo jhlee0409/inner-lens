@@ -403,3 +403,235 @@ export function scoreChunk(
 
   return score;
 }
+
+// ============================================
+// Lightweight Call Graph Analysis (P4-2)
+// ============================================
+
+/**
+ * Represents a function call extracted from code
+ */
+export interface FunctionCall {
+  caller: string;       // Function making the call
+  callee: string;       // Function being called
+  line: number;         // Line number of the call
+  isAsync: boolean;     // Is this an async call (await)?
+  isChained: boolean;   // Is this a method chain?
+}
+
+/**
+ * Represents a node in the call graph
+ */
+export interface CallGraphNode {
+  name: string;
+  calls: string[];      // Functions this node calls
+  calledBy: string[];   // Functions that call this node
+  isExported: boolean;
+  isAsync: boolean;
+  lines: { start: number; end: number };
+}
+
+/**
+ * Extract function calls from a code chunk
+ * Identifies:
+ * - Direct function calls: foo(), bar(args)
+ * - Method calls: obj.method()
+ * - Async calls: await foo()
+ * - Chained calls: foo().bar().baz()
+ */
+export function extractFunctionCalls(
+  content: string,
+  callerName: string,
+  startLine: number
+): FunctionCall[] {
+  const calls: FunctionCall[] = [];
+  const lines = content.split('\n');
+
+  // Built-in functions/keywords to ignore
+  const builtIns = new Set([
+    'if', 'for', 'while', 'switch', 'catch', 'function', 'class',
+    'return', 'throw', 'new', 'typeof', 'instanceof', 'delete',
+    'parseInt', 'parseFloat', 'isNaN', 'isFinite', 'encodeURI',
+    'decodeURI', 'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval',
+    'require', 'import', 'export',
+  ]);
+
+  // Built-in objects whose methods we should ignore
+  const builtInObjects = new Set([
+    'console', 'Math', 'JSON', 'Object', 'Array', 'String', 'Number',
+    'Boolean', 'Date', 'Promise', 'Map', 'Set', 'RegExp', 'Error',
+    'document', 'window', 'process', 'Buffer', 'global',
+  ]);
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] || '';
+    const lineNum = startLine + i;
+
+    // Skip comments
+    const trimmed = line.trim();
+    if (trimmed.startsWith('//') || trimmed.startsWith('*')) continue;
+
+    // Pattern 1: Direct function calls with optional await
+    // Matches: foo(), await bar(), this.method()
+    const directCallPattern = /(await\s+)?(?:this\.)?(\w+)\s*\(/g;
+
+    let match;
+    while ((match = directCallPattern.exec(line)) !== null) {
+      const hasAwait = !!match[1];
+      const callee = match[2];
+
+      // Skip if it's the function definition itself or built-in
+      if (!callee || callee === callerName || builtIns.has(callee)) continue;
+
+      // Check if it's a method call on a built-in object
+      // Look back to see if there's "BuiltIn." before the callee
+      const beforeMatch = line.slice(0, match.index).trimEnd();
+      const isBuiltInMethod = builtInObjects.has(beforeMatch.split('.').pop() || '') ||
+        [...builtInObjects].some(obj => beforeMatch.endsWith(obj + '.'));
+
+      if (isBuiltInMethod) continue;
+
+      // Check if it's a chained call
+      const isChained = beforeMatch.endsWith('.');
+
+      calls.push({
+        caller: callerName,
+        callee,
+        line: lineNum,
+        isAsync: hasAwait,
+        isChained,
+      });
+    }
+  }
+
+  return calls;
+}
+
+/**
+ * Build a call graph from code chunks
+ */
+export function buildCallGraph(chunks: CodeChunk[]): Map<string, CallGraphNode> {
+  const graph = new Map<string, CallGraphNode>();
+
+  // First pass: create nodes for all chunks
+  for (const chunk of chunks) {
+    if (chunk.type === 'function' || chunk.type === 'class') {
+      graph.set(chunk.name, {
+        name: chunk.name,
+        calls: [],
+        calledBy: [],
+        isExported: chunk.signature.includes('export'),
+        isAsync: chunk.signature.includes('async'),
+        lines: { start: chunk.startLine, end: chunk.endLine },
+      });
+    }
+  }
+
+  // Second pass: extract calls and build edges
+  for (const chunk of chunks) {
+    if (chunk.type !== 'function' && chunk.type !== 'class') continue;
+
+    const calls = extractFunctionCalls(chunk.content, chunk.name, chunk.startLine);
+    const node = graph.get(chunk.name);
+
+    if (!node) continue;
+
+    for (const call of calls) {
+      // Only add edges to known functions in our graph
+      if (graph.has(call.callee)) {
+        // Add to caller's calls list
+        if (!node.calls.includes(call.callee)) {
+          node.calls.push(call.callee);
+        }
+
+        // Add to callee's calledBy list
+        const calleeNode = graph.get(call.callee);
+        if (calleeNode && !calleeNode.calledBy.includes(chunk.name)) {
+          calleeNode.calledBy.push(chunk.name);
+        }
+      }
+    }
+  }
+
+  return graph;
+}
+
+/**
+ * Find call chain from a starting function to potential root causes
+ * Uses BFS to find shortest paths to entry points (exported functions)
+ */
+export function findCallChain(
+  graph: Map<string, CallGraphNode>,
+  startFunction: string,
+  maxDepth = 5
+): string[][] {
+  const chains: string[][] = [];
+  const visited = new Set<string>();
+
+  // BFS queue: [currentFunction, pathSoFar]
+  const queue: Array<[string, string[]]> = [[startFunction, [startFunction]]];
+
+  while (queue.length > 0) {
+    const item = queue.shift();
+    if (!item) break;
+
+    const [current, path] = item;
+
+    if (path.length > maxDepth) continue;
+    if (visited.has(current)) continue;
+    visited.add(current);
+
+    const node = graph.get(current);
+    if (!node) continue;
+
+    // If this is an entry point (exported), save the chain
+    if (node.isExported && path.length > 1) {
+      chains.push([...path].reverse()); // Reverse to show entry -> error order
+    }
+
+    // Continue traversing callers (going up the call stack)
+    for (const caller of node.calledBy) {
+      if (!visited.has(caller)) {
+        queue.push([caller, [...path, caller]]);
+      }
+    }
+  }
+
+  return chains;
+}
+
+/**
+ * Get functions related to an error location
+ * Returns functions in the call graph that are connected to the error
+ */
+export function getRelatedFunctions(
+  graph: Map<string, CallGraphNode>,
+  errorFunction: string,
+  maxRelated = 10
+): CallGraphNode[] {
+  const related: CallGraphNode[] = [];
+  const visited = new Set<string>();
+
+  const queue = [errorFunction];
+
+  while (queue.length > 0 && related.length < maxRelated) {
+    const current = queue.shift();
+    if (!current || visited.has(current)) continue;
+    visited.add(current);
+
+    const node = graph.get(current);
+    if (!node) continue;
+
+    related.push(node);
+
+    // Add callers and callees to queue
+    for (const caller of node.calledBy) {
+      if (!visited.has(caller)) queue.push(caller);
+    }
+    for (const callee of node.calls) {
+      if (!visited.has(callee)) queue.push(callee);
+    }
+  }
+
+  return related;
+}

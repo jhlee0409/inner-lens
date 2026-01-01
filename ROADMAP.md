@@ -90,6 +90,7 @@
 | 2026-01-01 | Phase 4.7-4.9 추가: 2025 리서치 기반 고도화 로드맵 (P3-P5) |
 | 2026-01-01 | Phase 4.7 P3-2 완료: 증거 기반 프롬프트 + Self-consistency |
 | 2026-01-01 | Phase 4.7 P3-1 완료: AST 기반 코드 청킹 (Regex 경량 구현) |
+| 2026-01-01 | Phase 4.8 P4-2 완료: 경량 Call Graph 분석 (15개 테스트) |
 
 ---
 
@@ -163,17 +164,17 @@
 ### 4.8 시맨틱 검색 도입 (P4)
 > 참고: [Greptile 블로그](https://www.greptile.com/blog/semantic-codebase-search), [Augment Code](https://www.augmentcode.com/blog/repo-scale-100M-line-codebase-quantized-vector-search)
 
-- [ ] **P4-1: 벡터 임베딩 검색**
-  - [ ] 임베딩 모델 선정 (voyage-3-large 또는 jina-embeddings-v2-base-code)
-  - [ ] 코드→자연어 변환 후 임베딩 (검색 품질 향상)
-  - [ ] 벡터 DB 통합 (Qdrant/Faiss)
-  - [ ] 양자화로 대규모 코드베이스 지원 (8x 메모리 절감)
+- [ ] ~~**P4-1: 벡터 임베딩 검색**~~ (스킵 - 오픈소스 범위 초과)
+  - 외부 벡터 DB 필요 (Qdrant/Faiss)
+  - 임베딩 모델 호스팅 필요
+  - 대규모 인프라 요구
 
-- [ ] **P4-2: Control/Data Flow 분석**
-  - [ ] CFG (Control Flow Graph) 구축
-  - [ ] DFG (Data Flow Graph) 추적
-  - [ ] 에러 위치에서 역추적하여 근본 원인 노드 탐색
-  - 기대 효과: MAP +32.9%, MRR +29.2%
+- [x] **P4-2: Control/Data Flow 분석 (경량 버전)** ✅ 2026-01-01
+  - [x] 함수 호출 추출 (`extractFunctionCalls`) ✅
+  - [x] Call Graph 구축 (`buildCallGraph`) ✅
+  - [x] 호출 체인 역추적 (`findCallChain`) ✅
+  - [x] 관련 함수 탐색 (`getRelatedFunctions`) ✅
+  - 15개 테스트 추가 (총 215개)
 
 ### 4.9 Multi-Agent 아키텍처 (P5)
 > 참고: [FixAgent](https://arxiv.org/html/2404.17153v1), [Flow-of-Action](https://dl.acm.org/doi/10.1145/3701716.3715225)

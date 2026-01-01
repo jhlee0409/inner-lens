@@ -6,6 +6,10 @@ import {
   extractKeywords,
   extractCodeChunks,
   scoreChunk,
+  extractFunctionCalls,
+  buildCallGraph,
+  findCallChain,
+  getRelatedFunctions,
   type CodeChunk,
 } from './analysis';
 
@@ -811,5 +815,425 @@ describe('scoreChunk', () => {
     const score = scoreChunk(chunk, [], ['ab', 'a', 'bc']);
 
     expect(score).toBe(0); // Short keywords (<=2 chars) should be ignored
+  });
+});
+
+// ============================================
+// Call Graph Tests (P4-2)
+// ============================================
+
+describe('extractFunctionCalls', () => {
+  it('extracts direct function calls', () => {
+    const code = `function main() {
+  const result = processData();
+  return result;
+}`;
+
+    const calls = extractFunctionCalls(code, 'main', 1);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({
+      caller: 'main',
+      callee: 'processData',
+      line: 2,
+    });
+  });
+
+  it('extracts multiple function calls', () => {
+    const code = `function handler() {
+  validateInput();
+  const data = fetchData();
+  processData(data);
+  saveResult();
+}`;
+
+    const calls = extractFunctionCalls(code, 'handler', 1);
+
+    expect(calls).toHaveLength(4);
+    expect(calls.map(c => c.callee)).toEqual([
+      'validateInput',
+      'fetchData',
+      'processData',
+      'saveResult',
+    ]);
+  });
+
+  it('detects async calls with await', () => {
+    const code = `async function loadUser() {
+  const user = await fetchUser();
+  return user;
+}`;
+
+    const calls = extractFunctionCalls(code, 'loadUser', 1);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({
+      callee: 'fetchUser',
+      isAsync: true,
+    });
+  });
+
+  it('ignores built-in functions', () => {
+    const code = `function process() {
+  console.log('test');
+  const x = parseInt('5');
+  return JSON.stringify({});
+}`;
+
+    const calls = extractFunctionCalls(code, 'process', 1);
+
+    expect(calls).toHaveLength(0);
+  });
+
+  it('ignores control flow keywords', () => {
+    const code = `function check() {
+  if (condition) {
+    for (let i = 0; i < 10; i++) {
+      while (true) {
+        break;
+      }
+    }
+  }
+}`;
+
+    const calls = extractFunctionCalls(code, 'check', 1);
+
+    expect(calls).toHaveLength(0);
+  });
+
+  it('ignores the caller function itself', () => {
+    const code = `function recursive() {
+  recursive();
+}`;
+
+    const calls = extractFunctionCalls(code, 'recursive', 1);
+
+    // Recursive calls are currently filtered out
+    expect(calls).toHaveLength(0);
+  });
+
+  it('extracts calls with arguments', () => {
+    const code = `function calculate() {
+  add(1, 2);
+  multiply(a, b, c);
+}`;
+
+    const calls = extractFunctionCalls(code, 'calculate', 1);
+
+    expect(calls).toHaveLength(2);
+    expect(calls.map(c => c.callee)).toEqual(['add', 'multiply']);
+  });
+});
+
+describe('buildCallGraph', () => {
+  it('builds graph from chunks with call relationships', () => {
+    const chunks: CodeChunk[] = [
+      {
+        type: 'function',
+        name: 'main',
+        startLine: 1,
+        endLine: 5,
+        content: `function main() {
+  helper();
+  process();
+}`,
+        signature: 'export function main()',
+      },
+      {
+        type: 'function',
+        name: 'helper',
+        startLine: 7,
+        endLine: 10,
+        content: `function helper() {
+  return 42;
+}`,
+        signature: 'function helper()',
+      },
+      {
+        type: 'function',
+        name: 'process',
+        startLine: 12,
+        endLine: 15,
+        content: `function process() {
+  helper();
+}`,
+        signature: 'function process()',
+      },
+    ];
+
+    const graph = buildCallGraph(chunks);
+
+    expect(graph.size).toBe(3);
+
+    // main calls helper and process
+    const mainNode = graph.get('main');
+    expect(mainNode?.calls).toContain('helper');
+    expect(mainNode?.calls).toContain('process');
+    expect(mainNode?.isExported).toBe(true);
+
+    // helper is called by main and process
+    const helperNode = graph.get('helper');
+    expect(helperNode?.calledBy).toContain('main');
+    expect(helperNode?.calledBy).toContain('process');
+
+    // process calls helper
+    const processNode = graph.get('process');
+    expect(processNode?.calls).toContain('helper');
+  });
+
+  it('handles isolated functions with no calls', () => {
+    const chunks: CodeChunk[] = [
+      {
+        type: 'function',
+        name: 'standalone',
+        startLine: 1,
+        endLine: 3,
+        content: 'function standalone() { return 1; }',
+        signature: 'function standalone()',
+      },
+    ];
+
+    const graph = buildCallGraph(chunks);
+
+    expect(graph.size).toBe(1);
+    const node = graph.get('standalone');
+    expect(node?.calls).toHaveLength(0);
+    expect(node?.calledBy).toHaveLength(0);
+  });
+
+  it('only includes known functions in the graph', () => {
+    const chunks: CodeChunk[] = [
+      {
+        type: 'function',
+        name: 'caller',
+        startLine: 1,
+        endLine: 4,
+        content: `function caller() {
+  unknownFunction();
+  knownFunction();
+}`,
+        signature: 'function caller()',
+      },
+      {
+        type: 'function',
+        name: 'knownFunction',
+        startLine: 6,
+        endLine: 8,
+        content: 'function knownFunction() {}',
+        signature: 'function knownFunction()',
+      },
+    ];
+
+    const graph = buildCallGraph(chunks);
+
+    const callerNode = graph.get('caller');
+    expect(callerNode?.calls).toContain('knownFunction');
+    expect(callerNode?.calls).not.toContain('unknownFunction');
+  });
+});
+
+describe('findCallChain', () => {
+  it('finds path from error function to entry point', () => {
+    const chunks: CodeChunk[] = [
+      {
+        type: 'function',
+        name: 'handleRequest',
+        startLine: 1,
+        endLine: 5,
+        content: `export function handleRequest() {
+  processInput();
+}`,
+        signature: 'export function handleRequest()',
+      },
+      {
+        type: 'function',
+        name: 'processInput',
+        startLine: 7,
+        endLine: 11,
+        content: `function processInput() {
+  validateData();
+}`,
+        signature: 'function processInput()',
+      },
+      {
+        type: 'function',
+        name: 'validateData',
+        startLine: 13,
+        endLine: 17,
+        content: `function validateData() {
+  // Error occurs here
+}`,
+        signature: 'function validateData()',
+      },
+    ];
+
+    const graph = buildCallGraph(chunks);
+    const chains = findCallChain(graph, 'validateData');
+
+    expect(chains).toHaveLength(1);
+    expect(chains[0]).toEqual(['handleRequest', 'processInput', 'validateData']);
+  });
+
+  it('returns empty array when no entry point found', () => {
+    const chunks: CodeChunk[] = [
+      {
+        type: 'function',
+        name: 'internal',
+        startLine: 1,
+        endLine: 3,
+        content: 'function internal() {}',
+        signature: 'function internal()',
+      },
+    ];
+
+    const graph = buildCallGraph(chunks);
+    const chains = findCallChain(graph, 'internal');
+
+    expect(chains).toHaveLength(0);
+  });
+
+  it('respects maxDepth parameter', () => {
+    const chunks: CodeChunk[] = [
+      {
+        type: 'function',
+        name: 'a',
+        startLine: 1,
+        endLine: 2,
+        content: 'export function a() { b(); }',
+        signature: 'export function a()',
+      },
+      {
+        type: 'function',
+        name: 'b',
+        startLine: 3,
+        endLine: 4,
+        content: 'function b() { c(); }',
+        signature: 'function b()',
+      },
+      {
+        type: 'function',
+        name: 'c',
+        startLine: 5,
+        endLine: 6,
+        content: 'function c() { d(); }',
+        signature: 'function c()',
+      },
+      {
+        type: 'function',
+        name: 'd',
+        startLine: 7,
+        endLine: 8,
+        content: 'function d() {}',
+        signature: 'function d()',
+      },
+    ];
+
+    const graph = buildCallGraph(chunks);
+
+    // With maxDepth 2, should not find chain a->b->c->d
+    const shortChains = findCallChain(graph, 'd', 2);
+    expect(shortChains).toHaveLength(0);
+
+    // With maxDepth 5, should find the full chain
+    const longChains = findCallChain(graph, 'd', 5);
+    expect(longChains).toHaveLength(1);
+  });
+});
+
+describe('getRelatedFunctions', () => {
+  it('returns connected functions in the call graph', () => {
+    const chunks: CodeChunk[] = [
+      {
+        type: 'function',
+        name: 'entryPoint',
+        startLine: 1,
+        endLine: 3,
+        content: 'export function entryPoint() { middle(); }',
+        signature: 'export function entryPoint()',
+      },
+      {
+        type: 'function',
+        name: 'middle',
+        startLine: 5,
+        endLine: 7,
+        content: 'function middle() { leaf(); }',
+        signature: 'function middle()',
+      },
+      {
+        type: 'function',
+        name: 'leaf',
+        startLine: 9,
+        endLine: 11,
+        content: 'function leaf() {}',
+        signature: 'function leaf()',
+      },
+      {
+        type: 'function',
+        name: 'isolated',
+        startLine: 13,
+        endLine: 15,
+        content: 'function isolated() {}',
+        signature: 'function isolated()',
+      },
+    ];
+
+    const graph = buildCallGraph(chunks);
+    const related = getRelatedFunctions(graph, 'middle');
+
+    expect(related).toHaveLength(3); // middle, entryPoint, leaf
+    expect(related.map(n => n.name)).toContain('middle');
+    expect(related.map(n => n.name)).toContain('entryPoint');
+    expect(related.map(n => n.name)).toContain('leaf');
+    expect(related.map(n => n.name)).not.toContain('isolated');
+  });
+
+  it('respects maxRelated limit', () => {
+    const chunks: CodeChunk[] = [
+      {
+        type: 'function',
+        name: 'a',
+        startLine: 1,
+        endLine: 2,
+        content: 'function a() { b(); c(); d(); e(); }',
+        signature: 'function a()',
+      },
+      {
+        type: 'function',
+        name: 'b',
+        startLine: 3,
+        endLine: 4,
+        content: 'function b() {}',
+        signature: 'function b()',
+      },
+      {
+        type: 'function',
+        name: 'c',
+        startLine: 5,
+        endLine: 6,
+        content: 'function c() {}',
+        signature: 'function c()',
+      },
+      {
+        type: 'function',
+        name: 'd',
+        startLine: 7,
+        endLine: 8,
+        content: 'function d() {}',
+        signature: 'function d()',
+      },
+      {
+        type: 'function',
+        name: 'e',
+        startLine: 9,
+        endLine: 10,
+        content: 'function e() {}',
+        signature: 'function e()',
+      },
+    ];
+
+    const graph = buildCallGraph(chunks);
+    const related = getRelatedFunctions(graph, 'a', 2);
+
+    expect(related).toHaveLength(2);
   });
 });
