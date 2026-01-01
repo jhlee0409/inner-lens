@@ -53,6 +53,66 @@ export interface InnerLensConfig {
     buttonPosition?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
   };
 
+  // ============================================
+  // Convenience Options (top-level shortcuts)
+  // ============================================
+
+  /**
+   * Button position (convenience option, maps to styles.buttonPosition)
+   * @default 'bottom-right'
+   */
+  position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+
+  /**
+   * Button color (convenience option, maps to styles.buttonColor)
+   * @default '#6366f1'
+   */
+  buttonColor?: string;
+
+  // ============================================
+  // UI Text Customization
+  // ============================================
+
+  /**
+   * Trigger button aria-label and title
+   * @default 'Report a bug'
+   */
+  buttonText?: string;
+
+  /**
+   * Dialog title text
+   * @default 'Report an Issue'
+   */
+  dialogTitle?: string;
+
+  /**
+   * Textarea label text
+   * @default 'Describe the issue'
+   */
+  dialogDescription?: string;
+
+  /**
+   * Submit button text
+   * @default 'Submit Report'
+   */
+  submitText?: string;
+
+  /**
+   * Cancel button text
+   * @default 'Cancel'
+   */
+  cancelText?: string;
+
+  /**
+   * Success message title
+   * @default 'Report Submitted'
+   */
+  successMessage?: string;
+
+  // ============================================
+  // Callbacks
+  // ============================================
+
   /**
    * Callback when report is successfully submitted
    */
@@ -62,6 +122,16 @@ export interface InnerLensConfig {
    * Callback when report submission fails
    */
   onError?: (error: Error) => void;
+
+  /**
+   * Callback when dialog opens
+   */
+  onOpen?: () => void;
+
+  /**
+   * Callback when dialog closes
+   */
+  onClose?: () => void;
 
   /**
    * Custom trigger element (replaces default button)
