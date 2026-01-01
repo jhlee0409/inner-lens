@@ -305,16 +305,18 @@ server.listen(3000);
 <details>
 <summary><b>Cloudflare Workers Full Example</b></summary>
 
-> **Important:** `inner-lens/server` uses `@octokit/rest` which requires Node.js APIs. You must enable the `nodejs_compat` compatibility flag.
+> **Important:** `inner-lens/server` uses `@octokit/rest` which requires Node.js APIs. You must enable the `nodejs_compat` compatibility flag with a compatibility date of `2024-09-23` or later.
 
 **1. Create `wrangler.toml` in your project root:**
 
 ```toml
 name = "inner-lens-worker"
 main = "src/index.ts"
-compatibility_date = "2024-01-01"
+compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 ```
+
+> **Dashboard GUI:** Workers & Pages → Worker 선택 → Settings → Build → Compatibility flags에서 `nodejs_compat`를 직접 입력하고, Compatibility date를 `2025-01-01` 이상으로 설정하세요.
 
 **2. Create `src/index.ts`:**
 
