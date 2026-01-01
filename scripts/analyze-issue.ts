@@ -32,6 +32,10 @@ interface AnalysisConfig {
   maxTokens: number;
   retryAttempts: number;
   retryDelay: number;
+  // Self-consistency settings (P3-2)
+  selfConsistency: boolean;
+  consistencySamples: number;
+  consistencyThreshold: number;
 }
 
 // Structured output schema for analysis
@@ -76,6 +80,10 @@ const config: AnalysisConfig = {
   maxTokens: parseInt(process.env['MAX_TOKENS'] || '4000', 10),
   retryAttempts: 3,
   retryDelay: 2000,
+  // Self-consistency: run multiple analyses and check agreement (P3-2)
+  selfConsistency: process.env['SELF_CONSISTENCY'] === 'true',
+  consistencySamples: parseInt(process.env['CONSISTENCY_SAMPLES'] || '3', 10),
+  consistencyThreshold: parseFloat(process.env['CONSISTENCY_THRESHOLD'] || '0.67'),
 };
 
 // ============================================
@@ -1157,7 +1165,42 @@ Before any analysis, you MUST determine if this is a valid, actionable bug repor
 - Provide working code snippets, not pseudocode
 - Explain WHY the fix works, not just WHAT to change
 - DO NOT fabricate issues that don't exist in the code
-- If you cannot find evidence of a bug, say so honestly`;
+- If you cannot find evidence of a bug, say so honestly
+
+## EVIDENCE-BASED ANALYSIS RULES (P3-2 Enhancement)
+
+### Rule 1: Code Location Citation (MANDATORY)
+Every claim about the code MUST include a precise location reference:
+- Format: \`filename.ts:lineNumber\` (e.g., \`server.ts:42\`)
+- When suggesting fixes, specify the exact line range to modify
+- If line numbers are marked with >>> in the context, prioritize those lines
+
+### Rule 2: Evidence Chain
+Build a traceable path from error to root cause:
+1. **Error Point**: Where the error manifests (from stack trace or logs)
+2. **Call Path**: How execution reached that point
+3. **Root Cause**: The actual source of the bug
+Each step must cite code evidence.
+
+### Rule 3: Confidence Calibration
+Your confidence score MUST reflect actual evidence quality:
+- **90-100%**: Stack trace points directly to the issue + code clearly shows the bug
+- **70-89%**: Strong circumstantial evidence from code patterns
+- **50-69%**: Reasonable inference but missing direct evidence
+- **Below 50%**: Speculative - state this clearly and request more info
+
+### Rule 4: Counter-Evidence Check
+Before finalizing analysis, ask yourself:
+- "What evidence would DISPROVE this hypothesis?"
+- "Are there alternative explanations for this behavior?"
+- "What assumptions am I making that might be wrong?"
+If counter-evidence exists, mention it and explain why your conclusion is still valid.
+
+### Rule 5: No Speculation Without Disclosure
+If you must speculate (due to incomplete information):
+- Prefix with "⚠️ Speculative:" or similar marker
+- Explain what additional information would confirm/deny the speculation
+- Lower confidence score accordingly`;
 
 const USER_PROMPT_TEMPLATE = (
   title: string,
@@ -1211,6 +1254,140 @@ async function withRetry<T>(
   }
 
   throw lastError;
+}
+
+// ============================================
+// Self-Consistency Verification (P3-2)
+// ============================================
+
+/**
+ * Calculate similarity between two root cause summaries
+ * Uses simple word overlap as a heuristic
+ */
+function calculateSimilarity(text1: string, text2: string): number {
+  const normalize = (t: string) => t.toLowerCase().replace(/[^a-z0-9가-힣\s]/g, '');
+  const words1 = new Set(normalize(text1).split(/\s+/).filter(w => w.length > 2));
+  const words2 = new Set(normalize(text2).split(/\s+/).filter(w => w.length > 2));
+
+  if (words1.size === 0 || words2.size === 0) return 0;
+
+  let intersection = 0;
+  for (const word of words1) {
+    if (words2.has(word)) intersection++;
+  }
+
+  // Jaccard similarity
+  const union = words1.size + words2.size - intersection;
+  return union > 0 ? intersection / union : 0;
+}
+
+/**
+ * Check if multiple analysis results are consistent
+ * Returns the most common result with consistency metadata
+ */
+function checkConsistency(
+  results: AnalysisResult[],
+  threshold: number
+): { result: AnalysisResult; isConsistent: boolean; agreementRate: number } {
+  if (results.length === 0) {
+    throw new Error('No results to check consistency');
+  }
+
+  if (results.length === 1) {
+    return { result: results[0], isConsistent: true, agreementRate: 1.0 };
+  }
+
+  // Group by validity first
+  const validResults = results.filter(r => r.isValidReport);
+  const invalidResults = results.filter(r => !r.isValidReport);
+
+  // If majority says invalid, use that
+  if (invalidResults.length > validResults.length) {
+    return {
+      result: invalidResults[0],
+      isConsistent: invalidResults.length === results.length,
+      agreementRate: invalidResults.length / results.length,
+    };
+  }
+
+  // For valid reports, check root cause similarity
+  const summaries = validResults.map(r => r.rootCause.summary);
+  const similarityMatrix: number[][] = [];
+
+  for (let i = 0; i < summaries.length; i++) {
+    similarityMatrix[i] = [];
+    for (let j = 0; j < summaries.length; j++) {
+      similarityMatrix[i][j] = i === j ? 1 : calculateSimilarity(summaries[i], summaries[j]);
+    }
+  }
+
+  // Find the result with highest average similarity to others
+  let bestIdx = 0;
+  let bestAvgSim = 0;
+  for (let i = 0; i < summaries.length; i++) {
+    const avgSim = similarityMatrix[i].reduce((a, b) => a + b, 0) / summaries.length;
+    if (avgSim > bestAvgSim) {
+      bestAvgSim = avgSim;
+      bestIdx = i;
+    }
+  }
+
+  // Count how many agree with the best result
+  const agreementCount = similarityMatrix[bestIdx].filter(sim => sim >= 0.5).length;
+  const agreementRate = agreementCount / results.length;
+
+  return {
+    result: validResults[bestIdx],
+    isConsistent: agreementRate >= threshold,
+    agreementRate,
+  };
+}
+
+/**
+ * Run analysis with self-consistency verification
+ * Generates multiple analyses and checks for agreement
+ */
+async function analyzeWithConsistency(
+  generateFn: () => Promise<AnalysisResult>,
+  numSamples: number,
+  threshold: number
+): Promise<AnalysisResult> {
+  console.log(`   🔄 Running ${numSamples} parallel analyses for consistency check...`);
+
+  // Run analyses in parallel
+  const promises = Array(numSamples).fill(null).map(() => generateFn());
+  const results = await Promise.allSettled(promises);
+
+  const successfulResults: AnalysisResult[] = [];
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      successfulResults.push(result.value);
+    }
+  }
+
+  if (successfulResults.length === 0) {
+    throw new Error('All consistency samples failed');
+  }
+
+  // Check consistency
+  const { result, isConsistent, agreementRate } = checkConsistency(successfulResults, threshold);
+
+  console.log(`   📊 Agreement rate: ${(agreementRate * 100).toFixed(0)}% (${successfulResults.length} samples)`);
+
+  if (!isConsistent) {
+    console.log(`   ⚠️ Low consistency detected - adding warning to result`);
+    // Adjust the result to indicate low consistency
+    return {
+      ...result,
+      confidence: Math.min(result.confidence, 50),
+      additionalContext: (result.additionalContext || '') +
+        `\n\n⚠️ **Consistency Warning**: Multiple analysis runs showed ${(agreementRate * 100).toFixed(0)}% agreement. ` +
+        `This analysis may benefit from manual verification.`,
+    };
+  }
+
+  console.log(`   ✅ High consistency confirmed`);
+  return result;
 }
 
 // ============================================
@@ -1468,25 +1645,34 @@ async function analyzeIssue(): Promise<void> {
 
   const userPrompt = USER_PROMPT_TEMPLATE(maskedTitle, maskedBody, codeContext, keywords);
 
+  // Single analysis generation function
+  const generateAnalysis = async (): Promise<AnalysisResult> => {
+    const { object } = await generateObject({
+      model,
+      schema: AnalysisResultSchema,
+      system: SYSTEM_PROMPT,
+      prompt: userPrompt,
+      maxTokens: config.maxTokens,
+    });
+    return object;
+  };
+
   let analysis: AnalysisResult;
 
   try {
-    // Try structured output first
-    const result = await withRetry(
-      async () => {
-        const { object } = await generateObject({
-          model,
-          schema: AnalysisResultSchema,
-          system: SYSTEM_PROMPT,
-          prompt: userPrompt,
-          maxTokens: config.maxTokens,
-        });
-        return object;
-      },
-      config.retryAttempts,
-      config.retryDelay
-    );
-    analysis = result;
+    // Use self-consistency if enabled (P3-2)
+    if (config.selfConsistency) {
+      console.log('   🔄 Self-consistency mode enabled');
+      analysis = await analyzeWithConsistency(
+        () => withRetry(generateAnalysis, config.retryAttempts, config.retryDelay),
+        config.consistencySamples,
+        config.consistencyThreshold
+      );
+    } else {
+      // Standard single analysis
+      const result = await withRetry(generateAnalysis, config.retryAttempts, config.retryDelay);
+      analysis = result;
+    }
     console.log('   ✅ Structured analysis generated');
   } catch (structuredError) {
     // Fallback to text generation if structured fails

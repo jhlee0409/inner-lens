@@ -88,6 +88,7 @@
 | 2026-01-01 | Phase 4.5 완료: LLM Re-ranking (P1-2) |
 | 2026-01-01 | Phase 4.6 완료: 분석 유틸리티 테스트 (P2) - 37개 테스트 |
 | 2026-01-01 | Phase 4.7-4.9 추가: 2025 리서치 기반 고도화 로드맵 (P3-P5) |
+| 2026-01-01 | Phase 4.7 P3-2 완료: 증거 기반 프롬프트 + Self-consistency |
 
 ---
 
@@ -149,12 +150,12 @@
   - [ ] 청크 메타데이터 (시그니처, 의존성) 추출
   - 기대 효과: RepoEval +5.5점
 
-- [ ] **P3-2: 증거 기반 프롬프트 강화**
-  - [ ] 코드 위치 명시 규칙 추가 (`파일:라인` 형식)
-  - [ ] 증거 체인 요구 (에러→호출경로→근본원인)
-  - [ ] 반증 검토 의무화
-  - [ ] Self-consistency 검증 (3회 분석 후 다수결)
-  - 기대 효과: 환각 감소, 일관성 향상
+- [x] **P3-2: 증거 기반 프롬프트 강화** ✅ 2026-01-01
+  - [x] 코드 위치 명시 규칙 추가 (`파일:라인` 형식) ✅
+  - [x] 증거 체인 요구 (에러→호출경로→근본원인) ✅
+  - [x] 반증 검토 의무화 (Counter-Evidence Check) ✅
+  - [x] Self-consistency 검증 (N회 분석 후 일관성 체크) ✅
+  - 효과: 환각 감소, 일관성 향상
 
 ### 4.8 시맨틱 검색 도입 (P4)
 > 참고: [Greptile 블로그](https://www.greptile.com/blog/semantic-codebase-search), [Augment Code](https://www.augmentcode.com/blog/repo-scale-100M-line-codebase-quantized-vector-search)
