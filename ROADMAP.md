@@ -87,6 +87,7 @@
 | 2026-01-01 | Phase 4.4 완료: Import 그래프 추적 (P1-1) |
 | 2026-01-01 | Phase 4.5 완료: LLM Re-ranking (P1-2) |
 | 2026-01-01 | Phase 4.6 완료: 분석 유틸리티 테스트 (P2) - 37개 테스트 |
+| 2026-01-01 | Phase 4.7-4.9 추가: 2025 리서치 기반 고도화 로드맵 (P3-P5) |
 
 ---
 
@@ -138,3 +139,50 @@
 - [x] 내용 기반 검색 테스트 ✅ 2026-01-01
 - [x] Import 파싱 테스트 ✅ 2026-01-01
 - [ ] 실제 버그 리포트로 E2E 테스트
+
+### 4.7 코드 분석 고도화 (P3) - 2025 리서치 기반
+> 참고: [cAST 논문](https://arxiv.org/html/2506.15655v1), [IJCAI CFG 연구](https://www.ijcai.org/proceedings/2023/249)
+
+- [ ] **P3-1: AST 기반 코드 청킹**
+  - [ ] TypeScript/JavaScript AST 파서 통합 (ts-morph)
+  - [ ] 함수/클래스/메서드 단위 청킹
+  - [ ] 청크 메타데이터 (시그니처, 의존성) 추출
+  - 기대 효과: RepoEval +5.5점
+
+- [ ] **P3-2: 증거 기반 프롬프트 강화**
+  - [ ] 코드 위치 명시 규칙 추가 (`파일:라인` 형식)
+  - [ ] 증거 체인 요구 (에러→호출경로→근본원인)
+  - [ ] 반증 검토 의무화
+  - [ ] Self-consistency 검증 (3회 분석 후 다수결)
+  - 기대 효과: 환각 감소, 일관성 향상
+
+### 4.8 시맨틱 검색 도입 (P4)
+> 참고: [Greptile 블로그](https://www.greptile.com/blog/semantic-codebase-search), [Augment Code](https://www.augmentcode.com/blog/repo-scale-100M-line-codebase-quantized-vector-search)
+
+- [ ] **P4-1: 벡터 임베딩 검색**
+  - [ ] 임베딩 모델 선정 (voyage-3-large 또는 jina-embeddings-v2-base-code)
+  - [ ] 코드→자연어 변환 후 임베딩 (검색 품질 향상)
+  - [ ] 벡터 DB 통합 (Qdrant/Faiss)
+  - [ ] 양자화로 대규모 코드베이스 지원 (8x 메모리 절감)
+
+- [ ] **P4-2: Control/Data Flow 분석**
+  - [ ] CFG (Control Flow Graph) 구축
+  - [ ] DFG (Data Flow Graph) 추적
+  - [ ] 에러 위치에서 역추적하여 근본 원인 노드 탐색
+  - 기대 효과: MAP +32.9%, MRR +29.2%
+
+### 4.9 Multi-Agent 아키텍처 (P5)
+> 참고: [FixAgent](https://arxiv.org/html/2404.17153v1), [Flow-of-Action](https://dl.acm.org/doi/10.1145/3701716.3715225)
+
+- [ ] **P5-1: 3단계 에이전트 설계**
+  - [ ] Retrieval Agent: AST 파싱, 벡터 검색, CFG 분석
+  - [ ] Analysis Agent: 다중 가설 생성, 증거 수집, 신뢰도 계산
+  - [ ] Verification Agent: 분석 검증, Self-consistency 체크
+  - 기대 효과: QuixBugs 79/80 버그 수정 (98.75%)
+
+- [ ] **P5-2: SOP 기반 추론**
+  - [ ] 표준 분석 절차 정의 (검증→위치파악→분석→검증)
+  - [ ] 각 단계별 필수 증거 요구사항
+  - [ ] 신뢰도 임계값 설정
+  - 기대 효과: LLM 환각 대폭 감소
+
