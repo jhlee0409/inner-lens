@@ -305,13 +305,40 @@ server.listen(3000);
 <details>
 <summary><b>Cloudflare Workers Full Example</b></summary>
 
+### Prerequisites
+
+`inner-lens/server` uses `@octokit/rest` which requires Node.js APIs. You must enable the `nodejs_compat` compatibility flag.
+
+---
+
+### Option A: Wrangler CLI (Recommended)
+
+Use this method if you want to use the `inner-lens` npm package.
+
+**1. Create a new Worker project:**
+
+```bash
+npm create cloudflare@latest my-bug-reporter
+cd my-bug-reporter
+npm install inner-lens
+```
+
+**2. Configure `wrangler.toml`:**
+
+```toml
+name = "my-bug-reporter"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+```
+
+**3. Write `src/index.ts`:**
+
 ```ts
-// src/index.ts
 import { createFetchHandler } from 'inner-lens/server';
 
 interface Env {
   GITHUB_TOKEN: string;
-  GITHUB_REPOSITORY: string;
 }
 
 export default {
@@ -330,11 +357,10 @@ export default {
     if (request.method === 'POST') {
       const handler = createFetchHandler({
         githubToken: env.GITHUB_TOKEN,
-        repository: env.GITHUB_REPOSITORY,
+        repository: 'your-username/your-repo',  // Hardcode your repo
       });
       const response = await handler(request);
 
-      // Add CORS headers
       const headers = new Headers(response.headers);
       headers.set('Access-Control-Allow-Origin', '*');
       return new Response(response.body, { status: response.status, headers });
@@ -343,6 +369,167 @@ export default {
     return new Response('Method not allowed', { status: 405 });
   },
 };
+```
+
+**4. Deploy:**
+
+```bash
+wrangler secret put GITHUB_TOKEN
+wrangler deploy
+```
+
+---
+
+### Option B: Dashboard GUI Only (No npm packages)
+
+Use this method if you want to set up everything via the Cloudflare Dashboard without CLI.
+
+> ⚠️ **Important:** Dashboard Quick Edit cannot import npm packages. You must use the standalone code below that calls GitHub API directly.
+
+**1. Create a Worker in Dashboard:**
+
+Go to **Workers & Pages → Create → Create Worker**
+
+**2. Configure Compatibility Settings:**
+
+Go to **Settings → Build** and configure:
+
+| Setting | Value |
+|---------|-------|
+| Compatibility date | `2025-01-01` |
+| Compatibility flags | `nodejs_compat` (type manually, not in dropdown) |
+
+> 💡 **Note:** `nodejs_compat` is NOT in the dropdown list. You must type it directly into the input field.
+
+**3. Set Environment Variables:**
+
+Go to **Settings → Variables and Secrets**:
+
+| Name | Type |
+|------|------|
+| `GITHUB_TOKEN` | Secret (Encrypt) |
+
+**4. Edit Code (Quick Edit):**
+
+Replace the default code with:
+
+```js
+export default {
+  async fetch(request, env) {
+    // CORS preflight
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Max-Age': '86400',
+        },
+      });
+    }
+
+    if (request.method !== 'POST') {
+      return new Response(JSON.stringify({ success: false, message: 'Method not allowed' }), {
+        status: 405,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
+    }
+
+    try {
+      const payload = await request.json();
+
+      if (!payload.description || typeof payload.description !== 'string') {
+        return new Response(JSON.stringify({ success: false, message: 'description is required' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+
+      const result = await createGitHubIssue(payload, env.GITHUB_TOKEN);
+
+      return new Response(JSON.stringify(result), {
+        status: result.success ? 201 : 500,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ success: false, message: error.message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
+    }
+  },
+};
+
+async function createGitHubIssue(payload, token) {
+  // ⚠️ Change this to your repository
+  const owner = 'your-username';
+  const repo = 'your-repo';
+
+  const formattedLogs = (payload.logs || [])
+    .slice(-20)
+    .map(log => `[${new Date(log.timestamp).toISOString()}] [${log.level?.toUpperCase() || 'LOG'}] ${log.message}`)
+    .join('\n');
+
+  const issueBody = `## Bug Report
+
+### Description
+${payload.description}
+
+### Environment
+- **URL:** ${payload.url || 'N/A'}
+- **User Agent:** ${payload.userAgent || 'N/A'}
+- **Reported At:** ${new Date(payload.timestamp || Date.now()).toISOString()}
+
+### Console Logs
+\`\`\`
+${formattedLogs || 'No logs captured'}
+\`\`\`
+
+---
+*This issue was automatically created by [inner-lens](https://github.com/jhlee0409/inner-lens).*
+*Awaiting AI analysis...*`;
+
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+      'User-Agent': 'inner-lens-worker',
+    },
+    body: JSON.stringify({
+      title: `[Bug Report] ${payload.description.slice(0, 80)}${payload.description.length > 80 ? '...' : ''}`,
+      body: issueBody,
+      labels: ['bug', 'inner-lens'],
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`GitHub API error: ${response.status} - ${error}`);
+  }
+
+  const issue = await response.json();
+  return {
+    success: true,
+    issueUrl: issue.html_url,
+    issueNumber: issue.number,
+  };
+}
+```
+
+**5. Save and Deploy**
+
+Click **Save and deploy** in the Quick Edit interface.
+
+---
+
+### Custom Entry Point
+
+You can change the entry point path in `wrangler.toml`:
+
+```toml
+main = "src/inner-lens/index.ts"  # Custom path
 ```
 
 </details>
