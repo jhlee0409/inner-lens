@@ -1,5 +1,9 @@
 # Trigger workflow for inner-lens AI Analysis
 # This workflow triggers the reusable analysis-engine when issues are created/labeled
+#
+# Duplicate Prevention (2025):
+# - Checks if analysis comment already exists before running
+# - Skips if 'analyzed' label is present
 
 name: Analyze Issues
 
@@ -14,8 +18,39 @@ jobs:
     outputs:
       should_analyze: ${{ steps.check.outputs.should_analyze }}
     steps:
+      - name: Check if analysis already exists
+        id: check-existing
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            // Check for existing analysis comment
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              per_page: 100
+            });
+
+            const hasAnalysis = comments.data.some(c =>
+              c.body && c.body.includes('## 🔍 inner-lens Analysis')
+            );
+
+            // Check for 'analyzed' label
+            const labels = context.payload.issue.labels || [];
+            const hasAnalyzedLabel = labels.some(l => l.name === 'analyzed');
+
+            core.setOutput('already_analyzed', hasAnalysis || hasAnalyzedLabel);
+
+            if (hasAnalysis) {
+              console.log('⏭️ Skipping: Analysis comment already exists');
+            }
+            if (hasAnalyzedLabel) {
+              console.log('⏭️ Skipping: Issue already has "analyzed" label');
+            }
+
       - name: Check if analysis should run
         id: check
+        if: steps.check-existing.outputs.already_analyzed != 'true'
         run: |
           # Run analysis if:
           # 1. Issue was just opened with 'bug' label, OR
@@ -37,13 +72,18 @@ jobs:
             SHOULD_ANALYZE="true"
           fi
 
-          # Case 2: 'inner-lens' label was added
+          # Case 2: 'inner-lens' label was added (but not if bug label was just added at open)
           if [[ "$EVENT_NAME" == "labeled" ]] && [[ "$ADDED_LABEL" == "inner-lens" ]]; then
             echo "✅ inner-lens label added"
             SHOULD_ANALYZE="true"
           fi
 
           echo "should_analyze=$SHOULD_ANALYZE" >> $GITHUB_OUTPUT
+
+      - name: Set output for skipped analysis
+        id: set-skip
+        if: steps.check-existing.outputs.already_analyzed == 'true'
+        run: echo "should_analyze=false" >> $GITHUB_OUTPUT
 
   analyze:
     name: Run Analysis

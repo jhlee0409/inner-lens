@@ -46,8 +46,25 @@ const AnalysisResultSchema = z.object({
   isValidReport: z.boolean().describe('Whether this is a valid, actionable bug report with sufficient information'),
   invalidReason: z.string().optional().describe('If isValidReport is false, explain why (e.g., "No error logs or reproduction steps provided", "Description too vague to analyze")'),
 
+  // Report classification (2025 enhancement)
+  reportType: z.enum([
+    'bug',              // Actual bug - code is broken
+    'not_a_bug',        // Expected behavior - user misunderstanding
+    'feature_request',  // Request for new functionality
+    'improvement',      // Enhancement to existing feature
+    'cannot_verify',    // Cannot confirm bug from code analysis
+    'needs_info',       // Insufficient information to analyze
+  ]).describe('Classification of what this report actually is'),
+
   severity: z.enum(['critical', 'high', 'medium', 'low', 'none']),
   category: z.enum(['runtime_error', 'logic_error', 'performance', 'security', 'ui_ux', 'configuration', 'invalid_report', 'unknown']),
+
+  // Code verification result (2025 enhancement)
+  codeVerification: z.object({
+    bugExistsInCode: z.boolean().describe('After analyzing the code, does the described bug actually exist?'),
+    evidence: z.string().describe('What evidence from the code supports or refutes the bug claim?'),
+    alternativeExplanation: z.string().optional().describe('If not a bug, what might explain the reported behavior?'),
+  }).describe('Result of verifying the bug claim against actual code'),
   rootCause: z.object({
     summary: z.string().describe('One-line summary of the root cause'),
     explanation: z.string().describe('Detailed explanation of why the bug occurred'),
@@ -1301,40 +1318,55 @@ const SYSTEM_PROMPT = `You are an expert Security-First QA Engineer analyzing bu
 3. NEVER include PII (emails, names, IPs) in your response
 4. If you detect sensitive data, note that it was redacted
 
-## STEP 0: VALIDATE REPORT (MANDATORY - DO THIS FIRST)
+## STEP 0: VALIDATE AND CLASSIFY REPORT (MANDATORY - DO THIS FIRST)
 
-Before any analysis, you MUST determine if this is a valid, actionable bug report.
+Before any analysis, you MUST:
+1. Determine if this is a valid, analyzable report
+2. Classify what type of report this actually is
+
+### Report Types (reportType field):
+- **bug**: Actual bug - code is demonstrably broken (SET THIS ONLY IF YOU FIND EVIDENCE IN CODE)
+- **not_a_bug**: Expected behavior - user misunderstands how feature works
+- **feature_request**: User wants new functionality that doesn't exist
+- **improvement**: Enhancement suggestion for existing functionality
+- **cannot_verify**: Report describes a bug, but you cannot find evidence in the code
+- **needs_info**: Insufficient information to make any determination
+
+### CRITICAL: Code Verification (codeVerification field)
+You MUST verify bug claims against the actual code provided:
+
+1. **bugExistsInCode**: After reading the code, can you confirm the bug exists?
+   - TRUE only if you can point to specific code that would cause the described issue
+   - FALSE if the code looks correct or you can't find evidence of the issue
+
+2. **evidence**: What in the code supports or refutes the bug claim?
+   - Cite specific file:line references
+   - Quote actual code snippets
+   - If no evidence found, say "No evidence of described issue found in provided code"
+
+3. **alternativeExplanation**: If not a bug, what else could explain this?
+   - User configuration issue?
+   - External service problem?
+   - User misunderstanding of feature?
 
 ### Mark as INVALID (isValidReport: false) if ANY of these are true:
 1. **No evidence of actual error**: No error messages, no stack traces, no console logs, AND description is vague
 2. **Insufficient information**: Description is less than 10 words or just says "error" without details
 3. **Cannot reproduce**: No reproduction steps AND no logs AND no specific error description
 4. **False/Test report**: Description appears to be a test, placeholder, or intentionally fake
-5. **Feature request disguised as bug**: User is requesting new functionality, not reporting broken existing functionality
-6. **User error, not bug**: The described behavior is actually expected/correct behavior
 
 ### Signs of INVALID reports:
 - "No logs captured" + vague description like "에러" or "doesn't work"
 - Description only contains generic words without specific symptoms
 - No URL context + no logs + no error messages
-- Description doesn't match any actual code behavior
 
-### Mark as VALID (isValidReport: true) only if:
-- There are actual error logs/stack traces, OR
-- Description clearly explains what went wrong with specific details, OR
-- There are network request failures shown, OR
-- Description includes reproduction steps
+### When codeVerification.bugExistsInCode is FALSE:
+Even if the report seems valid, if you cannot find evidence in the code:
+- Set reportType: "cannot_verify" or "not_a_bug"
+- Do NOT suggest code fixes for bugs you cannot verify
+- Instead, suggest debugging steps or request more information
 
-**If the report is INVALID:**
-- Set isValidReport: false
-- Set invalidReason: explain why (be specific)
-- Set severity: "none"
-- Set category: "invalid_report"
-- Set confidence: 0
-- rootCause.summary: "Unable to analyze - insufficient information"
-- Keep other fields minimal/empty
-
-**Only proceed with full analysis if isValidReport: true**
+**Only suggest code fixes when you have CONFIRMED the bug exists in the code**
 
 ## ANALYSIS METHODOLOGY (Chain-of-Thought) - Only for VALID reports
 
@@ -1600,6 +1632,15 @@ async function analyzeWithConsistency(
 // ============================================
 
 function formatAnalysisComment(result: AnalysisResult, provider: string, filesAnalyzed: number): string {
+  const reportTypeLabels: Record<string, { emoji: string; label: string; color: string }> = {
+    bug: { emoji: '🐛', label: 'Confirmed Bug', color: 'red' },
+    not_a_bug: { emoji: '✅', label: 'Not a Bug', color: 'green' },
+    feature_request: { emoji: '💡', label: 'Feature Request', color: 'blue' },
+    improvement: { emoji: '🔧', label: 'Improvement Suggestion', color: 'purple' },
+    cannot_verify: { emoji: '🔍', label: 'Cannot Verify', color: 'orange' },
+    needs_info: { emoji: '❓', label: 'Needs More Info', color: 'gray' },
+  };
+
   // Handle invalid reports first
   if (!result.isValidReport) {
     return `## 🔍 inner-lens Analysis
@@ -1647,6 +1688,80 @@ To analyze this issue, please provide:
 </details>
 
 *This analysis was generated by [inner-lens](https://github.com/jhlee0409/inner-lens).*`;
+  }
+
+  // Handle non-bug reports (2025 enhancement)
+  const reportTypeInfo = reportTypeLabels[result.reportType] || reportTypeLabels.cannot_verify;
+
+  if (result.reportType !== 'bug') {
+    // For non-bug reports, show a different format
+    return `## 🔍 inner-lens Analysis
+
+${reportTypeInfo.emoji} **Classification:** ${reportTypeInfo.label}
+
+---
+
+### 📋 Analysis Result
+
+${result.codeVerification?.bugExistsInCode === false
+  ? `**Code Verification:** ❌ No bug found in code
+
+${result.codeVerification.evidence}
+
+${result.codeVerification.alternativeExplanation ? `**Possible Explanation:** ${result.codeVerification.alternativeExplanation}` : ''}`
+  : `${result.rootCause.explanation}`}
+
+---
+
+${result.reportType === 'feature_request' || result.reportType === 'improvement' ? `### 💡 Recommendation
+
+This appears to be a ${result.reportType === 'feature_request' ? 'feature request' : 'suggested improvement'} rather than a bug report.
+
+Consider:
+- Creating a separate feature request issue
+- Discussing in a GitHub Discussion or community channel
+- Checking if this feature already exists in the roadmap
+` : ''}
+
+${result.reportType === 'not_a_bug' ? `### ✅ Expected Behavior
+
+The reported behavior appears to be working as designed.
+
+${result.codeVerification?.alternativeExplanation || 'Please review the documentation for expected functionality.'}
+` : ''}
+
+${result.reportType === 'cannot_verify' ? `### 🔍 Unable to Confirm
+
+We analyzed the relevant code but could not find evidence of the reported bug.
+
+**What this means:**
+- The bug may exist in code we didn't analyze
+- The issue may be environment-specific
+- More information may be needed
+
+**Suggested next steps:**
+1. Provide console logs with the error
+2. Share steps to reproduce
+3. Include the exact error message
+` : ''}
+
+---
+
+<details>
+<summary>Analysis Metadata</summary>
+
+| Field | Value |
+|-------|-------|
+| Classification | ${reportTypeInfo.label} |
+| Bug Found in Code | ${result.codeVerification?.bugExistsInCode ? 'Yes' : 'No'} |
+| Confidence | ${result.confidence}% |
+| Provider | ${provider} |
+| Files Analyzed | ${filesAnalyzed} |
+| Timestamp | ${new Date().toISOString()} |
+
+</details>
+
+*This analysis was generated by [inner-lens](https://github.com/jhlee0409/inner-lens). Always verify suggestions before applying.*`;
   }
 
   const severityEmoji: Record<string, string> = {
@@ -1916,8 +2031,13 @@ async function analyzeIssue(): Promise<void> {
     // Create a basic structured result from text
     analysis = {
       isValidReport: true, // Assume valid if we got this far
+      reportType: 'cannot_verify', // Conservative default for fallback
       severity: 'medium',
       category: 'unknown',
+      codeVerification: {
+        bugExistsInCode: false,
+        evidence: 'Unable to perform structured code verification (fallback mode)',
+      },
       rootCause: {
         summary: 'Analysis generated from unstructured response',
         explanation: text,
@@ -1948,34 +2068,66 @@ async function analyzeIssue(): Promise<void> {
 
   // Step 7: Add labels based on analysis
   console.log('\n🏷️ Step 7: Adding labels...');
-  const labelsToAdd: string[] = [];
+  const labelsToAdd: string[] = ['analyzed']; // Always add 'analyzed' to prevent duplicate runs
 
   // Handle invalid reports
   if (!analysis.isValidReport) {
     labelsToAdd.push('needs-more-info');
     console.log('   📋 Report marked as invalid/insufficient');
   } else {
-    // Only add severity/confidence labels for valid reports
-    if (analysis.severity === 'critical' || analysis.severity === 'high') {
-      labelsToAdd.push('priority:high');
+    // Add labels based on report type (2025 enhancement)
+    switch (analysis.reportType) {
+      case 'bug':
+        // Only add severity labels for confirmed bugs
+        if (analysis.severity === 'critical' || analysis.severity === 'high') {
+          labelsToAdd.push('priority:high');
+        }
+        if (analysis.codeVerification?.bugExistsInCode) {
+          labelsToAdd.push('ai:bug-confirmed');
+        }
+        break;
+      case 'not_a_bug':
+        labelsToAdd.push('not-a-bug');
+        break;
+      case 'feature_request':
+        labelsToAdd.push('enhancement');
+        break;
+      case 'improvement':
+        labelsToAdd.push('enhancement');
+        break;
+      case 'cannot_verify':
+        labelsToAdd.push('needs-reproduction');
+        break;
+      case 'needs_info':
+        labelsToAdd.push('needs-more-info');
+        break;
     }
+
+    // Add category-based labels
     if (analysis.category === 'security') {
       labelsToAdd.push('security');
     }
+
+    // Add confidence indicator
     if (analysis.confidence >= 80) {
       labelsToAdd.push('ai:high-confidence');
+    } else if (analysis.confidence < 50) {
+      labelsToAdd.push('ai:low-confidence');
     }
   }
 
-  if (labelsToAdd.length > 0) {
+  // Add labels (filter out duplicates)
+  const uniqueLabels = [...new Set(labelsToAdd)];
+
+  if (uniqueLabels.length > 0) {
     try {
       await octokit.issues.addLabels({
         owner: config.owner,
         repo: config.repo,
         issue_number: config.issueNumber,
-        labels: labelsToAdd,
+        labels: uniqueLabels,
       });
-      console.log(`   Added labels: ${labelsToAdd.join(', ')}`);
+      console.log(`   Added labels: ${uniqueLabels.join(', ')}`);
     } catch {
       console.log('   ⚠️ Could not add labels (may not exist in repo)');
     }
