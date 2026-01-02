@@ -807,13 +807,13 @@ inner-lens automatically masks sensitive data before submission:
 
 ## 📊 AI Providers
 
-| Provider | Default Model | Suggested Models (2026) | Best For |
-|----------|---------------|------------------------|----------|
-| **Anthropic** | `claude-sonnet-4-5` | `claude-opus-4-5`, `claude-opus-4`, `claude-haiku-4-5` | Nuanced code analysis |
-| **OpenAI** | `gpt-4.1` | `o3`, `o3-pro`, `o4-mini`, `gpt-4.1-mini` | Fast general debugging |
-| **Google** | `gemini-2.0-flash` | `gemini-3-flash`, `gemini-3-pro`, `gemini-2.5-flash-lite` | Cost-effective |
+| Provider | Default Model | Latest Models | Previous Gen |
+|----------|---------------|---------------|--------------|
+| **Anthropic** | `claude-sonnet-4-5` | `claude-opus-4-5`, `claude-haiku-4-5` | `claude-sonnet-4`, `claude-opus-4` |
+| **OpenAI** | `gpt-4.1` | `gpt-4.1-mini`, `gpt-4.1-nano`, `o3`, `o4-mini` | `gpt-4o`, `gpt-4o-mini` |
+| **Google** | `gemini-2.0-flash` | `gemini-3-flash`, `gemini-3-pro`, `gemini-2.5-flash-lite` | `gemini-2.0-flash-lite` |
 
-> 💡 **Tip:** Use `inner-lens init` to select a custom model during setup, or specify `model` in workflow inputs.
+> 💡 **Tip:** Use `inner-lens init` to select a model, or specify `model` in workflow inputs. You can also enter a custom model name for preview/experimental models.
 
 ---
 
