@@ -14,6 +14,7 @@ inner-lens is an open-source developer tool that integrates seamlessly into **an
 - **🌐 Universal Framework Support** — Works with React, Vue, Svelte, vanilla JS, and more
 - **🚀 Zero-Config Setup** — One command to get started: `npx create-inner-lens`
 - **🤖 Universal LLM Support** — Choose from Anthropic (Claude), OpenAI (GPT-4o), or Google (Gemini)
+- **🌍 Multi-Language Analysis** — AI-generated comments in 8 languages (EN, KO, JA, ZH, ES, DE, FR, PT)
 - **🔒 Security-First** — Automatic masking of emails, API keys, tokens, and PII
 - **📱 Lightweight Widget** — Clean, accessible UI with zero external CSS dependencies
 - **⚡ Multi-Backend Support** — Works with Express, Fastify, Hono, Next.js, Koa, and more
@@ -603,6 +604,7 @@ jobs:
 | `max_files` | `number` | `25` | Maximum files to analyze (5-50) |
 | `max_tokens` | `number` | `4000` | Maximum tokens for AI response |
 | `node_version` | `string` | `20` | Node.js version |
+| `language` | `string` | `en` | Output language for analysis comments |
 
 **Required Secrets by Provider:**
 - `anthropic`: `ANTHROPIC_API_KEY`
@@ -814,6 +816,70 @@ inner-lens automatically masks sensitive data before submission:
 | **Google** | `gemini-2.0-flash` | `gemini-3-flash`, `gemini-3-pro`, `gemini-2.5-flash-lite` | `gemini-2.0-flash-lite` |
 
 > 💡 **Tip:** Use `inner-lens init` to select a model, or specify `model` in workflow inputs. You can also enter a custom model name for preview/experimental models.
+
+---
+
+## 🌐 Multi-Language Support
+
+Analysis comments can be generated in multiple languages using the `language` workflow input.
+
+### Supported Languages
+
+| Code | Language |
+|------|----------|
+| `en` | English (default) |
+| `ko` | 한국어 (Korean) |
+| `ja` | 日本語 (Japanese) |
+| `zh` | 中文 (Chinese) |
+| `es` | Español (Spanish) |
+| `de` | Deutsch (German) |
+| `fr` | Français (French) |
+| `pt` | Português (Portuguese) |
+
+### Configuration
+
+**Workflow Configuration:**
+
+```yaml
+uses: jhlee0409/inner-lens/.github/workflows/analysis-engine.yml@v1
+with:
+  provider: 'anthropic'
+  language: 'ko'  # Output in Korean
+secrets:
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+```
+
+**Environment Variable:**
+
+```bash
+OUTPUT_LANGUAGE=ko npx tsx scripts/analyze-issue.ts
+```
+
+### What Gets Translated
+
+| Translated | Kept in English |
+|------------|-----------------|
+| Root cause summary & explanation | File paths |
+| Fix suggestions & steps | Code snippets |
+| Prevention tips | Variable/function names |
+| UI labels in comments | Technical terms without standard translations |
+
+### Example Output (Korean)
+
+```markdown
+## 🔍 inner-lens 분석
+
+🟡 **심각도:** MEDIUM | **카테고리:** 로직 에러 | **신뢰도:** 85%
+
+### 🎯 근본 원인
+
+**대소문자 구분 없는 중복 검사로 인한 멤버 추가 오류**
+
+`addNamesFromInput` 함수에서 기존 멤버 이름을 소문자로 변환하여 비교하고 있어,
+대소문자만 다른 이름은 중복으로 처리됩니다.
+
+**영향받는 파일:** `components/MemberManager.tsx`
+```
 
 ---
 
