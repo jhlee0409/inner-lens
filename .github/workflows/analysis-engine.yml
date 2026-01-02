@@ -23,6 +23,11 @@ on:
         required: false
         type: string
         default: 'anthropic'
+      model:
+        description: 'AI Model name (e.g., claude-sonnet-4-20250514, gpt-4o, gemini-2.0-flash)'
+        required: false
+        type: string
+        default: ''
       max_files:
         description: 'Maximum files to analyze (5-50)'
         required: false
@@ -141,6 +146,7 @@ jobs:
         id: analysis
         env:
           AI_PROVIDER: ${{ inputs.provider }}
+          AI_MODEL: ${{ inputs.model }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           REPO_OWNER: ${{ github.repository_owner }}
           REPO_NAME: ${{ github.event.repository.name }}
@@ -156,6 +162,7 @@ jobs:
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "📋 Issue: $REPO_OWNER/$REPO_NAME#$ISSUE_NUMBER"
           echo "🤖 Provider: $AI_PROVIDER"
+          echo "🧠 Model: ${AI_MODEL:-default}"
           echo "📁 Max Files: $MAX_FILES"
           echo "📝 Max Tokens: $MAX_TOKENS"
           echo ""
