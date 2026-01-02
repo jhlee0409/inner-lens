@@ -32,7 +32,7 @@ interface AccessTokenResponse {
  */
 async function githubDeviceFlow(): Promise<string | null> {
   const spinner = p.spinner();
-  spinner.start('GitHub OAuth 인증을 시작합니다...');
+  spinner.start('Starting GitHub OAuth authentication...');
 
   try {
     // Step 1: Request device code
@@ -49,19 +49,19 @@ async function githubDeviceFlow(): Promise<string | null> {
     });
 
     if (!deviceCodeRes.ok) {
-      spinner.stop('Device code 요청 실패');
+      spinner.stop('Failed to request device code');
       throw new Error(`Failed to get device code: ${deviceCodeRes.status}`);
     }
 
     const deviceCode = await deviceCodeRes.json() as DeviceCodeResponse;
-    spinner.stop('Device code 생성됨');
+    spinner.stop('Device code generated');
 
     // Step 2: Show user code and prompt to open browser
     p.note(
-      `코드: ${chalk.bold.yellow(deviceCode.user_code)}\n\n` +
-      `아래 URL에서 위 코드를 입력하세요:\n` +
+      `Code: ${chalk.bold.yellow(deviceCode.user_code)}\n\n` +
+      `Enter this code at the URL below:\n` +
       chalk.cyan(deviceCode.verification_uri),
-      'GitHub 인증'
+      'GitHub Authentication'
     );
 
     // Try to open browser automatically
@@ -69,13 +69,13 @@ async function githubDeviceFlow(): Promise<string | null> {
       const openCommand = process.platform === 'darwin' ? 'open' :
                          process.platform === 'win32' ? 'start' : 'xdg-open';
       execSync(`${openCommand} ${deviceCode.verification_uri}`, { stdio: 'ignore' });
-      p.log.info('브라우저가 자동으로 열렸습니다.');
+      p.log.info('Browser opened automatically.');
     } catch {
-      p.log.info('브라우저를 수동으로 열어주세요.');
+      p.log.info('Please open your browser manually.');
     }
 
     const pollSpinner = p.spinner();
-    pollSpinner.start('인증 대기 중... (Ctrl+C로 취소)');
+    pollSpinner.start('Waiting for authentication... (Ctrl+C to cancel)');
 
     // Step 3: Poll for access token
     const interval = (deviceCode.interval || 5) * 1000;
@@ -100,7 +100,7 @@ async function githubDeviceFlow(): Promise<string | null> {
       const tokenData = await tokenRes.json() as AccessTokenResponse;
 
       if (tokenData.access_token) {
-        pollSpinner.stop('GitHub 인증 성공!');
+        pollSpinner.stop('GitHub authentication successful!');
         return tokenData.access_token;
       }
 
@@ -116,24 +116,24 @@ async function githubDeviceFlow(): Promise<string | null> {
       }
 
       if (tokenData.error === 'expired_token') {
-        pollSpinner.stop('인증 시간이 만료되었습니다.');
+        pollSpinner.stop('Authentication expired.');
         return null;
       }
 
       if (tokenData.error === 'access_denied') {
-        pollSpinner.stop('인증이 거부되었습니다.');
+        pollSpinner.stop('Authentication denied.');
         return null;
       }
 
       // Unknown error
-      pollSpinner.stop(`오류: ${tokenData.error_description || tokenData.error}`);
+      pollSpinner.stop(`Error: ${tokenData.error_description || tokenData.error}`);
       return null;
     }
 
-    pollSpinner.stop('인증 시간이 만료되었습니다.');
+    pollSpinner.stop('Authentication expired.');
     return null;
   } catch (error) {
-    p.log.error(`OAuth 오류: ${error instanceof Error ? error.message : error}`);
+    p.log.error(`OAuth error: ${error instanceof Error ? error.message : error}`);
     return null;
   }
 }
@@ -769,20 +769,20 @@ program
     } else {
       // Interactive setup
       // Step 1: GitHub Integration
-      p.log.step(chalk.bold('Step 1/4: GitHub 연동'));
+      p.log.step(chalk.bold('Step 1/4: GitHub Integration'));
 
       const authMethod = await p.select({
-        message: 'GitHub 연동 방식:',
+        message: 'GitHub authentication method:',
         options: [
-          { value: 'oauth', label: 'GitHub 로그인 (OAuth)', hint: '권장' },
-          { value: 'manual', label: '토큰 직접 입력 (PAT)' },
-          { value: 'skip', label: '나중에 설정' },
+          { value: 'oauth', label: 'GitHub Login (OAuth)', hint: 'recommended' },
+          { value: 'manual', label: 'Enter token manually (PAT)' },
+          { value: 'skip', label: 'Set up later' },
         ],
         initialValue: 'oauth',
       });
 
       if (p.isCancel(authMethod)) {
-        p.cancel('설정이 취소되었습니다.');
+        p.cancel('Setup cancelled.');
         process.exit(0);
       }
 
@@ -792,9 +792,9 @@ program
         if (githubToken) {
           // Fetch user's repos and let them choose
           const repoSpinner = p.spinner();
-          repoSpinner.start('레포지토리 목록을 가져오는 중...');
+          repoSpinner.start('Fetching repository list...');
           const repos = await fetchUserRepos(githubToken);
-          repoSpinner.stop('레포지토리 목록 로드 완료');
+          repoSpinner.stop('Repository list loaded');
 
           if (repos.length > 0) {
             // Add detected repo to the list if not already there
@@ -803,16 +803,16 @@ program
               : repos;
 
             const selectedRepo = await p.select({
-              message: '레포지토리 선택:',
+              message: 'Select repository:',
               options: [
                 ...repoChoices.map(r => ({ value: r, label: r })),
-                { value: '__custom__', label: '직접 입력...' },
+                { value: '__custom__', label: 'Enter manually...' },
               ],
               initialValue: detectedRepo || repos[0],
             });
 
             if (p.isCancel(selectedRepo)) {
-              p.cancel('설정이 취소되었습니다.');
+              p.cancel('Setup cancelled.');
               process.exit(0);
             }
 
@@ -821,13 +821,13 @@ program
                 message: 'GitHub repository (owner/repo):',
                 validate: (value) => {
                   if (!value || !value.includes('/')) {
-                    return 'owner/repo 형식으로 입력하세요';
+                    return 'Please enter in owner/repo format';
                   }
                 },
               });
 
               if (p.isCancel(customRepo)) {
-                p.cancel('설정이 취소되었습니다.');
+                p.cancel('Setup cancelled.');
                 process.exit(0);
               }
 
@@ -843,13 +843,13 @@ program
               initialValue: detectedRepo,
               validate: (value) => {
                 if (!value || !value.includes('/')) {
-                  return 'owner/repo 형식으로 입력하세요';
+                  return 'Please enter in owner/repo format';
                 }
               },
             });
 
             if (p.isCancel(inputRepo)) {
-              p.cancel('설정이 취소되었습니다.');
+              p.cancel('Setup cancelled.');
               process.exit(0);
             }
 
@@ -857,7 +857,7 @@ program
           }
         } else {
           // OAuth failed, fall back to manual
-          p.log.warn('OAuth 인증 실패. 수동 설정으로 진행합니다.');
+          p.log.warn('OAuth authentication failed. Proceeding with manual setup.');
 
           const inputRepo = await p.text({
             message: 'GitHub repository (owner/repo):',
@@ -865,13 +865,13 @@ program
             initialValue: detectedRepo,
             validate: (value) => {
               if (!value || !value.includes('/')) {
-                return 'owner/repo 형식으로 입력하세요';
+                return 'Please enter in owner/repo format';
               }
             },
           });
 
           if (p.isCancel(inputRepo)) {
-            p.cancel('설정이 취소되었습니다.');
+            p.cancel('Setup cancelled.');
             process.exit(0);
           }
 
@@ -884,21 +884,21 @@ program
           initialValue: detectedRepo,
           validate: (value) => {
             if (!value || !value.includes('/')) {
-              return 'owner/repo 형식으로 입력하세요';
+              return 'Please enter in owner/repo format';
             }
           },
         });
 
         if (p.isCancel(inputRepo)) {
-          p.cancel('설정이 취소되었습니다.');
+          p.cancel('Setup cancelled.');
           process.exit(0);
         }
 
         repository = inputRepo;
 
         p.note(
-          'GitHub Personal Access Token을 입력하세요.\n' +
-          `생성: ${chalk.cyan('https://github.com/settings/tokens/new?scopes=repo')}`,
+          'Enter your GitHub Personal Access Token.\n' +
+          `Create one: ${chalk.cyan('https://github.com/settings/tokens/new?scopes=repo')}`,
           'GitHub Token'
         );
 
@@ -906,13 +906,13 @@ program
           message: 'GitHub Token:',
           validate: (value) => {
             if (!value || value.length < 10) {
-              return '유효한 토큰을 입력하세요';
+              return 'Please enter a valid token';
             }
           },
         });
 
         if (p.isCancel(inputToken)) {
-          p.cancel('설정이 취소되었습니다.');
+          p.cancel('Setup cancelled.');
           process.exit(0);
         }
 
@@ -925,13 +925,13 @@ program
           initialValue: detectedRepo,
           validate: (value) => {
             if (!value || !value.includes('/')) {
-              return 'owner/repo 형식으로 입력하세요';
+              return 'Please enter in owner/repo format';
             }
           },
         });
 
         if (p.isCancel(inputRepo)) {
-          p.cancel('설정이 취소되었습니다.');
+          p.cancel('Setup cancelled.');
           process.exit(0);
         }
 
@@ -939,20 +939,20 @@ program
       }
 
       // Step 2: Framework Detection
-      p.log.step(chalk.bold('Step 2/4: 프레임워크'));
+      p.log.step(chalk.bold('Step 2/4: Framework'));
 
       const detectedFramework = await detectFramework(cwd);
 
       if (detectedFramework) {
-        p.log.info(`감지된 프레임워크: ${FRAMEWORK_CONFIGS[detectedFramework].name}`);
+        p.log.info(`Detected framework: ${FRAMEWORK_CONFIGS[detectedFramework].name}`);
 
         const useDetected = await p.confirm({
-          message: `${FRAMEWORK_CONFIGS[detectedFramework].name} 맞나요?`,
+          message: `Is ${FRAMEWORK_CONFIGS[detectedFramework].name} correct?`,
           initialValue: true,
         });
 
         if (p.isCancel(useDetected)) {
-          p.cancel('설정이 취소되었습니다.');
+          p.cancel('Setup cancelled.');
           process.exit(0);
         }
 
@@ -960,7 +960,7 @@ program
           framework = detectedFramework;
         } else {
           const selectedFramework = await p.select({
-            message: '프레임워크 선택:',
+            message: 'Select framework:',
             options: Object.entries(FRAMEWORK_CONFIGS).map(([key, config]) => ({
               value: key,
               label: config.name,
@@ -968,7 +968,7 @@ program
           });
 
           if (p.isCancel(selectedFramework)) {
-            p.cancel('설정이 취소되었습니다.');
+            p.cancel('Setup cancelled.');
             process.exit(0);
           }
 
@@ -976,7 +976,7 @@ program
         }
       } else {
         const selectedFramework = await p.select({
-          message: '프레임워크 선택:',
+          message: 'Select framework:',
           options: Object.entries(FRAMEWORK_CONFIGS).map(([key, config]) => ({
             value: key,
             label: config.name,
@@ -984,7 +984,7 @@ program
         });
 
         if (p.isCancel(selectedFramework)) {
-          p.cancel('설정이 취소되었습니다.');
+          p.cancel('Setup cancelled.');
           process.exit(0);
         }
 
@@ -995,9 +995,9 @@ program
       p.log.step(chalk.bold('Step 3/4: AI Provider'));
 
       const selectedProvider = await p.select({
-        message: 'AI Provider 선택:',
+        message: 'Select AI Provider:',
         options: [
-          { value: 'anthropic', label: 'Anthropic (Claude Sonnet 4)', hint: '추천' },
+          { value: 'anthropic', label: 'Anthropic (Claude Sonnet 4)', hint: 'recommended' },
           { value: 'openai', label: 'OpenAI (GPT-4o)' },
           { value: 'google', label: 'Google (Gemini 2.0 Flash)' },
         ],
@@ -1005,7 +1005,7 @@ program
       });
 
       if (p.isCancel(selectedProvider)) {
-        p.cancel('설정이 취소되었습니다.');
+        p.cancel('Setup cancelled.');
         process.exit(0);
       }
 
@@ -1016,22 +1016,22 @@ program
         backendFramework = await detectBackendFramework(cwd, framework);
       } else {
         // Frontend-only frameworks: ask where to deploy backend
-        p.log.step(chalk.bold('Step 4/4: 백엔드 배포'));
+        p.log.step(chalk.bold('Step 4/4: Backend Deployment'));
 
         const selectedBackend = await p.select({
-          message: '백엔드 배포 방법:',
+          message: 'Backend deployment method:',
           options: [
-            { value: 'cloudflare', label: 'Cloudflare Workers', hint: '독립 배포, 무료 10만/일' },
-            { value: 'vercel', label: 'Vercel', hint: '프론트와 함께 배포' },
-            { value: 'netlify', label: 'Netlify', hint: '프론트와 함께 배포' },
-            { value: 'existing', label: '기존 백엔드 서버 사용', hint: 'Express, Fastify 등' },
-            { value: 'skip', label: '나중에 설정' },
+            { value: 'cloudflare', label: 'Cloudflare Workers', hint: 'standalone, free 100k/day' },
+            { value: 'vercel', label: 'Vercel', hint: 'deploy with frontend' },
+            { value: 'netlify', label: 'Netlify', hint: 'deploy with frontend' },
+            { value: 'existing', label: 'Use existing backend server', hint: 'Express, Fastify, etc.' },
+            { value: 'skip', label: 'Set up later' },
           ],
           initialValue: 'cloudflare',
         });
 
         if (p.isCancel(selectedBackend)) {
-          p.cancel('설정이 취소되었습니다.');
+          p.cancel('Setup cancelled.');
           process.exit(0);
         }
 
@@ -1040,8 +1040,8 @@ program
 
       // Ask whether to generate files
       const generateMessage = isFullstackFramework(framework)
-        ? '위젯 파일과 API 라우트를 자동으로 생성할까요?'
-        : '위젯 파일을 자동으로 생성할까요?';
+        ? 'Auto-generate widget and API route files?'
+        : 'Auto-generate widget files?';
 
       const shouldGenerate = await p.confirm({
         message: generateMessage,
@@ -1049,7 +1049,7 @@ program
       });
 
       if (p.isCancel(shouldGenerate)) {
-        p.cancel('설정이 취소되었습니다.');
+        p.cancel('Setup cancelled.');
         process.exit(0);
       }
 
@@ -1061,7 +1061,7 @@ program
 
     // Generate files with spinner
     const generateSpinner = p.spinner();
-    generateSpinner.start('파일 생성 중...');
+    generateSpinner.start('Generating files...');
 
     // Check if .github/workflows directory exists
     const workflowsDir = path.join(cwd, '.github', 'workflows');
@@ -1174,7 +1174,7 @@ program
       }
     }
 
-    generateSpinner.stop('파일 생성 완료');
+    generateSpinner.stop('Files generated');
 
     // Show generated files
     const generatedFiles: string[] = ['.github/workflows/inner-lens.yml'];
@@ -1182,7 +1182,7 @@ program
     if (widgetFileCreated) generatedFiles.push(widgetFilePath);
     if (apiRouteFileCreated) generatedFiles.push(apiRouteFilePath);
 
-    p.note(generatedFiles.map(f => `  ${chalk.green('+')} ${f}`).join('\n'), '생성된 파일');
+    p.note(generatedFiles.map(f => `  ${chalk.green('+')} ${f}`).join('\n'), 'Generated Files');
 
     // Build next steps
     const nextSteps: string[] = [];
@@ -1190,18 +1190,18 @@ program
 
     // GitHub Secrets
     nextSteps.push(
-      `${chalk.bold(`${stepNumber}. GitHub Secrets 설정`)}\n` +
+      `${chalk.bold(`${stepNumber}. Configure GitHub Secrets`)}\n` +
       `   GitHub repository → Settings → Secrets → Actions\n` +
-      (githubToken ? '' : `   ${chalk.yellow('GITHUB_TOKEN')} (repo scope 필요)\n`) +
+      (githubToken ? '' : `   ${chalk.yellow('GITHUB_TOKEN')} (requires repo scope)\n`) +
       `   ${chalk.yellow(providerConfig.secretName)}\n` +
-      `   ${chalk.dim(`링크: https://github.com/${repository}/settings/secrets/actions`)}`
+      `   ${chalk.dim(`Link: https://github.com/${repository}/settings/secrets/actions`)}`
     );
     stepNumber++;
 
     // Environment Variable (only if not already set)
     if (!githubToken) {
       nextSteps.push(
-        `${chalk.bold(`${stepNumber}. 환경변수 설정 (.env.local)`)}\n` +
+        `${chalk.bold(`${stepNumber}. Set environment variables (.env.local)`)}\n` +
         `   ${chalk.gray('# .env.local')}\n` +
         `   ${chalk.green('GITHUB_TOKEN=')}${chalk.gray('ghp_xxxxxxxxxxxx')}`
       );
@@ -1211,7 +1211,7 @@ program
     // Widget (if not generated)
     if (!widgetFileCreated) {
       nextSteps.push(
-        `${chalk.bold(`${stepNumber}. 위젯 추가 (${frameworkConfig.name})`)}\n` +
+        `${chalk.bold(`${stepNumber}. Add widget (${frameworkConfig.name})`)}\n` +
         `   ${chalk.gray(`// ${frameworkConfig.widgetFile}`)}\n` +
         frameworkConfig.example.split('\n').map(l => `   ${chalk.cyan(l)}`).join('\n')
       );
@@ -1222,7 +1222,7 @@ program
     if (isFullstackFramework(framework) && !apiRouteFileCreated && backendFramework) {
       const backendConfig = BACKEND_CONFIGS[backendFramework];
       nextSteps.push(
-        `${chalk.bold(`${stepNumber}. API 라우트 추가 (${backendConfig.name})`)}\n` +
+        `${chalk.bold(`${stepNumber}. Add API route (${backendConfig.name})`)}\n` +
         `   ${chalk.gray(`// ${backendConfig.apiRouteFile}`)}\n` +
         backendConfig.apiRouteTemplate.split('\n').map(l => `   ${chalk.cyan(l)}`).join('\n')
       );
@@ -1236,41 +1236,41 @@ program
       switch (backendDeploy) {
         case 'cloudflare':
           backendInstructions =
-            `${chalk.bold.yellow('Cloudflare Workers')} (무료 10만 요청/일)\n\n` +
-            `   README.md의 Serverless 배포 섹션을 참고하세요:\n` +
+            `${chalk.bold.yellow('Cloudflare Workers')} (free 100k requests/day)\n\n` +
+            `   See the Serverless deployment section in README.md:\n` +
             `   ${chalk.cyan('https://github.com/jhlee0409/inner-lens#serverless-deployment')}`;
           break;
         case 'vercel':
           backendInstructions =
             `${chalk.bold.cyan('Vercel Serverless Function')}\n\n` +
-            `   README.md의 Serverless 배포 섹션을 참고하세요:\n` +
+            `   See the Serverless deployment section in README.md:\n` +
             `   ${chalk.cyan('https://github.com/jhlee0409/inner-lens#serverless-deployment')}`;
           break;
         case 'netlify':
           backendInstructions =
             `${chalk.bold.cyan('Netlify Function')}\n\n` +
-            `   README.md의 Serverless 배포 섹션을 참고하세요:\n` +
+            `   See the Serverless deployment section in README.md:\n` +
             `   ${chalk.cyan('https://github.com/jhlee0409/inner-lens#serverless-deployment')}`;
           break;
         case 'existing':
           backendInstructions =
-            `${chalk.bold.dim('기존 백엔드 서버 사용')}\n\n` +
-            `   ${chalk.gray('// Express 예시:')}\n` +
+            `${chalk.bold.dim('Use existing backend server')}\n\n` +
+            `   ${chalk.gray('// Express example:')}\n` +
             `   ${chalk.cyan(`import { createExpressHandler } from 'inner-lens/server';`)}\n` +
             `   ${chalk.cyan(`app.post('/api/inner-lens/report', createExpressHandler({`)}\n` +
             `   ${chalk.cyan(`  githubToken: process.env.GITHUB_TOKEN,`)}\n` +
             `   ${chalk.cyan(`  repository: '${repository}',`)}\n` +
             `   ${chalk.cyan(`}));`)}\n\n` +
-            `   ${chalk.gray('// 지원 프레임워크: Express, Fastify, Hono, Koa, Node HTTP')}`;
+            `   ${chalk.gray('// Supported: Express, Fastify, Hono, Koa, Node HTTP')}`;
           break;
         default:
           backendInstructions =
-            `나중에 설정하시려면 아래 가이드를 참고하세요:\n` +
+            `To set up later, see the guide:\n` +
             `   ${chalk.cyan('https://github.com/jhlee0409/inner-lens#backend-setup')}`;
       }
 
       nextSteps.push(
-        `${chalk.bold(`${stepNumber}. 백엔드 설정`)}\n` +
+        `${chalk.bold(`${stepNumber}. Backend setup`)}\n` +
         `   ${backendInstructions}`
       );
       stepNumber++;
@@ -1278,23 +1278,23 @@ program
 
     // Test
     nextSteps.push(
-      `${chalk.bold(`${stepNumber}. 테스트`)}\n` +
-      `   npm run dev → 우측 하단 버그 리포트 버튼 클릭!`
+      `${chalk.bold(`${stepNumber}. Test`)}\n` +
+      `   npm run dev → Click the bug report button in the bottom right!`
     );
 
     p.note(nextSteps.join('\n\n'), 'Next Steps');
 
     // Final message
     if (githubToken) {
-      p.log.success('GitHub 연동 완료! 토큰이 자동으로 저장되었습니다.');
+      p.log.success('GitHub integration complete! Token saved automatically.');
     }
 
     if (isFullstackFramework(framework) && widgetFileCreated && apiRouteFileCreated) {
-      p.log.success('위젯과 API 라우트가 자동으로 설정되었습니다!');
-      p.log.info('npm run dev 후 바로 테스트할 수 있습니다.');
+      p.log.success('Widget and API route configured automatically!');
+      p.log.info('Run npm run dev to test immediately.');
     } else if (!isFullstackFramework(framework) && widgetFileCreated) {
-      p.log.success('위젯이 자동으로 설정되었습니다!');
-      p.log.info('백엔드 서버 설정 후 테스트할 수 있습니다.');
+      p.log.success('Widget configured automatically!');
+      p.log.info('Configure your backend server before testing.');
     }
 
     p.outro(

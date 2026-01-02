@@ -99,6 +99,7 @@
 | 2026-01-01 | Phase 4.9 P5-4 완료: Reviewer Agent - **Multi-Agent 완성!** 🎉 |
 | 2026-01-01 | P5 품질 검증: E2E 테스트 41개 추가, QA→개발자 플로우 검증 |
 | 2026-01-02 | Phase 5.4-B 완료: Session Replay 문서화, Legacy Styling 섹션 정리 |
+| 2026-01-02 | Issue 4 완료: CLI 영어 마이그레이션 - **Phase 5 모든 이슈 해결!** |
 
 ---
 
@@ -286,9 +287,9 @@ MAX_RETRIES=2                      # 검증 실패 시 재시도
 
 | 영역 | 상태 | 이슈 수 |
 |------|------|---------|
-| README.md vs 코드 | ✅ 수정 완료 | 0 Critical (수정됨 3), 1 Minor (Issue 4만 잔여) |
+| README.md vs 코드 | ✅ 수정 완료 | 0 Critical (수정됨 3), 0 Minor (모두 수정됨) |
 | Package.json exports | ✅ 검증 완료 | 없음 |
-| CLI 명령어 | ✅ 검증 완료 | 1 Minor |
+| CLI 명령어 | ✅ 수정 완료 | 0 (영어 마이그레이션 완료) |
 | Server Handlers | ✅ 검증 완료 | 없음 |
 | AI Analysis Engine | ✅ 검증 완료 | 없음 |
 
@@ -350,13 +351,17 @@ MAX_RETRIES=2                      # 검증 실패 시 재시도
 
 ### 5.2 Minor Issues
 
-#### Issue 4: CLI 한국어 전용
+#### Issue 4: CLI Korean-Only → English Migration
 
-**상태:** 🟡 검토 필요
+**상태:** ✅ 수정 완료 (2026-01-02)
 
-CLI 프롬프트가 한국어로만 작성되어 국제 사용자 혼란 가능
-- 영향: 낮음 (CLI 기능은 정상 작동)
-- 권장: i18n 도입 또는 영어 프롬프트 추가
+~~CLI 프롬프트가 한국어로만 작성되어 국제 사용자 혼란 가능~~
+
+**변경 사항:**
+- 모든 CLI 프롬프트 영어로 마이그레이션
+- GitHub OAuth 메시지 영어화
+- 프레임워크 선택/백엔드 배포 메시지 영어화
+- Next Steps 안내 영어화
 
 #### Issue 5: Deprecated Options 문서 혼란
 
