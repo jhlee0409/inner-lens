@@ -113,10 +113,10 @@ const config: AnalysisConfig = {
 // Model Selection
 // ============================================
 
-// Default models for each provider
+// Default models for each provider (2026 latest)
 const DEFAULT_MODELS: Record<AIProvider, string> = {
-  anthropic: 'claude-sonnet-4-20250514',
-  openai: 'gpt-4o',
+  anthropic: 'claude-sonnet-4-5-20250929',
+  openai: 'gpt-4.1',
   google: 'gemini-2.0-flash',
 };
 

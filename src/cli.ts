@@ -193,10 +193,10 @@ interface FrameworkConfig {
 const PROVIDER_CONFIGS: Record<AIProvider, ProviderConfig> = {
   anthropic: {
     name: 'Anthropic (Claude)',
-    defaultModel: 'claude-sonnet-4-20250514',
+    defaultModel: 'claude-sonnet-4-5-20250929',
     modelSuggestions: [
-      'claude-sonnet-4-20250514',
       'claude-sonnet-4-5-20250929',
+      'claude-opus-4-5-20251124',
       'claude-opus-4-20250514',
       'claude-haiku-4-5-20251015',
     ],
@@ -205,14 +205,14 @@ const PROVIDER_CONFIGS: Record<AIProvider, ProviderConfig> = {
   },
   openai: {
     name: 'OpenAI (GPT)',
-    defaultModel: 'gpt-4o',
+    defaultModel: 'gpt-4.1',
     modelSuggestions: [
-      'gpt-4o',
-      'gpt-4o-mini',
       'gpt-4.1',
       'gpt-4.1-mini',
+      'o3',
+      'o3-pro',
+      'o4-mini',
       'gpt-4.1-nano',
-      'o3-mini',
     ],
     secretName: 'OPENAI_API_KEY',
     envVar: 'OPENAI_API_KEY',
@@ -222,10 +222,10 @@ const PROVIDER_CONFIGS: Record<AIProvider, ProviderConfig> = {
     defaultModel: 'gemini-2.0-flash',
     modelSuggestions: [
       'gemini-2.0-flash',
-      'gemini-2.5-pro',
-      'gemini-2.5-flash',
-      'gemini-3-pro',
+      'gemini-2.5-flash-lite',
       'gemini-3-flash',
+      'gemini-3-pro',
+      'gemini-2.5-pro',
     ],
     secretName: 'GOOGLE_GENERATIVE_AI_API_KEY',
     envVar: 'GOOGLE_GENERATIVE_AI_API_KEY',
