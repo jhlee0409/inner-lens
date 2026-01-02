@@ -635,14 +635,24 @@ jobs:
 | `buttonColor` | `string` | `#6366f1` | Button background color |
 
 <details>
-<summary><b>Deprecated Options</b></summary>
+<summary><b>Legacy Styling (Backward Compatible)</b></summary>
 
-The following options still work but are deprecated. Use the top-level options above instead:
+The `styles` object is still supported for backward compatibility. Top-level props are preferred for cleaner syntax:
 
-| Option | Use Instead |
-|--------|-------------|
+| Legacy Option | Preferred |
+|---------------|-----------|
 | `styles.buttonColor` | `buttonColor` |
 | `styles.buttonPosition` | `position` |
+
+Both approaches work in all frameworks (React, Vue, Vanilla JS):
+
+```tsx
+// Preferred: top-level props
+<InnerLensWidget position="bottom-left" buttonColor="#10b981" />
+
+// Legacy: styles object (still works)
+<InnerLensWidget styles={{ buttonPosition: "bottom-left", buttonColor: "#10b981" }} />
+```
 
 </details>
 
@@ -670,6 +680,79 @@ The following options still work but are deprecated. Use the top-level options a
 > ```tsx
 > <InnerLensWidget devOnly={false} />
 > ```
+
+---
+
+## 🎬 Session Replay (Optional)
+
+inner-lens supports DOM-level session recording via [rrweb](https://www.rrweb.io/), providing visual reproduction of bugs regardless of console logging practices.
+
+### Installation
+
+Session replay requires rrweb as an optional peer dependency:
+
+```bash
+npm install rrweb
+```
+
+### Usage
+
+```tsx
+import { startSessionReplay, stopSessionReplay, getSessionReplaySnapshot } from 'inner-lens/replay';
+
+// Start recording early in your app lifecycle
+await startSessionReplay({
+  maxBufferDuration: 60000,  // Keep last 60 seconds
+  maskInputs: true,          // Mask all input values
+});
+
+// Get replay data when submitting bug report
+const replayData = getSessionReplaySnapshot();
+
+// Or stop recording and get data
+const replayData = stopSessionReplay();
+```
+
+### Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `maxBufferDuration` | `number` | `60000` | Maximum recording duration to keep (ms) |
+| `checkoutInterval` | `number` | `30000` | Interval for creating new snapshots (ms) |
+| `maskInputs` | `boolean` | `true` | Mask all input field values |
+| `blockSelectors` | `string[]` | `[]` | CSS selectors for elements to hide completely |
+| `maskSelectors` | `string[]` | `['.sensitive', '[data-sensitive]', '.pii']` | CSS selectors for elements to mask |
+| `onStart` | `() => void` | - | Callback when recording starts |
+| `onStop` | `() => void` | - | Callback when recording stops |
+| `onError` | `(error: Error) => void` | - | Callback on error |
+
+### Privacy Controls
+
+```tsx
+await startSessionReplay({
+  // Hide sensitive elements completely
+  blockSelectors: ['.credit-card-form', '#ssn-input'],
+
+  // Mask text content (shows placeholder)
+  maskSelectors: ['.pii', '[data-sensitive]', '.user-email'],
+
+  // Always mask all input values
+  maskInputs: true,
+});
+```
+
+### API Reference
+
+| Export | Description |
+|--------|-------------|
+| `startSessionReplay(config?)` | Start recording (async) |
+| `stopSessionReplay()` | Stop and return captured data |
+| `getSessionReplaySnapshot()` | Get current data without stopping |
+| `isRecording()` | Check if currently recording |
+| `compressReplayData(data)` | Compress for transmission (async) |
+| `calculateReplayQualityScore(data)` | Get quality score for debugging |
+
+> **Bundle Size Note:** Session replay adds ~77KB gzipped when used. rrweb is loaded on-demand to minimize initial bundle impact.
 
 ---
 
@@ -729,6 +812,9 @@ inner-lens automatically masks sensitive data before submission:
 | `inner-lens/vue` | `InnerLensWidget` | Vue component |
 | `inner-lens/vue` | `useInnerLens` | Vue composable |
 | `inner-lens/vanilla` | `InnerLens` | Vanilla JS class |
+| `inner-lens/replay` | `startSessionReplay` | Start session recording |
+| `inner-lens/replay` | `stopSessionReplay` | Stop and get replay data |
+| `inner-lens/replay` | `getSessionReplaySnapshot` | Get current replay data |
 
 ### Server Exports
 

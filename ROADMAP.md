@@ -98,6 +98,7 @@
 | 2026-01-01 | Phase 4.9 P5-3 완료: Level 판단 + Investigator Agent |
 | 2026-01-01 | Phase 4.9 P5-4 완료: Reviewer Agent - **Multi-Agent 완성!** 🎉 |
 | 2026-01-01 | P5 품질 검증: E2E 테스트 41개 추가, QA→개발자 플로우 검증 |
+| 2026-01-02 | Phase 5.4-B 완료: Session Replay 문서화, Legacy Styling 섹션 정리 |
 
 ---
 
@@ -285,7 +286,7 @@ MAX_RETRIES=2                      # 검증 실패 시 재시도
 
 | 영역 | 상태 | 이슈 수 |
 |------|------|---------|
-| README.md vs 코드 | 🔍 분석 완료 | 3 Critical, 2 Minor |
+| README.md vs 코드 | ✅ 수정 완료 | 0 Critical (수정됨 3), 1 Minor (Issue 4만 잔여) |
 | Package.json exports | ✅ 검증 완료 | 없음 |
 | CLI 명령어 | ✅ 검증 완료 | 1 Minor |
 | Server Handlers | ✅ 검증 완료 | 없음 |
@@ -295,9 +296,9 @@ MAX_RETRIES=2                      # 검증 실패 시 재시도
 
 #### Issue 1: React Widget Missing UI Customization Props
 
-**상태:** 🔴 수정 필요
+**상태:** ✅ 수정 완료 (2026-01-01)
 
-README에서 문서화된 UI 커스터마이징 옵션이 React 컴포넌트에서 누락됨:
+~~README에서 문서화된 UI 커스터마이징 옵션이 React 컴포넌트에서 누락됨:~~
 
 | 옵션 | README | React Widget | Vanilla JS |
 |------|--------|--------------|------------|
@@ -317,9 +318,9 @@ README에서 문서화된 UI 커스터마이징 옵션이 React 컴포넌트에�
 
 #### Issue 2: Top-Level Convenience Props 미작동
 
-**상태:** 🔴 수정 필요
+**상태:** ✅ 수정 완료 (2026-01-01)
 
-README는 `position`과 `buttonColor`를 top-level props로 문서화하지만, React에서는 `styles` 객체로만 작동:
+~~README는 `position`과 `buttonColor`를 top-level props로 문서화하지만, React에서는 `styles` 객체로만 작동:~~
 
 ```tsx
 // README 예시 (작동 안함)
@@ -335,15 +336,17 @@ README는 `position`과 `buttonColor`를 top-level props로 문서화하지만, 
 
 #### Issue 3: Session Replay 문서 누락
 
-**상태:** 🔴 수정 필요
+**상태:** ✅ 수정 완료 (2026-01-02)
 
-`inner-lens/replay` export가 존재하지만 README에 미문서화:
-- 사용 방법 미기재
-- 캡처 범위 미설명
-- 설정 옵션 미기재
-- 프라이버시 컨트롤 미기재
+~~`inner-lens/replay` export가 존재하지만 README에 미문서화~~
 
-**수정 대상:** README.md에 Session Replay 섹션 추가
+**추가된 문서:**
+- 🎬 Session Replay (Optional) 섹션
+- 설치 방법 (rrweb peer dependency)
+- 사용 예제
+- 설정 옵션 테이블
+- 프라이버시 컨트롤 (blockSelectors, maskSelectors)
+- API Reference 테이블
 
 ### 5.2 Minor Issues
 
@@ -357,11 +360,14 @@ CLI 프롬프트가 한국어로만 작성되어 국제 사용자 혼란 가능
 
 #### Issue 5: Deprecated Options 문서 혼란
 
-**상태:** 🟡 검토 필요
+**상태:** ✅ 수정 완료 (2026-01-02)
 
-README에서 `styles.buttonColor`와 `styles.buttonPosition`을 deprecated로 표시했으나:
-- React에서는 deprecated 방식이 유일한 방법
-- Vanilla JS에서만 top-level props 작동
+~~README에서 `styles.buttonColor`와 `styles.buttonPosition`을 deprecated로 표시했으나~~
+
+**변경 사항:**
+- "Deprecated" → "Legacy Styling (Backward Compatible)" 으로 문구 변경
+- 모든 프레임워크에서 top-level props + styles 객체 모두 작동 확인
+- 예제 코드 추가로 사용법 명확화
 
 ### 5.3 검증 완료 항목
 
@@ -404,10 +410,10 @@ README에서 `styles.buttonColor`와 `styles.buttonPosition`을 deprecated로 �
 - [x] `InnerLensWidget.tsx` props 적용 ✅
 - [ ] Vue 컴포넌트 확인 및 업데이트 (스킵 - React 우선)
 
-#### Phase B: 문서 업데이트
-- [ ] Session Replay 섹션 추가
-- [ ] 프레임워크별 지원 옵션 명시
-- [ ] Deprecated options 섹션 정리
+#### Phase B: 문서 업데이트 ✅ 2026-01-02
+- [x] Session Replay 섹션 추가 ✅
+- [x] 프레임워크별 지원 옵션 명시 ✅
+- [x] Deprecated options 섹션 정리 → "Legacy Styling" 으로 변경 ✅
 
 #### Phase C: E2E 검증 ✅ 2026-01-01
 - [x] 테스트 스위트 실행 (256개 통과) ✅
