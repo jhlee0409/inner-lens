@@ -599,6 +599,7 @@ jobs:
 | Input | Type | Default | Description |
 |-------|------|---------|-------------|
 | `provider` | `string` | `anthropic` | AI provider (`anthropic`, `openai`, `google`) |
+| `model` | `string` | (auto) | Custom model name (e.g., `claude-sonnet-4-5-20250929`, `gpt-4.1`, `gemini-3-pro`) |
 | `max_files` | `number` | `25` | Maximum files to analyze (5-50) |
 | `max_tokens` | `number` | `4000` | Maximum tokens for AI response |
 | `node_version` | `string` | `20` | Node.js version |
@@ -607,6 +608,20 @@ jobs:
 - `anthropic`: `ANTHROPIC_API_KEY`
 - `openai`: `OPENAI_API_KEY`
 - `google`: `GOOGLE_GENERATIVE_AI_API_KEY`
+
+### Two-Model Architecture
+
+inner-lens uses a cost-optimized two-model approach:
+
+| Stage | Purpose | Model Used | Cost (per 1M tokens) |
+|-------|---------|------------|---------------------|
+| **Re-ranking** | Score file candidates | Cheapest available | $0.10-0.25 input |
+| **Main Analysis** | Bug analysis & fixes | User-selected model | Varies by model |
+
+**Re-ranking models (2025):**
+- OpenAI: `gpt-4.1-nano` ($0.10/$0.40)
+- Google: `gemini-2.5-flash-lite` ($0.10/$0.40)
+- Anthropic: `claude-3-haiku` ($0.25/$1.25)
 
 ---
 
@@ -792,11 +807,13 @@ inner-lens automatically masks sensitive data before submission:
 
 ## 📊 AI Providers
 
-| Provider | Model | Best For |
-|----------|-------|----------|
-| **Anthropic** | Claude Sonnet 4 | Nuanced code analysis |
-| **OpenAI** | GPT-4o | Fast general debugging |
-| **Google** | Gemini 2.0 Flash | Cost-effective |
+| Provider | Default Model | Suggested Models (2025) | Best For |
+|----------|---------------|------------------------|----------|
+| **Anthropic** | `claude-sonnet-4-20250514` | `claude-sonnet-4-5`, `claude-opus-4`, `claude-haiku-4-5` | Nuanced code analysis |
+| **OpenAI** | `gpt-4o` | `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `o3-mini` | Fast general debugging |
+| **Google** | `gemini-2.0-flash` | `gemini-2.5-pro`, `gemini-3-pro`, `gemini-3-flash` | Cost-effective |
+
+> 💡 **Tip:** Use `inner-lens init` to select a custom model during setup, or specify `model` in workflow inputs.
 
 ---
 
@@ -898,11 +915,13 @@ Yes! inner-lens is designed for production use. By default, the widget is hidden
 <details>
 <summary><b>Which AI provider should I choose?</b></summary>
 
-| Provider | Model | Best For |
-|----------|-------|----------|
-| Anthropic | Claude Sonnet 4 | Best code understanding (recommended) |
-| OpenAI | GPT-4o | Fast, versatile |
-| Google | Gemini 2.0 Flash | Cost-effective |
+| Provider | Recommended Model | Best For |
+|----------|-------------------|----------|
+| Anthropic | `claude-sonnet-4-5` | Best code understanding (recommended) |
+| OpenAI | `gpt-4.1` | Fast, versatile |
+| Google | `gemini-2.5-flash-lite` | Most cost-effective |
+
+You can specify a custom model during `inner-lens init` or via workflow `model` input.
 
 </details>
 

@@ -305,7 +305,10 @@ Key AI analysis features:
 - **Report validation** - Distinguishes bugs vs feature requests vs invalid reports
 - **Code verification** - Confirms bugs exist in actual code before suggesting fixes
 - **Import graph tracking** - Follows dependencies to find related files
-- **LLM re-ranking** - Uses fast model to re-rank file candidates
+- **LLM re-ranking** - Uses cheapest model per provider to re-rank file candidates:
+  - OpenAI: `gpt-4.1-nano` ($0.10/$0.40 per 1M tokens)
+  - Google: `gemini-2.5-flash-lite` ($0.10/$0.40 per 1M tokens)
+  - Anthropic: `claude-3-haiku` ($0.25/$1.25 per 1M tokens)
 - **AST-like chunking** - Extracts functions/classes for precise context
 - **Self-consistency** - Optional multiple analysis runs for verification
 
@@ -316,8 +319,9 @@ Interactive setup wizard:
 1. GitHub OAuth Device Flow authentication (or manual token)
 2. Framework auto-detection (Next.js, Vite, SvelteKit, etc.)
 3. AI provider selection (Anthropic, OpenAI, Google)
-4. Backend deployment configuration
-5. Automatic file generation (workflow, API route, widget)
+4. AI model selection (predefined suggestions + custom input option)
+5. Backend deployment configuration
+6. Automatic file generation (workflow, API route, widget)
 
 ### `inner-lens check`
 Verifies configuration:
@@ -334,6 +338,7 @@ Verifies configuration:
 
 ### For AI Analysis (GitHub Actions)
 - `AI_PROVIDER` - `anthropic`, `openai`, or `google`
+- `AI_MODEL` - Custom model name (e.g., `claude-sonnet-4-5-20250929`, `gpt-4.1`, `gemini-2.5-pro`)
 - `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY`
 - `ISSUE_NUMBER`, `REPO_OWNER`, `REPO_NAME` - Set by GitHub Actions
 - `MAX_FILES` - Maximum files to analyze (default: 25)
