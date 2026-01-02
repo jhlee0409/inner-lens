@@ -171,7 +171,8 @@ type BackendFramework = 'nextjs-app' | 'nextjs-pages' | 'sveltekit' | 'express' 
 
 interface ProviderConfig {
   name: string;
-  model: string;
+  defaultModel: string;
+  modelSuggestions: string[];
   secretName: string;
   envVar: string;
 }
@@ -191,20 +192,41 @@ interface FrameworkConfig {
 
 const PROVIDER_CONFIGS: Record<AIProvider, ProviderConfig> = {
   anthropic: {
-    name: 'Anthropic (Claude Sonnet 4)',
-    model: 'claude-sonnet-4-20250514',
+    name: 'Anthropic (Claude)',
+    defaultModel: 'claude-sonnet-4-20250514',
+    modelSuggestions: [
+      'claude-sonnet-4-20250514',
+      'claude-sonnet-4-5-20250929',
+      'claude-opus-4-20250514',
+      'claude-haiku-4-5-20251015',
+    ],
     secretName: 'ANTHROPIC_API_KEY',
     envVar: 'ANTHROPIC_API_KEY',
   },
   openai: {
-    name: 'OpenAI (GPT-4o)',
-    model: 'gpt-4o',
+    name: 'OpenAI (GPT)',
+    defaultModel: 'gpt-4o',
+    modelSuggestions: [
+      'gpt-4o',
+      'gpt-4o-mini',
+      'gpt-4.1',
+      'gpt-4.1-mini',
+      'gpt-4.1-nano',
+      'o3-mini',
+    ],
     secretName: 'OPENAI_API_KEY',
     envVar: 'OPENAI_API_KEY',
   },
   google: {
-    name: 'Google (Gemini 2.0 Flash)',
-    model: 'gemini-2.0-flash',
+    name: 'Google (Gemini)',
+    defaultModel: 'gemini-2.0-flash',
+    modelSuggestions: [
+      'gemini-2.0-flash',
+      'gemini-2.5-pro',
+      'gemini-2.5-flash',
+      'gemini-3-pro',
+      'gemini-3-flash',
+    ],
     secretName: 'GOOGLE_GENERATIVE_AI_API_KEY',
     envVar: 'GOOGLE_GENERATIVE_AI_API_KEY',
   },
@@ -751,6 +773,7 @@ program
 
     let repository: string;
     let provider: AIProvider;
+    let model: string;
     let framework: Framework;
     let backendFramework: BackendFramework | null = null;
     let githubToken: string | null = null;
@@ -762,6 +785,7 @@ program
       provider = options.provider && options.provider in PROVIDER_CONFIGS
         ? options.provider as AIProvider
         : 'anthropic';
+      model = PROVIDER_CONFIGS[provider].defaultModel;
       repository = detectedRepo || 'owner/repo';
       const detected = await detectFramework(cwd);
       framework = detected || 'nextjs-app';
@@ -991,15 +1015,15 @@ program
         framework = selectedFramework as Framework;
       }
 
-      // Step 3: AI Provider
-      p.log.step(chalk.bold('Step 3/4: AI Provider'));
+      // Step 3: AI Provider & Model
+      p.log.step(chalk.bold('Step 3/4: AI Provider & Model'));
 
       const selectedProvider = await p.select({
         message: 'Select AI Provider:',
         options: [
-          { value: 'anthropic', label: 'Anthropic (Claude Sonnet 4)', hint: 'recommended' },
-          { value: 'openai', label: 'OpenAI (GPT-4o)' },
-          { value: 'google', label: 'Google (Gemini 2.0 Flash)' },
+          { value: 'anthropic', label: 'Anthropic (Claude)', hint: 'recommended' },
+          { value: 'openai', label: 'OpenAI (GPT)' },
+          { value: 'google', label: 'Google (Gemini)' },
         ],
         initialValue: 'anthropic',
       });
@@ -1010,6 +1034,58 @@ program
       }
 
       provider = selectedProvider as AIProvider;
+      const providerConfig = PROVIDER_CONFIGS[provider];
+
+      // Model selection with suggestions and custom input option
+      const modelOptions = [
+        ...providerConfig.modelSuggestions.map((m, i) => ({
+          value: m,
+          label: m,
+          hint: i === 0 ? 'default' : undefined,
+        })),
+        { value: '__custom__', label: 'Enter custom model name...', hint: 'for new/preview models' },
+      ];
+
+      const selectedModel = await p.select({
+        message: `Select ${providerConfig.name} model:`,
+        options: modelOptions,
+        initialValue: providerConfig.defaultModel,
+      });
+
+      if (p.isCancel(selectedModel)) {
+        p.cancel('Setup cancelled.');
+        process.exit(0);
+      }
+
+      if (selectedModel === '__custom__') {
+        const customModel = await p.text({
+          message: 'Enter model name:',
+          placeholder: providerConfig.defaultModel,
+          validate: (value) => {
+            if (!value || value.trim().length === 0) {
+              return 'Model name is required';
+            }
+            if (value.trim().length < 3) {
+              return 'Model name is too short';
+            }
+            // Basic format validation
+            if (!/^[a-zA-Z0-9._-]+$/.test(value.trim())) {
+              return 'Model name can only contain letters, numbers, dots, hyphens, and underscores';
+            }
+            return undefined;
+          },
+        });
+
+        if (p.isCancel(customModel)) {
+          p.cancel('Setup cancelled.');
+          process.exit(0);
+        }
+
+        model = (customModel as string).trim();
+        p.log.info(`Using custom model: ${chalk.cyan(model)}`);
+      } else {
+        model = selectedModel as string;
+      }
 
       // Fullstack frameworks (Next.js, SvelteKit) have built-in API routes
       if (isFullstackFramework(framework)) {
@@ -1075,9 +1151,9 @@ program
     let workflowContent: string;
 
     if (options.eject) {
-      workflowContent = generateEjectedWorkflow(provider, providerConfig);
+      workflowContent = generateEjectedWorkflow(provider, model, providerConfig);
     } else {
-      workflowContent = generateReusableWorkflow(provider, providerConfig);
+      workflowContent = generateReusableWorkflow(provider, model, providerConfig);
     }
 
     await fs.writeFile(workflowPath, workflowContent);
@@ -1398,6 +1474,7 @@ program
 // Generate reusable workflow (standard mode)
 function generateReusableWorkflow(
   provider: AIProvider,
+  model: string,
   config: ProviderConfig
 ): string {
   return `# inner-lens - AI-Powered Bug Analysis
@@ -1415,6 +1492,7 @@ jobs:
     uses: jhlee0409/inner-lens/.github/workflows/analysis-engine.yml@v1
     with:
       provider: '${provider}'
+      model: '${model}'
     secrets:
       ${config.secretName}: \${{ secrets.${config.secretName} }}
 `;
@@ -1423,6 +1501,7 @@ jobs:
 // Generate ejected workflow (full standalone)
 function generateEjectedWorkflow(
   provider: AIProvider,
+  model: string,
   config: ProviderConfig
 ): string {
   return `# inner-lens - AI-Powered Bug Analysis (Ejected)
@@ -1436,6 +1515,7 @@ on:
 
 env:
   AI_PROVIDER: '${provider}'
+  AI_MODEL: '${model}'
 
 jobs:
   analyze:
@@ -1476,11 +1556,24 @@ jobs:
           import * as path from 'path';
 
           const provider = process.env.AI_PROVIDER || 'anthropic';
+          const modelName = process.env.AI_MODEL || '';
           const issueNumber = parseInt(process.env.ISSUE_NUMBER || '0', 10);
           const owner = process.env.REPO_OWNER || '';
           const repo = process.env.REPO_NAME || '';
 
           function getModel() {
+            // Use custom model name if provided
+            if (modelName) {
+              switch (provider) {
+                case 'openai':
+                  return openai(modelName);
+                case 'google':
+                  return google(modelName);
+                default:
+                  return anthropic(modelName);
+              }
+            }
+            // Fallback to defaults
             switch (provider) {
               case 'openai':
                 return openai('gpt-4o');
@@ -1557,7 +1650,7 @@ Provide:
               owner,
               repo,
               issue_number: issueNumber,
-              body: \`## 🔍 inner-lens Analysis\\n\\n\${text}\\n\\n---\\n*Analyzed by inner-lens using \${provider}*\`,
+              body: \`## 🔍 inner-lens Analysis\\n\\n\${text}\\n\\n---\\n*Analyzed by inner-lens using \${provider} (\${modelName || 'default model'})*\`,
             });
 
             console.log('Analysis posted successfully!');

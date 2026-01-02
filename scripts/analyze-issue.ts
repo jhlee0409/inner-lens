@@ -25,6 +25,7 @@ type AIProvider = 'anthropic' | 'openai' | 'google';
 
 interface AnalysisConfig {
   provider: AIProvider;
+  model: string;
   issueNumber: number;
   owner: string;
   repo: string;
@@ -92,6 +93,7 @@ type AnalysisResult = z.infer<typeof AnalysisResultSchema>;
 
 const config: AnalysisConfig = {
   provider: (process.env['AI_PROVIDER'] as AIProvider) || 'anthropic',
+  model: process.env['AI_MODEL'] || '',
   issueNumber: parseInt(process.env['ISSUE_NUMBER'] || '0', 10),
   owner: process.env['REPO_OWNER'] || '',
   repo: process.env['REPO_NAME'] || '',
@@ -111,18 +113,27 @@ const config: AnalysisConfig = {
 // Model Selection
 // ============================================
 
+// Default models for each provider
+const DEFAULT_MODELS: Record<AIProvider, string> = {
+  anthropic: 'claude-sonnet-4-20250514',
+  openai: 'gpt-4o',
+  google: 'gemini-2.0-flash',
+};
+
 function getModel() {
+  const modelName = config.model || DEFAULT_MODELS[config.provider];
+
   switch (config.provider) {
     case 'openai':
-      console.log('📦 Using OpenAI GPT-4o');
-      return openai('gpt-4o');
+      console.log(`📦 Using OpenAI ${modelName}`);
+      return openai(modelName);
     case 'google':
-      console.log('📦 Using Google Gemini 2.0 Flash');
-      return google('gemini-2.0-flash');
+      console.log(`📦 Using Google ${modelName}`);
+      return google(modelName);
     case 'anthropic':
     default:
-      console.log('📦 Using Anthropic Claude Sonnet 4');
-      return anthropic('claude-sonnet-4-20250514');
+      console.log(`📦 Using Anthropic ${modelName}`);
+      return anthropic(modelName);
   }
 }
 
@@ -1631,7 +1642,8 @@ async function analyzeWithConsistency(
 // Analysis Result Formatting
 // ============================================
 
-function formatAnalysisComment(result: AnalysisResult, provider: string, filesAnalyzed: number): string {
+function formatAnalysisComment(result: AnalysisResult, provider: string, model: string, filesAnalyzed: number): string {
+  const modelDisplay = model || DEFAULT_MODELS[provider as AIProvider] || 'default';
   const reportTypeLabels: Record<string, { emoji: string; label: string; color: string }> = {
     bug: { emoji: '🐛', label: 'Confirmed Bug', color: 'red' },
     not_a_bug: { emoji: '✅', label: 'Not a Bug', color: 'green' },
@@ -1682,6 +1694,7 @@ To analyze this issue, please provide:
 |-------|-------|
 | Status | Invalid/Insufficient |
 | Provider | ${provider} |
+| Model | ${modelDisplay} |
 | Files Scanned | ${filesAnalyzed} |
 | Timestamp | ${new Date().toISOString()} |
 
@@ -1756,6 +1769,7 @@ We analyzed the relevant code but could not find evidence of the reported bug.
 | Bug Found in Code | ${result.codeVerification?.bugExistsInCode ? 'Yes' : 'No'} |
 | Confidence | ${result.confidence}% |
 | Provider | ${provider} |
+| Model | ${modelDisplay} |
 | Files Analyzed | ${filesAnalyzed} |
 | Timestamp | ${new Date().toISOString()} |
 
@@ -1832,6 +1846,7 @@ ${result.additionalContext ? `\n---\n\n### 📝 Additional Notes\n\n${result.add
 | Field | Value |
 |-------|-------|
 | Provider | ${provider} |
+| Model | ${modelDisplay} |
 | Files Analyzed | ${filesAnalyzed} |
 | Timestamp | ${new Date().toISOString()} |
 | Confidence | ${result.confidence}% |
@@ -2057,7 +2072,7 @@ async function analyzeIssue(): Promise<void> {
   // Step 6: Post comment
   console.log('\n💬 Step 6: Posting analysis comment...');
 
-  const commentBody = formatAnalysisComment(analysis, config.provider, relevantFiles.length);
+  const commentBody = formatAnalysisComment(analysis, config.provider, config.model, relevantFiles.length);
 
   await octokit.issues.createComment({
     owner: config.owner,
