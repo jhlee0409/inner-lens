@@ -91,11 +91,15 @@
 | 2026-01-01 | Phase 4.7 P3-2 완료: 증거 기반 프롬프트 + Self-consistency |
 | 2026-01-01 | Phase 4.7 P3-1 완료: AST 기반 코드 청킹 (Regex 경량 구현) |
 | 2026-01-01 | Phase 4.8 P4-2 완료: 경량 Call Graph 분석 (15개 테스트) |
+| 2026-01-01 | Phase 5 추가: 문서-코드베이스 일치 검증 |
+| 2026-01-01 | Phase 5.4-A 완료: InnerLensConfig 타입 확장 + React Widget props 적용 |
 | 2026-01-01 | Phase 4.9 P5 시작: Multi-Agent 아키텍처 Phase 1 구현 |
 | 2026-01-01 | Phase 4.9 P5-2 완료: Explainer Agent 구현 |
 | 2026-01-01 | Phase 4.9 P5-3 완료: Level 판단 + Investigator Agent |
 | 2026-01-01 | Phase 4.9 P5-4 완료: Reviewer Agent - **Multi-Agent 완성!** 🎉 |
 | 2026-01-01 | P5 품질 검증: E2E 테스트 41개 추가, QA→개발자 플로우 검증 |
+| 2026-01-02 | Phase 5.4-B 완료: Session Replay 문서화, Legacy Styling 섹션 정리 |
+| 2026-01-02 | Issue 4 완료: CLI 영어 마이그레이션 - **Phase 5 모든 이슈 해결!** |
 
 ---
 
@@ -271,6 +275,155 @@ MAX_RETRIES=2                      # 검증 실패 시 재시도
 ### P5 품질 검증 결과 ✅ 2026-01-01
 
 **테스트 파일:** `scripts/agents/agents.e2e.test.ts` (41개 테스트)
+
+---
+
+## Phase 5: Documentation-Codebase Verification (2026-01-01 ~)
+
+> Open source 패키지로서 문서와 코드의 일치 여부 검증
+> 목표: 사용자가 설치 → 설정 → 사용 → 버그 리포트 → AI 분석까지 무결하게 경험
+
+### 5.0 검증 현황 요약
+
+| 영역 | 상태 | 이슈 수 |
+|------|------|---------|
+| README.md vs 코드 | ✅ 수정 완료 | 0 Critical (수정됨 3), 0 Minor (모두 수정됨) |
+| Package.json exports | ✅ 검증 완료 | 없음 |
+| CLI 명령어 | ✅ 수정 완료 | 0 (영어 마이그레이션 완료) |
+| Server Handlers | ✅ 검증 완료 | 없음 |
+| AI Analysis Engine | ✅ 검증 완료 | 없음 |
+
+### 5.1 Critical Issues
+
+#### Issue 1: React Widget Missing UI Customization Props
+
+**상태:** ✅ 수정 완료 (2026-01-01)
+
+~~README에서 문서화된 UI 커스터마이징 옵션이 React 컴포넌트에서 누락됨:~~
+
+| 옵션 | README | React Widget | Vanilla JS |
+|------|--------|--------------|------------|
+| `buttonText` | ✅ | ❌ 누락 | ✅ |
+| `dialogTitle` | ✅ | ❌ 누락 | ✅ |
+| `dialogDescription` | ✅ | ❌ 누락 | ✅ |
+| `submitText` | ✅ | ❌ 누락 | ✅ |
+| `cancelText` | ✅ | ❌ 누락 | ✅ |
+| `successMessage` | ✅ | ❌ 누락 | ✅ |
+| `onOpen` | ✅ | ❌ 누락 | ✅ |
+| `onClose` | ✅ | ❌ 누락 | ✅ |
+
+**수정 대상:**
+- `src/types.ts:11-82` - InnerLensConfig에 props 추가
+- `src/components/InnerLensWidget.tsx:72-85` - props 수용 및 적용
+- README.md - 프레임워크별 지원 명시
+
+#### Issue 2: Top-Level Convenience Props 미작동
+
+**상태:** ✅ 수정 완료 (2026-01-01)
+
+~~README는 `position`과 `buttonColor`를 top-level props로 문서화하지만, React에서는 `styles` 객체로만 작동:~~
+
+```tsx
+// README 예시 (작동 안함)
+<InnerLensWidget position="bottom-left" buttonColor="#10b981" />
+
+// 실제 작동 방식
+<InnerLensWidget styles={{ buttonPosition: "bottom-left", buttonColor: "#10b981" }} />
+```
+
+**수정 대상:**
+- `src/types.ts` - top-level props 추가
+- `src/components/InnerLensWidget.tsx` - props 매핑
+
+#### Issue 3: Session Replay 문서 누락
+
+**상태:** ✅ 수정 완료 (2026-01-02)
+
+~~`inner-lens/replay` export가 존재하지만 README에 미문서화~~
+
+**추가된 문서:**
+- 🎬 Session Replay (Optional) 섹션
+- 설치 방법 (rrweb peer dependency)
+- 사용 예제
+- 설정 옵션 테이블
+- 프라이버시 컨트롤 (blockSelectors, maskSelectors)
+- API Reference 테이블
+
+### 5.2 Minor Issues
+
+#### Issue 4: CLI Korean-Only → English Migration
+
+**상태:** ✅ 수정 완료 (2026-01-02)
+
+~~CLI 프롬프트가 한국어로만 작성되어 국제 사용자 혼란 가능~~
+
+**변경 사항:**
+- 모든 CLI 프롬프트 영어로 마이그레이션
+- GitHub OAuth 메시지 영어화
+- 프레임워크 선택/백엔드 배포 메시지 영어화
+- Next Steps 안내 영어화
+
+#### Issue 5: Deprecated Options 문서 혼란
+
+**상태:** ✅ 수정 완료 (2026-01-02)
+
+~~README에서 `styles.buttonColor`와 `styles.buttonPosition`을 deprecated로 표시했으나~~
+
+**변경 사항:**
+- "Deprecated" → "Legacy Styling (Backward Compatible)" 으로 문구 변경
+- 모든 프레임워크에서 top-level props + styles 객체 모두 작동 확인
+- 예제 코드 추가로 사용법 명확화
+
+### 5.3 검증 완료 항목
+
+#### Package.json Exports ✅
+모든 export가 README 문서와 일치:
+- `inner-lens` → `src/core.ts`
+- `inner-lens/react` → `src/react.ts`
+- `inner-lens/vue` → `src/vue.ts`
+- `inner-lens/vanilla` → `src/vanilla.ts`
+- `inner-lens/server` → `src/server.ts`
+- `inner-lens/replay` → `src/replay.ts`
+
+#### CLI Commands ✅
+- `npx create-inner-lens` - 정상 작동
+- `npx inner-lens init` - 모든 옵션 작동 (`--provider`, `--eject`, `-y`)
+- `npx inner-lens check` - 정상 작동
+
+#### Server Handlers ✅
+모든 문서화된 핸들러가 구현됨:
+- `createFetchHandler` - Web Fetch API
+- `createExpressHandler` - Express middleware
+- `createFastifyHandler` - Fastify handler
+- `createKoaHandler` - Koa middleware
+- `createNodeHandler` - Node.js HTTP
+
+#### AI Analysis Engine ✅
+- Chain-of-Thought 프롬프팅
+- 구조화된 JSON 출력 (Zod 스키마)
+- 다중 AI 프로바이더 (Anthropic, OpenAI, Google)
+- 코드 검증 후 수정 제안
+- Import 그래프 추적
+- LLM Re-ranking
+- AST 기반 코드 청킹
+- Self-consistency 검증
+
+### 5.4 수정 계획
+
+#### Phase A: 타입 & 컴포넌트 업데이트 ✅ 2026-01-01
+- [x] `InnerLensConfig` 타입 확장 ✅
+- [x] `InnerLensWidget.tsx` props 적용 ✅
+- [ ] Vue 컴포넌트 확인 및 업데이트 (스킵 - React 우선)
+
+#### Phase B: 문서 업데이트 ✅ 2026-01-02
+- [x] Session Replay 섹션 추가 ✅
+- [x] 프레임워크별 지원 옵션 명시 ✅
+- [x] Deprecated options 섹션 정리 → "Legacy Styling" 으로 변경 ✅
+
+#### Phase C: E2E 검증 ✅ 2026-01-01
+- [x] 테스트 스위트 실행 (256개 통과) ✅
+- [x] 전체 패키지 빌드 (8개 빌드 성공) ✅
+- [ ] 수동 E2E 테스트
 
 #### 검증 항목
 

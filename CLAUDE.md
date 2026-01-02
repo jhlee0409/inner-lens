@@ -31,7 +31,7 @@ The system prioritizes **consistent, equal-quality data collection** across all 
 | Session Replay | rrweb (DOM recording/playback) |
 | AI | Vercel AI SDK (@ai-sdk/anthropic, @ai-sdk/openai, @ai-sdk/google) |
 | GitHub | Octokit REST client |
-| CLI | Commander, Inquirer, Chalk |
+| CLI | Commander, @clack/prompts, Chalk, fs-extra |
 
 ## Project Structure
 
@@ -44,7 +44,8 @@ inner-lens/
 │   ├── vanilla.ts           # Vanilla JS with auto-init export
 │   ├── server.ts            # Backend handlers export
 │   ├── replay.ts            # Session replay export (rrweb)
-│   ├── cli.ts               # CLI entry point
+│   ├── cli.ts               # CLI entry point (inner-lens command)
+│   ├── create.ts            # create-inner-lens wrapper
 │   ├── types.ts             # Shared TypeScript types
 │   ├── core/
 │   │   └── InnerLensCore.ts # Framework-agnostic widget class
@@ -56,6 +57,7 @@ inner-lens/
 │       ├── masking.ts       # Sensitive data masking engine
 │       ├── log-capture.ts   # Console + network interceptor
 │       ├── session-replay.ts # rrweb integration module
+│       ├── analysis.ts      # Analysis utilities (error extraction, code chunking)
 │       └── styles.ts        # Inline CSS generation
 ├── scripts/
 │   └── analyze-issue.ts     # AI analysis engine (GitHub Actions)
@@ -63,7 +65,7 @@ inner-lens/
 │   ├── test.yml             # CI: tests + build
 │   ├── analyze-issues.yml   # Trigger: runs analysis on new bug issues
 │   └── analysis-engine.yml  # Reusable: AI analysis engine (called by analyze-issues.yml)
-├── tsup.config.ts           # Build configuration (7 separate builds)
+├── tsup.config.ts           # Build configuration (8 separate builds)
 ├── vitest.config.ts         # Test configuration
 └── tsconfig.json            # TypeScript configuration
 ```
@@ -80,7 +82,12 @@ The package uses conditional exports for different environments:
 | `inner-lens/vanilla` | `src/vanilla.ts` | Vanilla JS with auto-init | ~36 KB |
 | `inner-lens/server` | `src/server.ts` | Backend handlers | ~10 KB |
 | `inner-lens/replay` | `src/replay.ts` | Session replay (rrweb) | ~6 KB (+77 KB runtime) |
-| CLI: `inner-lens` | `src/cli.ts` | Interactive setup wizard | - |
+
+### CLI Binaries
+| Command | Entry File | Purpose |
+|---------|-----------|---------|
+| `inner-lens` | `src/cli.ts` | Interactive setup wizard with `init` and `check` commands |
+| `create-inner-lens` | `src/create.ts` | Wrapper that runs `inner-lens init` |
 
 ## Development Commands
 
@@ -91,33 +98,56 @@ npm run test         # Run tests once
 npm run test:watch   # Run tests in watch mode
 npm run test:coverage # Run tests with coverage report
 npm run typecheck    # TypeScript type checking only
+npm run example      # Run vanilla example server
 ```
 
 ## Architecture Patterns
 
 ### 1. Framework-Agnostic Core
-The `InnerLensCore` class (`src/core/InnerLensCore.ts`) contains all widget logic. Framework adapters (React, Vue) wrap this core class.
+The `InnerLensCore` class (`src/core/InnerLensCore.ts`) contains all widget logic:
+- Widget state management (idle, submitting, success, error)
+- DOM manipulation with inline styles
+- Log capture integration
+- Keyboard accessibility (Escape to close, Tab trap)
+- Environment detection (`devOnly` option)
+
+Framework adapters (React, Vue) wrap this core class.
 
 ### 2. Universal Server Handlers
 `src/server.ts` provides a single `handleBugReport()` function with framework-specific adapters:
-- `createFetchHandler()` - Web Fetch API (Next.js App Router, Hono, Bun)
+- `createFetchHandler()` - Web Fetch API (Next.js App Router, Hono, Bun, Cloudflare Workers)
 - `createExpressHandler()` - Express middleware
 - `createFastifyHandler()` - Fastify handler
 - `createKoaHandler()` - Koa middleware
 - `createNodeHandler()` - Node.js http module
 
 ### 3. Security-First Data Masking
-`src/utils/masking.ts` contains regex patterns for masking:
-- Emails, phone numbers, SSNs
+`src/utils/masking.ts` contains 18+ regex patterns for masking:
+- Emails, phone numbers, SSNs, IP addresses
 - API keys (OpenAI, Anthropic, Google, AWS, GitHub, Stripe)
 - Bearer tokens, JWTs
-- Database URLs, private keys
+- Database URLs, private keys (PEM format)
 - Credit card numbers
 
 Masking happens on both client (before submission) and server (before AI analysis).
 
 ### 4. Zod Schema Validation
-All incoming bug reports are validated with the `BugReportSchema` in `src/server.ts`.
+All incoming bug reports are validated with the `BugReportSchema` in `src/server.ts`:
+```typescript
+export const BugReportSchema = z.object({
+  description: z.string().min(1).max(10000),
+  logs: z.array(z.object({
+    level: z.enum(['error', 'warn', 'info', 'log']),
+    message: z.string(),
+    timestamp: z.number(),
+    stack: z.string().optional(),
+  })),
+  url: z.string().url().or(z.string().length(0)),
+  userAgent: z.string(),
+  timestamp: z.number(),
+  metadata: z.object({...}).optional(),
+});
+```
 
 ### 5. Session Replay (rrweb Integration)
 `src/utils/session-replay.ts` provides DOM-level recording independent of console logs:
@@ -126,6 +156,7 @@ All incoming bug reports are validated with the `BugReportSchema` in `src/server
 - Privacy controls (input masking, element blocking)
 - Quality scoring for replay data
 - Compression support for transmission
+- Dynamic loading of rrweb to minimize bundle impact
 
 ## Data Collection Architecture
 
@@ -160,26 +191,30 @@ All incoming bug reports are validated with the `BugReportSchema` in `src/server
 
 | File | Purpose |
 |------|---------|
-| `src/server.ts` | Server handlers + GitHub issue creation |
+| `src/server.ts` | Server handlers + GitHub issue creation with error handling |
 | `src/core/InnerLensCore.ts` | Widget state management + DOM manipulation |
 | `src/components/InnerLensWidget.tsx` | React UI with dialog, form, status states |
-| `src/utils/masking.ts` | Sensitive data regex patterns |
+| `src/utils/masking.ts` | 18+ sensitive data regex patterns |
 | `src/utils/log-capture.ts` | Console + fetch interceptor |
 | `src/utils/session-replay.ts` | rrweb integration for DOM recording |
+| `src/utils/analysis.ts` | Error extraction, code chunking, call graph utilities |
+| `src/cli.ts` | CLI with GitHub OAuth Device Flow, framework detection |
 | `scripts/analyze-issue.ts` | AI analysis engine with Chain-of-Thought prompts |
 
 ## Testing
 
 ### Test Files
-| File | Tests | Coverage |
-|------|-------|----------|
-| `src/utils/masking.test.ts` | 22 | Sensitive data masking |
-| `src/utils/log-capture.test.ts` | 29 | Console/network capture |
-| `src/utils/session-replay.test.ts` | 17 | rrweb session replay |
-| `src/server.test.ts` | 14 | Server handlers |
-| `src/qa-flow.integration.test.ts` | 30 | Full QA flow |
-| `src/qa-data-quality.test.ts` | 26 | Data quality/consistency |
-| **Total** | **138** | |
+| File | Purpose |
+|------|---------|
+| `src/utils/masking.test.ts` | Sensitive data masking |
+| `src/utils/log-capture.test.ts` | Console/network capture |
+| `src/utils/session-replay.test.ts` | rrweb session replay |
+| `src/utils/analysis.test.ts` | Error extraction, code chunking |
+| `src/server.test.ts` | Server handlers |
+| `src/qa-flow.integration.test.ts` | Full QA flow |
+| `src/qa-data-quality.test.ts` | Data quality/consistency |
+
+Total: **~145 test cases**
 
 ### Test Conventions
 - Tests are in `*.test.ts` files alongside source files
@@ -188,9 +223,17 @@ All incoming bug reports are validated with the `BugReportSchema` in `src/server
 
 Example test pattern:
 ```typescript
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('functionName', () => {
+  beforeEach(() => {
+    // Setup
+  });
+
+  afterEach(() => {
+    // Cleanup
+  });
+
   it('should do something', () => {
     expect(result).toBe(expected);
   });
@@ -204,6 +247,8 @@ describe('functionName', () => {
 3. **ESM First** - Package uses ES modules (`"type": "module"`)
 4. **Verbatim Module Syntax** - Import types with `import type { ... }`
 5. **React JSX** - Uses `react-jsx` transform (no React import needed)
+6. **Target ES2022** - Modern JavaScript features allowed
+7. **Bundler Module Resolution** - Uses `moduleResolution: "bundler"`
 
 ## Common Tasks
 
@@ -250,19 +295,51 @@ const replayData = stopSessionReplay();
 
 ### Modifying AI Analysis
 Edit `scripts/analyze-issue.ts`:
-- `SYSTEM_PROMPT` - Chain-of-Thought methodology
+- `SYSTEM_PROMPT` - Chain-of-Thought methodology with security rules
 - `AnalysisResultSchema` - Zod schema for structured output
 - `formatAnalysisComment()` - GitHub comment formatting
+
+Key AI analysis features:
+- **Chain-of-Thought prompts** - Structured reasoning methodology
+- **Structured JSON output** - Using Vercel AI SDK's `generateObject`
+- **Report validation** - Distinguishes bugs vs feature requests vs invalid reports
+- **Code verification** - Confirms bugs exist in actual code before suggesting fixes
+- **Import graph tracking** - Follows dependencies to find related files
+- **LLM re-ranking** - Uses fast model to re-rank file candidates
+- **AST-like chunking** - Extracts functions/classes for precise context
+- **Self-consistency** - Optional multiple analysis runs for verification
+
+## CLI Commands
+
+### `inner-lens init`
+Interactive setup wizard:
+1. GitHub OAuth Device Flow authentication (or manual token)
+2. Framework auto-detection (Next.js, Vite, SvelteKit, etc.)
+3. AI provider selection (Anthropic, OpenAI, Google)
+4. Backend deployment configuration
+5. Automatic file generation (workflow, API route, widget)
+
+### `inner-lens check`
+Verifies configuration:
+- GitHub workflow file exists
+- Framework detected
+- inner-lens package installed
+- GITHUB_TOKEN configured
 
 ## Environment Variables
 
 ### For Server Handlers
 - `GITHUB_TOKEN` - GitHub Personal Access Token (repo scope)
+- `GITHUB_REPOSITORY` - Repository in "owner/repo" format
 
 ### For AI Analysis (GitHub Actions)
 - `AI_PROVIDER` - `anthropic`, `openai`, or `google`
-- `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GOOGLE_API_KEY`
+- `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY`
 - `ISSUE_NUMBER`, `REPO_OWNER`, `REPO_NAME` - Set by GitHub Actions
+- `MAX_FILES` - Maximum files to analyze (default: 25)
+- `MAX_TOKENS` - Maximum tokens for AI response (default: 4000)
+- `SELF_CONSISTENCY` - Enable multiple analysis runs (default: false)
+- `USE_CHUNKING` - Use AST-like code chunking (default: true)
 
 ## CI/CD
 
@@ -271,28 +348,34 @@ Edit `scripts/analyze-issue.ts`:
 - Tests on Node.js 20 and 22
 - Uploads coverage to Codecov (Node 20 only)
 - Uses SHA-pinned GitHub Actions for security
+- Runs typecheck, tests, and build
 
 ### analyze-issues.yml (Trigger Workflow)
 - Triggers on new issues with `bug` label or when `inner-lens` label is added
+- Checks for existing analysis to prevent duplicates
 - Calls the reusable `analysis-engine.yml` workflow
 - Configures AI provider and parameters
 
 ### analysis-engine.yml (Reusable Workflow)
 - Reusable workflow (`workflow_call`) for AI analysis
 - Can be called from this repo or external repos
+- Supports all three AI providers (Anthropic, OpenAI, Google)
+- SHA-pinned actions for supply chain security
 - Runs Chain-of-Thought AI analysis and posts comment
-- Adds severity/category labels based on analysis
+- Adds labels based on analysis (severity, category, confidence)
 - External usage: `uses: jhlee0409/inner-lens/.github/workflows/analysis-engine.yml@v1`
 
 ## Important Considerations
 
 1. **Peer Dependencies** - React and Vue are optional peer dependencies
-2. **Build Output** - Each entry point has separate ESM + CJS builds (7 total)
+2. **Build Output** - Each entry point has separate ESM + CJS builds (8 total)
 3. **"use client"** - React build includes this banner for Next.js App Router
 4. **No External CSS** - All styles are inline (see `src/utils/styles.ts`)
 5. **Security** - Never log unmasked data; always call `maskSensitiveData()` before AI processing
 6. **Bundle Size** - Session replay (`inner-lens/replay`) adds ~77KB gzipped when used
 7. **Dynamic Loading** - rrweb is loaded on-demand to minimize initial bundle impact
+8. **GitHub OAuth** - CLI uses Device Flow for secure token acquisition
+9. **Analysis Accuracy** - AI confirms bugs exist in code before suggesting fixes
 
 ## Data Quality Guarantees
 

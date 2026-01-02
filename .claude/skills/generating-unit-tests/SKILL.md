@@ -1,6 +1,7 @@
 ---
 name: generating-unit-tests
 description: Generate Vitest unit tests following project conventions. Use when user asks to create tests, write test cases, or add test coverage for TypeScript functions.
+allowed-tools: [Read, Write, Bash, Grep, Glob, Edit]
 ---
 
 # Unit Test Generation for inner-lens

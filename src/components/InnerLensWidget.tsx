@@ -77,8 +77,21 @@ export function InnerLensWidget({
   maxLogEntries = 50,
   maskSensitiveData: enableMasking = true,
   styles: styleConfig,
+  // Convenience options (map to styles)
+  position,
+  buttonColor,
+  // UI text customization
+  buttonText = 'Report a bug',
+  dialogTitle = 'Report an Issue',
+  dialogDescription = 'Describe the issue',
+  submitText = 'Submit Report',
+  cancelText = 'Cancel',
+  successMessage = 'Report Submitted',
+  // Callbacks
   onSuccess,
   onError,
+  onOpen,
+  onClose,
   trigger,
   disabled = false,
   devOnly = true,
@@ -96,7 +109,13 @@ export function InnerLensWidget({
   const dialogRef = useRef<HTMLDivElement>(null);
   const styleInjectedRef = useRef(false);
 
-  const styles = createStyles(styleConfig);
+  // Merge convenience options with styleConfig
+  const mergedStyleConfig = {
+    ...styleConfig,
+    buttonPosition: position ?? styleConfig?.buttonPosition ?? 'bottom-right',
+    buttonColor: buttonColor ?? styleConfig?.buttonColor ?? '#6366f1',
+  };
+  const styles = createStyles(mergedStyleConfig);
 
   // Inject keyframe animation CSS
   useEffect(() => {
@@ -173,7 +192,13 @@ export function InnerLensWidget({
     setErrorMessage(null);
     setDescription('');
     setIssueUrl(null);
-  }, []);
+    onClose?.();
+  }, [onClose]);
+
+  const handleOpen = useCallback(() => {
+    setIsOpen(true);
+    onOpen?.();
+  }, [onOpen]);
 
   const handleSubmit = useCallback(async () => {
     if (!description.trim()) {
@@ -261,11 +286,11 @@ export function InnerLensWidget({
     if (trigger) {
       return (
         <div
-          onClick={() => setIsOpen(true)}
+          onClick={handleOpen}
           style={{ cursor: 'pointer' }}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && setIsOpen(true)}
+          onKeyDown={(e) => e.key === 'Enter' && handleOpen()}
         >
           {trigger}
         </div>
@@ -280,12 +305,12 @@ export function InnerLensWidget({
     return (
       <button
         type="button"
-        onClick={() => setIsOpen(true)}
+        onClick={handleOpen}
         style={buttonStyle}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        aria-label="Report a bug"
-        title="Report a bug"
+        aria-label={buttonText}
+        title={buttonText}
       >
         <BugIcon />
       </button>
@@ -300,7 +325,7 @@ export function InnerLensWidget({
             <CheckIcon />
           </div>
           <h3 style={{ ...styles.headerTitle, marginBottom: '8px' }}>
-            Report Submitted
+            {successMessage}
           </h3>
           <p
             style={{
@@ -338,7 +363,7 @@ export function InnerLensWidget({
       <>
         <div style={styles.content}>
           <label style={styles.label} htmlFor="inner-lens-description">
-            Describe the issue
+            {dialogDescription}
           </label>
           <textarea
             ref={textareaRef}
@@ -397,7 +422,7 @@ export function InnerLensWidget({
             onClick={handleClose}
             style={styles.cancelButton}
           >
-            Cancel
+            {cancelText}
           </button>
           <button
             type="button"
@@ -425,7 +450,7 @@ export function InnerLensWidget({
                 Submitting...
               </span>
             ) : (
-              'Submit Report'
+              submitText
             )}
           </button>
         </div>
@@ -452,7 +477,7 @@ export function InnerLensWidget({
           <div ref={dialogRef} style={styles.dialog} onClick={(e) => e.stopPropagation()}>
             <div style={styles.header}>
               <h2 id="inner-lens-title" style={styles.headerTitle}>
-                Report an Issue
+                {dialogTitle}
               </h2>
               <button
                 type="button"
