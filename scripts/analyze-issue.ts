@@ -42,25 +42,10 @@ interface AnalysisConfig {
 }
 
 // Structured output schema for analysis
-const AnalysisResultSchema = z.object({
-  // Validity check - MUST be evaluated first
-  isValidReport: z.boolean().describe('Whether this is a valid, actionable bug report with sufficient information'),
-  invalidReason: z.string().optional().describe('If isValidReport is false, explain why (e.g., "No error logs or reproduction steps provided", "Description too vague to analyze")'),
-
-  // Report classification (2025 enhancement)
-  reportType: z.enum([
-    'bug',              // Actual bug - code is broken
-    'not_a_bug',        // Expected behavior - user misunderstanding
-    'feature_request',  // Request for new functionality
-    'improvement',      // Enhancement to existing feature
-    'cannot_verify',    // Cannot confirm bug from code analysis
-    'needs_info',       // Insufficient information to analyze
-  ]).describe('Classification of what this report actually is'),
-
+// Schema for a single root cause analysis
+const RootCauseAnalysisSchema = z.object({
   severity: z.enum(['critical', 'high', 'medium', 'low', 'none']),
   category: z.enum(['runtime_error', 'logic_error', 'performance', 'security', 'ui_ux', 'configuration', 'invalid_report', 'unknown']),
-
-  // Code verification result (2025 enhancement)
   codeVerification: z.object({
     bugExistsInCode: z.boolean().describe('After analyzing the code, does the described bug actually exist?'),
     evidence: z.string().describe('What evidence from the code supports or refutes the bug claim?'),
@@ -85,7 +70,30 @@ const AnalysisResultSchema = z.object({
   additionalContext: z.string().optional().describe('Any additional context or caveats'),
 });
 
+const AnalysisResultSchema = z.object({
+  // Validity check - MUST be evaluated first
+  isValidReport: z.boolean().describe('Whether this is a valid, actionable bug report with sufficient information'),
+  invalidReason: z.string().optional().describe('If isValidReport is false, explain why (e.g., "No error logs or reproduction steps provided", "Description too vague to analyze")'),
+
+  // Report classification (2025 enhancement)
+  reportType: z.enum([
+    'bug',              // Actual bug - code is broken
+    'not_a_bug',        // Expected behavior - user misunderstanding
+    'feature_request',  // Request for new functionality
+    'improvement',      // Enhancement to existing feature
+    'cannot_verify',    // Cannot confirm bug from code analysis
+    'needs_info',       // Insufficient information to analyze
+  ]).describe('Classification of what this report actually is'),
+
+  // Multiple root causes support - each will be posted as a separate comment
+  analyses: z.array(RootCauseAnalysisSchema)
+    .min(1)
+    .max(3)
+    .describe('Array of potential root causes, ordered by likelihood. Each will be posted as a separate comment. Usually 1, but can be 2-3 if multiple distinct issues are found.'),
+});
+
 type AnalysisResult = z.infer<typeof AnalysisResultSchema>;
+type RootCauseAnalysis = z.infer<typeof RootCauseAnalysisSchema>;
 
 // ============================================
 // Configuration
@@ -1451,7 +1459,31 @@ If counter-evidence exists, mention it and explain why your conclusion is still 
 If you must speculate (due to incomplete information):
 - Prefix with "⚠️ Speculative:" or similar marker
 - Explain what additional information would confirm/deny the speculation
-- Lower confidence score accordingly`;
+- Lower confidence score accordingly
+
+## MULTIPLE ROOT CAUSES (analyses array)
+
+The output schema supports multiple root cause analyses. Use this when:
+
+### When to return MULTIPLE analyses (2-3):
+- The bug report describes multiple distinct issues (e.g., "login fails AND profile page crashes")
+- You find evidence of unrelated bugs in the same code area
+- The symptoms could be caused by completely different root causes
+
+### When to return SINGLE analysis (1):
+- There is one clear root cause
+- Multiple symptoms trace back to the same underlying issue
+- You're not confident about alternative causes
+
+### Guidelines:
+- Order analyses by likelihood (most likely first)
+- Each analysis should be INDEPENDENT and COMPLETE with its own:
+  - severity, category, codeVerification
+  - rootCause (summary, explanation, affectedFiles)
+  - suggestedFix (steps, codeChanges)
+  - prevention, confidence, additionalContext
+- Do NOT split one issue into multiple analyses just to fill the array
+- Maximum 3 analyses - if more potential causes exist, mention them in additionalContext`;
 
 const USER_PROMPT_TEMPLATE = (
   title: string,
@@ -1561,8 +1593,8 @@ function checkConsistency(
     };
   }
 
-  // For valid reports, check root cause similarity
-  const summaries = validResults.map(r => r.rootCause.summary);
+  // For valid reports, check root cause similarity (using first analysis)
+  const summaries = validResults.map(r => r.analyses[0]?.rootCause.summary || '');
   const similarityMatrix: number[][] = [];
 
   for (let i = 0; i < summaries.length; i++) {
@@ -1627,13 +1659,17 @@ async function analyzeWithConsistency(
 
   if (!isConsistent) {
     console.log(`   ⚠️ Low consistency detected - adding warning to result`);
-    // Adjust the result to indicate low consistency
+    // Adjust the result to indicate low consistency - update each analysis in the array
+    const warningMessage = `\n\n⚠️ **Consistency Warning**: Multiple analysis runs showed ${(agreementRate * 100).toFixed(0)}% agreement. ` +
+      `This analysis may benefit from manual verification.`;
+
     return {
       ...result,
-      confidence: Math.min(result.confidence, 50),
-      additionalContext: (result.additionalContext || '') +
-        `\n\n⚠️ **Consistency Warning**: Multiple analysis runs showed ${(agreementRate * 100).toFixed(0)}% agreement. ` +
-        `This analysis may benefit from manual verification.`,
+      analyses: result.analyses.map(analysis => ({
+        ...analysis,
+        confidence: Math.min(analysis.confidence, 50),
+        additionalContext: (analysis.additionalContext || '') + warningMessage,
+      })),
     };
   }
 
@@ -1645,20 +1681,24 @@ async function analyzeWithConsistency(
 // Analysis Result Formatting
 // ============================================
 
-function formatAnalysisComment(result: AnalysisResult, provider: string, model: string, filesAnalyzed: number): string {
-  const modelDisplay = model || DEFAULT_MODELS[provider as AIProvider] || 'default';
-  const reportTypeLabels: Record<string, { emoji: string; label: string; color: string }> = {
-    bug: { emoji: '🐛', label: 'Confirmed Bug', color: 'red' },
-    not_a_bug: { emoji: '✅', label: 'Not a Bug', color: 'green' },
-    feature_request: { emoji: '💡', label: 'Feature Request', color: 'blue' },
-    improvement: { emoji: '🔧', label: 'Improvement Suggestion', color: 'purple' },
-    cannot_verify: { emoji: '🔍', label: 'Cannot Verify', color: 'orange' },
-    needs_info: { emoji: '❓', label: 'Needs More Info', color: 'gray' },
-  };
+interface FormatOptions {
+  provider: string;
+  model: string;
+  filesAnalyzed: number;
+  analysisIndex?: number;  // 1-based index for multiple analyses
+  totalAnalyses?: number;  // Total number of analyses
+}
 
-  // Handle invalid reports first
-  if (!result.isValidReport) {
-    return `## 🔍 inner-lens Analysis
+/**
+ * Format comment for invalid/insufficient reports
+ */
+function formatInvalidReportComment(
+  invalidReason: string | undefined,
+  options: FormatOptions
+): string {
+  const modelDisplay = options.model || DEFAULT_MODELS[options.provider as AIProvider] || 'default';
+
+  return `## 🔍 inner-lens Analysis
 
 ⚪ **Report Status:** INSUFFICIENT INFORMATION
 
@@ -1668,7 +1708,7 @@ function formatAnalysisComment(result: AnalysisResult, provider: string, model: 
 
 This bug report does not contain enough information for automated analysis.
 
-**Reason:** ${result.invalidReason || 'The report lacks sufficient details, error logs, or reproduction steps.'}
+**Reason:** ${invalidReason || 'The report lacks sufficient details, error logs, or reproduction steps.'}
 
 ---
 
@@ -1696,22 +1736,37 @@ To analyze this issue, please provide:
 | Field | Value |
 |-------|-------|
 | Status | Invalid/Insufficient |
-| Provider | ${provider} |
+| Provider | ${options.provider} |
 | Model | ${modelDisplay} |
-| Files Scanned | ${filesAnalyzed} |
+| Files Scanned | ${options.filesAnalyzed} |
 | Timestamp | ${new Date().toISOString()} |
 
 </details>
 
 *This analysis was generated by [inner-lens](https://github.com/jhlee0409/inner-lens).*`;
-  }
+}
 
-  // Handle non-bug reports (2025 enhancement)
-  const reportTypeInfo = reportTypeLabels[result.reportType] || reportTypeLabels.cannot_verify;
+/**
+ * Format comment for non-bug reports (feature requests, not a bug, etc.)
+ */
+function formatNonBugReportComment(
+  reportType: AnalysisResult['reportType'],
+  analysis: RootCauseAnalysis,
+  options: FormatOptions
+): string {
+  const modelDisplay = options.model || DEFAULT_MODELS[options.provider as AIProvider] || 'default';
+  const reportTypeLabels: Record<string, { emoji: string; label: string }> = {
+    bug: { emoji: '🐛', label: 'Confirmed Bug' },
+    not_a_bug: { emoji: '✅', label: 'Not a Bug' },
+    feature_request: { emoji: '💡', label: 'Feature Request' },
+    improvement: { emoji: '🔧', label: 'Improvement Suggestion' },
+    cannot_verify: { emoji: '🔍', label: 'Cannot Verify' },
+    needs_info: { emoji: '❓', label: 'Needs More Info' },
+  };
 
-  if (result.reportType !== 'bug') {
-    // For non-bug reports, show a different format
-    return `## 🔍 inner-lens Analysis
+  const reportTypeInfo = reportTypeLabels[reportType] || reportTypeLabels.cannot_verify;
+
+  return `## 🔍 inner-lens Analysis
 
 ${reportTypeInfo.emoji} **Classification:** ${reportTypeInfo.label}
 
@@ -1719,19 +1774,19 @@ ${reportTypeInfo.emoji} **Classification:** ${reportTypeInfo.label}
 
 ### 📋 Analysis Result
 
-${result.codeVerification?.bugExistsInCode === false
+${analysis.codeVerification?.bugExistsInCode === false
   ? `**Code Verification:** ❌ No bug found in code
 
-${result.codeVerification.evidence}
+${analysis.codeVerification.evidence}
 
-${result.codeVerification.alternativeExplanation ? `**Possible Explanation:** ${result.codeVerification.alternativeExplanation}` : ''}`
-  : `${result.rootCause.explanation}`}
+${analysis.codeVerification.alternativeExplanation ? `**Possible Explanation:** ${analysis.codeVerification.alternativeExplanation}` : ''}`
+  : `${analysis.rootCause.explanation}`}
 
 ---
 
-${result.reportType === 'feature_request' || result.reportType === 'improvement' ? `### 💡 Recommendation
+${reportType === 'feature_request' || reportType === 'improvement' ? `### 💡 Recommendation
 
-This appears to be a ${result.reportType === 'feature_request' ? 'feature request' : 'suggested improvement'} rather than a bug report.
+This appears to be a ${reportType === 'feature_request' ? 'feature request' : 'suggested improvement'} rather than a bug report.
 
 Consider:
 - Creating a separate feature request issue
@@ -1739,14 +1794,14 @@ Consider:
 - Checking if this feature already exists in the roadmap
 ` : ''}
 
-${result.reportType === 'not_a_bug' ? `### ✅ Expected Behavior
+${reportType === 'not_a_bug' ? `### ✅ Expected Behavior
 
 The reported behavior appears to be working as designed.
 
-${result.codeVerification?.alternativeExplanation || 'Please review the documentation for expected functionality.'}
+${analysis.codeVerification?.alternativeExplanation || 'Please review the documentation for expected functionality.'}
 ` : ''}
 
-${result.reportType === 'cannot_verify' ? `### 🔍 Unable to Confirm
+${reportType === 'cannot_verify' ? `### 🔍 Unable to Confirm
 
 We analyzed the relevant code but could not find evidence of the reported bug.
 
@@ -1769,17 +1824,26 @@ We analyzed the relevant code but could not find evidence of the reported bug.
 | Field | Value |
 |-------|-------|
 | Classification | ${reportTypeInfo.label} |
-| Bug Found in Code | ${result.codeVerification?.bugExistsInCode ? 'Yes' : 'No'} |
-| Confidence | ${result.confidence}% |
-| Provider | ${provider} |
+| Bug Found in Code | ${analysis.codeVerification?.bugExistsInCode ? 'Yes' : 'No'} |
+| Confidence | ${analysis.confidence}% |
+| Provider | ${options.provider} |
 | Model | ${modelDisplay} |
-| Files Analyzed | ${filesAnalyzed} |
+| Files Analyzed | ${options.filesAnalyzed} |
 | Timestamp | ${new Date().toISOString()} |
 
 </details>
 
 *This analysis was generated by [inner-lens](https://github.com/jhlee0409/inner-lens). Always verify suggestions before applying.*`;
-  }
+}
+
+/**
+ * Format comment for a single root cause analysis (bug report)
+ */
+function formatRootCauseComment(
+  analysis: RootCauseAnalysis,
+  options: FormatOptions
+): string {
+  const modelDisplay = options.model || DEFAULT_MODELS[options.provider as AIProvider] || 'default';
 
   const severityEmoji: Record<string, string> = {
     critical: '🔴',
@@ -1800,7 +1864,7 @@ We analyzed the relevant code but could not find evidence of the reported bug.
     unknown: 'Unknown',
   };
 
-  const codeChangesSection = result.suggestedFix.codeChanges
+  const codeChangesSection = analysis.suggestedFix.codeChanges
     .map((change) => {
       let section = `#### 📄 \`${change.file}\`\n${change.description}\n`;
       if (change.before) {
@@ -1811,25 +1875,30 @@ We analyzed the relevant code but could not find evidence of the reported bug.
     })
     .join('\n\n');
 
-  return `## 🔍 inner-lens Analysis
+  // Show analysis number if there are multiple analyses
+  const analysisHeader = options.totalAnalyses && options.totalAnalyses > 1
+    ? `## 🔍 inner-lens Analysis (${options.analysisIndex}/${options.totalAnalyses})`
+    : '## 🔍 inner-lens Analysis';
 
-${severityEmoji[result.severity]} **Severity:** ${result.severity.toUpperCase()} | **Category:** ${categoryLabels[result.category]} | **Confidence:** ${result.confidence}%
+  return `${analysisHeader}
+
+${severityEmoji[analysis.severity]} **Severity:** ${analysis.severity.toUpperCase()} | **Category:** ${categoryLabels[analysis.category]} | **Confidence:** ${analysis.confidence}%
 
 ---
 
 ### 🎯 Root Cause
 
-**${result.rootCause.summary}**
+**${analysis.rootCause.summary}**
 
-${result.rootCause.explanation}
+${analysis.rootCause.explanation}
 
-${result.rootCause.affectedFiles.length > 0 ? `**Affected Files:** ${result.rootCause.affectedFiles.map(f => `\`${f}\``).join(', ')}` : ''}
+${analysis.rootCause.affectedFiles.length > 0 ? `**Affected Files:** ${analysis.rootCause.affectedFiles.map(f => `\`${f}\``).join(', ')}` : ''}
 
 ---
 
 ### 🔧 Suggested Fix
 
-${result.suggestedFix.steps.map((step, i) => `${i + 1}. ${step}`).join('\n')}
+${analysis.suggestedFix.steps.map((step, i) => `${i + 1}. ${step}`).join('\n')}
 
 ${codeChangesSection ? `\n#### Code Changes\n\n${codeChangesSection}` : ''}
 
@@ -1837,9 +1906,9 @@ ${codeChangesSection ? `\n#### Code Changes\n\n${codeChangesSection}` : ''}
 
 ### 🛡️ Prevention
 
-${result.prevention.map((p) => `- ${p}`).join('\n')}
+${analysis.prevention.map((p) => `- ${p}`).join('\n')}
 
-${result.additionalContext ? `\n---\n\n### 📝 Additional Notes\n\n${result.additionalContext}` : ''}
+${analysis.additionalContext ? `\n---\n\n### 📝 Additional Notes\n\n${analysis.additionalContext}` : ''}
 
 ---
 
@@ -1848,11 +1917,12 @@ ${result.additionalContext ? `\n---\n\n### 📝 Additional Notes\n\n${result.add
 
 | Field | Value |
 |-------|-------|
-| Provider | ${provider} |
+| Provider | ${options.provider} |
 | Model | ${modelDisplay} |
-| Files Analyzed | ${filesAnalyzed} |
+| Files Analyzed | ${options.filesAnalyzed} |
 | Timestamp | ${new Date().toISOString()} |
-| Confidence | ${result.confidence}% |
+| Confidence | ${analysis.confidence}% |
+${options.totalAnalyses && options.totalAnalyses > 1 ? `| Analysis | ${options.analysisIndex} of ${options.totalAnalyses} |` : ''}
 
 </details>
 
@@ -2046,43 +2116,97 @@ async function analyzeIssue(): Promise<void> {
       config.retryDelay
     );
 
-    // Create a basic structured result from text
+    // Create a basic structured result from text (using new schema with analyses array)
     analysis = {
       isValidReport: true, // Assume valid if we got this far
       reportType: 'cannot_verify', // Conservative default for fallback
-      severity: 'medium',
-      category: 'unknown',
-      codeVerification: {
-        bugExistsInCode: false,
-        evidence: 'Unable to perform structured code verification (fallback mode)',
-      },
-      rootCause: {
-        summary: 'Analysis generated from unstructured response',
-        explanation: text,
-        affectedFiles: relevantFiles.slice(0, 3).map((f) => f.path),
-      },
-      suggestedFix: {
-        steps: ['Review the analysis above', 'Identify the specific changes needed', 'Implement and test the fix'],
-        codeChanges: [],
-      },
-      prevention: ['Add automated tests for this scenario', 'Consider adding error handling'],
-      confidence: 50,
-      additionalContext: 'This analysis was generated using fallback text mode. Structured output was not available.',
+      analyses: [{
+        severity: 'medium',
+        category: 'unknown',
+        codeVerification: {
+          bugExistsInCode: false,
+          evidence: 'Unable to perform structured code verification (fallback mode)',
+        },
+        rootCause: {
+          summary: 'Analysis generated from unstructured response',
+          explanation: text,
+          affectedFiles: relevantFiles.slice(0, 3).map((f) => f.path),
+        },
+        suggestedFix: {
+          steps: ['Review the analysis above', 'Identify the specific changes needed', 'Implement and test the fix'],
+          codeChanges: [],
+        },
+        prevention: ['Add automated tests for this scenario', 'Consider adding error handling'],
+        confidence: 50,
+        additionalContext: 'This analysis was generated using fallback text mode. Structured output was not available.',
+      }],
     };
     console.log('   ✅ Fallback analysis generated');
   }
 
-  // Step 6: Post comment
-  console.log('\n💬 Step 6: Posting analysis comment...');
+  // Step 6: Post comments (one per root cause analysis)
+  console.log('\n💬 Step 6: Posting analysis comments...');
 
-  const commentBody = formatAnalysisComment(analysis, config.provider, config.model, relevantFiles.length);
+  const formatOptions: FormatOptions = {
+    provider: config.provider,
+    model: config.model,
+    filesAnalyzed: relevantFiles.length,
+  };
 
-  await octokit.issues.createComment({
-    owner: config.owner,
-    repo: config.repo,
-    issue_number: config.issueNumber,
-    body: commentBody,
-  });
+  // Handle invalid reports - single comment
+  if (!analysis.isValidReport) {
+    const commentBody = formatInvalidReportComment(analysis.invalidReason, formatOptions);
+    await octokit.issues.createComment({
+      owner: config.owner,
+      repo: config.repo,
+      issue_number: config.issueNumber,
+      body: commentBody,
+    });
+    console.log('   📝 Posted invalid report comment');
+  }
+  // Handle non-bug reports - single comment using first analysis
+  else if (analysis.reportType !== 'bug') {
+    const firstAnalysis = analysis.analyses[0];
+    if (firstAnalysis) {
+      const commentBody = formatNonBugReportComment(analysis.reportType, firstAnalysis, formatOptions);
+      await octokit.issues.createComment({
+        owner: config.owner,
+        repo: config.repo,
+        issue_number: config.issueNumber,
+        body: commentBody,
+      });
+      console.log('   📝 Posted non-bug report comment');
+    }
+  }
+  // Handle bug reports - one comment per root cause analysis
+  else {
+    const totalAnalyses = analysis.analyses.length;
+    console.log(`   📊 Found ${totalAnalyses} root cause(s) to report`);
+
+    for (let i = 0; i < totalAnalyses; i++) {
+      const rootCauseAnalysis = analysis.analyses[i];
+      if (!rootCauseAnalysis) continue;
+
+      const commentBody = formatRootCauseComment(rootCauseAnalysis, {
+        ...formatOptions,
+        analysisIndex: i + 1,
+        totalAnalyses,
+      });
+
+      await octokit.issues.createComment({
+        owner: config.owner,
+        repo: config.repo,
+        issue_number: config.issueNumber,
+        body: commentBody,
+      });
+      console.log(`   📝 Posted analysis comment ${i + 1}/${totalAnalyses}`);
+
+      // Small delay between comments to avoid rate limiting
+      if (i < totalAnalyses - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+  }
 
   // Step 7: Add labels based on analysis
   console.log('\n🏷️ Step 7: Adding labels...');
@@ -2093,15 +2217,31 @@ async function analyzeIssue(): Promise<void> {
     labelsToAdd.push('needs-more-info');
     console.log('   📋 Report marked as invalid/insufficient');
   } else {
-    // Add labels based on report type (2025 enhancement)
+    // Add labels based on report type
     switch (analysis.reportType) {
       case 'bug':
-        // Only add severity labels for confirmed bugs
-        if (analysis.severity === 'critical' || analysis.severity === 'high') {
-          labelsToAdd.push('priority:high');
+        // Check all analyses for severity and verification
+        for (const rootCauseAnalysis of analysis.analyses) {
+          if (rootCauseAnalysis.severity === 'critical' || rootCauseAnalysis.severity === 'high') {
+            labelsToAdd.push('priority:high');
+          }
+          if (rootCauseAnalysis.codeVerification?.bugExistsInCode) {
+            labelsToAdd.push('ai:bug-confirmed');
+          }
+          if (rootCauseAnalysis.category === 'security') {
+            labelsToAdd.push('security');
+          }
         }
-        if (analysis.codeVerification?.bugExistsInCode) {
-          labelsToAdd.push('ai:bug-confirmed');
+        // Add confidence indicator based on highest confidence analysis
+        const maxConfidence = Math.max(...analysis.analyses.map(a => a.confidence));
+        if (maxConfidence >= 80) {
+          labelsToAdd.push('ai:high-confidence');
+        } else if (maxConfidence < 50) {
+          labelsToAdd.push('ai:low-confidence');
+        }
+        // Add label indicating multiple root causes
+        if (analysis.analyses.length > 1) {
+          labelsToAdd.push('multiple-causes');
         }
         break;
       case 'not_a_bug':
@@ -2119,18 +2259,6 @@ async function analyzeIssue(): Promise<void> {
       case 'needs_info':
         labelsToAdd.push('needs-more-info');
         break;
-    }
-
-    // Add category-based labels
-    if (analysis.category === 'security') {
-      labelsToAdd.push('security');
-    }
-
-    // Add confidence indicator
-    if (analysis.confidence >= 80) {
-      labelsToAdd.push('ai:high-confidence');
-    } else if (analysis.confidence < 50) {
-      labelsToAdd.push('ai:low-confidence');
     }
   }
 
