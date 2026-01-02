@@ -4,6 +4,7 @@
 # Duplicate Prevention (2025):
 # - Checks if analysis comment already exists before running
 # - Skips if 'analyzed' label is present
+# - Uses concurrency control to prevent race conditions
 
 name: Analyze Issues
 
@@ -11,12 +12,18 @@ on:
   issues:
     types: [opened, labeled]
 
+# Prevent race conditions: only one analysis per issue at a time
+# If a new workflow is triggered while one is running, the new one will wait
+concurrency:
+  group: analyze-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
 jobs:
   check-trigger:
     name: Check Trigger Conditions
     runs-on: ubuntu-latest
     outputs:
-      should_analyze: ${{ steps.check.outputs.should_analyze }}
+      should_analyze: ${{ steps.check.outputs.should_analyze || steps.set-skip.outputs.should_analyze || 'false' }}
     steps:
       - name: Check if analysis already exists
         id: check-existing
@@ -94,5 +101,6 @@ jobs:
       provider: 'anthropic'
       max_files: 25
       max_tokens: 4000
+      language: 'ko'  # Output language: en, ko, ja, zh, es, de, fr, pt
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

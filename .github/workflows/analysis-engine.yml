@@ -43,6 +43,11 @@ on:
         required: false
         type: string
         default: '20'
+      language:
+        description: 'Output language for analysis (en, ko, ja, zh, es, de, fr, pt)'
+        required: false
+        type: string
+        default: 'en'
     secrets:
       ANTHROPIC_API_KEY:
         required: false
@@ -152,6 +157,7 @@ jobs:
           REPO_NAME: ${{ github.event.repository.name }}
           MAX_FILES: ${{ inputs.max_files }}
           MAX_TOKENS: ${{ inputs.max_tokens }}
+          OUTPUT_LANGUAGE: ${{ inputs.language }}
           GITHUB_TOKEN: ${{ github.token }}
           # Provider API Keys - only the relevant one will be used
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -165,6 +171,7 @@ jobs:
           echo "🧠 Model: ${AI_MODEL:-default}"
           echo "📁 Max Files: $MAX_FILES"
           echo "📝 Max Tokens: $MAX_TOKENS"
+          echo "🌐 Language: $OUTPUT_LANGUAGE"
           echo ""
           npx tsx .inner-lens/scripts/analyze-issue.ts
 
