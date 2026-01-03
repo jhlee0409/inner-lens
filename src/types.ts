@@ -171,6 +171,9 @@ export interface BugReportPayload {
   userAgent: string;
   timestamp: number;
   metadata?: Record<string, unknown>;
+  // Centralized mode fields (for inner-lens API)
+  owner?: string;
+  repo?: string;
 }
 
 /**

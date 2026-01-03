@@ -1,12 +1,18 @@
 # Source files (dist is published)
 src/
 scripts/
+api/
+docs/
+examples/
 
 # Config files
 tsconfig.json
 tsup.config.ts
+vitest.config.ts
+vercel.json
 .gitignore
 .github/
+.claude/
 
 # Development
 node_modules/

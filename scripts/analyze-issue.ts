@@ -2902,55 +2902,104 @@ async function analyzeIssue(): Promise<void> {
   }
 
   // Step 7: Add labels based on analysis
+  // Label schema (inspired by Kubernetes, VS Code, React):
+  // - type:     Issue type (bug, enhancement, invalid)
+  // - severity: Urgency level (critical, high, medium, low)
+  // - area:     Affected area (runtime, logic, performance, security, ui-ux, config)
+  // - status:   Analysis state (analyzed, needs-info, needs-repro)
+  // - ai:       AI verification (verified, unverified)
   console.log('\n🏷️ Step 7: Adding labels...');
-  const labelsToAdd: string[] = ['analyzed']; // Always add 'analyzed' to prevent duplicate runs
+  const labelsToAdd: string[] = ['status:analyzed']; // Always add to prevent duplicate runs
+
+  // Category to area label mapping
+  const categoryToArea: Record<string, string> = {
+    runtime_error: 'area:runtime',
+    logic_error: 'area:logic',
+    performance: 'area:performance',
+    security: 'area:security',
+    ui_ux: 'area:ui-ux',
+    configuration: 'area:config',
+  };
 
   // Handle invalid reports
   if (!analysis.isValidReport) {
-    labelsToAdd.push('needs-more-info');
+    labelsToAdd.push('type:invalid', 'status:needs-info');
     console.log('   📋 Report marked as invalid/insufficient');
   } else {
     // Add labels based on report type
     switch (analysis.reportType) {
       case 'bug':
-        // Check all analyses for severity and verification
+        labelsToAdd.push('type:bug');
+
+        // Collect unique severities and areas from all analyses
+        const severities = new Set<string>();
+        const areas = new Set<string>();
+        let hasVerifiedBug = false;
+        let hasUnverifiedBug = false;
+
         for (const rootCauseAnalysis of analysis.analyses) {
-          if (rootCauseAnalysis.severity === 'critical' || rootCauseAnalysis.severity === 'high') {
-            labelsToAdd.push('priority:high');
+          // Add severity label (use highest severity found)
+          if (rootCauseAnalysis.severity && rootCauseAnalysis.severity !== 'none') {
+            severities.add(`severity:${rootCauseAnalysis.severity}`);
           }
+
+          // Add area label based on category
+          const areaLabel = categoryToArea[rootCauseAnalysis.category];
+          if (areaLabel) {
+            areas.add(areaLabel);
+          }
+
+          // Track verification status
           if (rootCauseAnalysis.codeVerification?.bugExistsInCode) {
-            labelsToAdd.push('ai:bug-confirmed');
-          }
-          if (rootCauseAnalysis.category === 'security') {
-            labelsToAdd.push('security');
+            hasVerifiedBug = true;
+          } else {
+            hasUnverifiedBug = true;
           }
         }
-        // Add confidence indicator based on highest confidence analysis
-        const maxConfidence = Math.max(...analysis.analyses.map(a => a.confidence));
-        if (maxConfidence >= 80) {
-          labelsToAdd.push('ai:high-confidence');
-        } else if (maxConfidence < 50) {
-          labelsToAdd.push('ai:low-confidence');
+
+        // Add highest severity (priority order: critical > high > medium > low)
+        const severityPriority = ['severity:critical', 'severity:high', 'severity:medium', 'severity:low'];
+        for (const sev of severityPriority) {
+          if (severities.has(sev)) {
+            labelsToAdd.push(sev);
+            break; // Only add highest severity
+          }
         }
-        // Add label indicating multiple root causes
+
+        // Add all unique areas (can have multiple affected areas)
+        areas.forEach(area => labelsToAdd.push(area));
+
+        // Add AI verification status
+        if (hasVerifiedBug) {
+          labelsToAdd.push('ai:verified');
+        } else if (hasUnverifiedBug) {
+          labelsToAdd.push('ai:unverified');
+        }
+
+        // Add label for multiple root causes
         if (analysis.analyses.length > 1) {
-          labelsToAdd.push('multiple-causes');
+          labelsToAdd.push('multi-cause');
         }
         break;
+
       case 'not_a_bug':
-        labelsToAdd.push('not-a-bug');
+        labelsToAdd.push('type:invalid', 'resolution:not-a-bug');
         break;
+
       case 'feature_request':
-        labelsToAdd.push('enhancement');
+        labelsToAdd.push('type:enhancement', 'kind:feature');
         break;
+
       case 'improvement':
-        labelsToAdd.push('enhancement');
+        labelsToAdd.push('type:enhancement', 'kind:improvement');
         break;
+
       case 'cannot_verify':
-        labelsToAdd.push('needs-reproduction');
+        labelsToAdd.push('type:bug', 'status:needs-repro', 'ai:unverified');
         break;
+
       case 'needs_info':
-        labelsToAdd.push('needs-more-info');
+        labelsToAdd.push('status:needs-info');
         break;
     }
   }
@@ -2958,7 +3007,87 @@ async function analyzeIssue(): Promise<void> {
   // Add labels (filter out duplicates)
   const uniqueLabels = [...new Set(labelsToAdd)];
 
+  // Label color definitions (GitHub-style hex colors without #)
+  // Design principles:
+  // - Type: distinct primary colors
+  // - Severity: traffic light (red→orange→yellow→green)
+  // - Area: each has unique, meaningful color
+  // - Status: professional blues and purples
+  // - AI: trust indicator (blue=verified, gray=unverified)
+  const labelColors: Record<string, { color: string; description: string }> = {
+    // Type labels - Primary colors for instant recognition
+    'type:bug': { color: 'FF0000', description: 'Something isn\'t working' },           // Pure red - danger
+    'type:enhancement': { color: '0066FF', description: 'New feature or request' },     // Blue - new idea
+    'type:invalid': { color: 'CCCCCC', description: 'Invalid or incomplete report' },   // Gray - dismissed
+
+    // Severity labels - Traffic light system (instantly recognizable)
+    'severity:critical': { color: '8B0000', description: 'Critical: System down or data loss' },  // Dark red - emergency
+    'severity:high': { color: 'FF4500', description: 'High: Major functionality broken' },        // Orange red - urgent
+    'severity:medium': { color: 'FFA500', description: 'Medium: Minor functionality issue' },     // Orange - attention
+    'severity:low': { color: '32CD32', description: 'Low: Cosmetic or minor issue' },             // Lime green - minor
+
+    // Area labels - Unique colors representing the domain
+    'area:runtime': { color: '8B008B', description: 'Runtime errors and crashes' },      // Dark magenta - runtime crash
+    'area:logic': { color: '9932CC', description: 'Logic errors and wrong behavior' },   // Purple - logic/brain
+    'area:performance': { color: 'FF8C00', description: 'Performance issues' },          // Dark orange - speed warning
+    'area:security': { color: 'DC143C', description: 'Security vulnerabilities' },       // Crimson - security alert
+    'area:ui-ux': { color: '1E90FF', description: 'UI/UX issues' },                       // Dodger blue - UI/design
+    'area:config': { color: '708090', description: 'Configuration issues' },             // Slate gray - settings/config
+
+    // Status labels - Progress indicator colors
+    'status:analyzed': { color: '006400', description: 'AI analysis complete' },         // Dark green - done
+    'status:needs-info': { color: 'FF69B4', description: 'More information needed' },    // Hot pink - needs attention
+    'status:needs-repro': { color: 'FFD700', description: 'Reproduction steps needed' }, // Gold - warning/wait
+
+    // AI verification labels - Trust indicator
+    'ai:verified': { color: '228B22', description: 'Bug verified in code by AI' },       // Forest green - confirmed
+    'ai:unverified': { color: 'A9A9A9', description: 'Needs manual verification' },      // Dark gray - uncertain
+
+    // Resolution labels
+    'resolution:not-a-bug': { color: 'E0E0E0', description: 'Not a bug - working as intended' },  // Light gray - closed
+
+    // Kind labels - Feature types
+    'kind:feature': { color: '00CED1', description: 'Feature request' },                 // Dark turquoise - new feature
+    'kind:improvement': { color: '20B2AA', description: 'Improvement suggestion' },      // Light sea green - enhance
+
+    // Multiple causes indicator
+    'multi-cause': { color: 'FF6347', description: 'Multiple root causes identified' }, // Tomato - complex issue
+  };
+
+  // Ensure labels exist with correct colors
   if (uniqueLabels.length > 0) {
+    console.log('   Creating/updating labels if needed...');
+    for (const labelName of uniqueLabels) {
+      const labelDef = labelColors[labelName];
+      if (labelDef) {
+        try {
+          // Try to update the label (creates if doesn't exist)
+          await octokit.issues.updateLabel({
+            owner: config.owner,
+            repo: config.repo,
+            name: labelName,
+            color: labelDef.color,
+            description: labelDef.description,
+          });
+        } catch {
+          // Label doesn't exist, create it
+          try {
+            await octokit.issues.createLabel({
+              owner: config.owner,
+              repo: config.repo,
+              name: labelName,
+              color: labelDef.color,
+              description: labelDef.description,
+            });
+            console.log(`   Created label: ${labelName}`);
+          } catch {
+            // Label might already exist, ignore
+          }
+        }
+      }
+    }
+
+    // Add labels to the issue
     try {
       await octokit.issues.addLabels({
         owner: config.owner,
@@ -2966,9 +3095,9 @@ async function analyzeIssue(): Promise<void> {
         issue_number: config.issueNumber,
         labels: uniqueLabels,
       });
-      console.log(`   Added labels: ${uniqueLabels.join(', ')}`);
+      console.log(`   ✅ Added labels: ${uniqueLabels.join(', ')}`);
     } catch {
-      console.log('   ⚠️ Could not add labels (may not exist in repo)');
+      console.log('   ⚠️ Could not add labels');
     }
   }
 

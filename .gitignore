@@ -25,6 +25,13 @@ yarn-error.log*
 .env.local
 .env.*.local
 
+# GitHub App Private Keys
+*.pem
+*.private-key.pem
+
+# Vercel
+.vercel
+
 # Test coverage
 coverage/
 

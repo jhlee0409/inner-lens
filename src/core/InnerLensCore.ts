@@ -648,6 +648,9 @@ export class InnerLensCore {
     this.render();
 
     try {
+      // Parse owner/repo from repository string (e.g., "owner/repo")
+      const [owner, repo] = (this.config.repository || '').split('/');
+
       const payload: BugReportPayload = {
         description: this.config.maskSensitiveData
           ? maskSensitiveData(this.description)
@@ -656,6 +659,10 @@ export class InnerLensCore {
         url: typeof window !== 'undefined' ? window.location.href : '',
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
         timestamp: Date.now(),
+        // Centralized mode: send owner/repo directly
+        owner: owner || undefined,
+        repo: repo || undefined,
+        // Legacy: keep metadata for backwards compatibility
         metadata: {
           repository: this.config.repository,
           labels: this.config.labels,
