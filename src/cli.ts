@@ -1725,13 +1725,21 @@ function generateReusableWorkflow(
   config: ProviderConfig
 ): string {
   return `# inner-lens - AI-Powered Bug Analysis
-# This workflow triggers when issues with 'inner-lens' label are created
+# Triggers on issue creation with 'inner-lens' label
+# Use workflow_dispatch to manually re-analyze existing issues
 
 name: inner-lens Analysis
 
 on:
   issues:
-    types: [opened, labeled]
+    types: [opened]
+
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to analyze'
+        required: true
+        type: number
 
 jobs:
   analyze:
@@ -1753,12 +1761,20 @@ function generateEjectedWorkflow(
 ): string {
   return `# inner-lens - AI-Powered Bug Analysis (Ejected)
 # This is a standalone workflow with full analysis logic embedded
+# Use workflow_dispatch to manually re-analyze existing issues
 
 name: inner-lens Analysis
 
 on:
   issues:
-    types: [opened, labeled]
+    types: [opened]
+
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to analyze'
+        required: true
+        type: number
 
 env:
   AI_PROVIDER: '${provider}'

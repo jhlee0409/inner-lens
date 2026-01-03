@@ -1,50 +1,90 @@
 # Trigger workflow for inner-lens AI Analysis
 #
-# SIMPLE RULE: Only triggers when 'inner-lens' label is added.
-# This prevents duplicate runs - one event, one trigger, one analysis.
+# Two trigger modes:
+# 1. Automatic: When issue is created with 'inner-lens' label
+# 2. Manual: workflow_dispatch for re-analyzing existing issues
 
 name: Analyze Issues
 
 on:
   issues:
-    types: [labeled]  # Only 'labeled' event - no duplicates possible
+    types: [opened]  # Only on issue creation - single event, no duplicates
+
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to analyze'
+        required: true
+        type: number
+
+# Prevent duplicate runs for the same issue
+concurrency:
+  group: analyze-issue-${{ github.event.issue.number || inputs.issue_number }}
+  cancel-in-progress: true
 
 jobs:
   check:
     name: Check Conditions
-    # Only run when 'inner-lens' label is added
-    if: github.event.label.name == 'inner-lens'
     runs-on: ubuntu-latest
     outputs:
       should_run: ${{ steps.check.outputs.result }}
+      issue_number: ${{ steps.check.outputs.issue_number }}
     steps:
-      - name: Check if already analyzed
+      - name: Check if should analyze
         id: check
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           script: |
-            const labels = context.payload.issue.labels.map(l => l.name);
+            // Get issue number from event or input
+            const issueNumber = context.payload.issue?.number || ${{ inputs.issue_number || 0 }};
 
-            // Skip if already analyzed
-            if (labels.includes('status:analyzed')) {
-              console.log('⏭️ SKIP: Already analyzed');
+            if (!issueNumber) {
+              console.log('❌ No issue number provided');
               return 'skip';
             }
 
-            // Check for existing analysis comment
-            const { data: comments } = await github.rest.issues.listComments({
+            // Fetch issue details
+            const { data: issue } = await github.rest.issues.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.payload.issue.number,
-              per_page: 100
+              issue_number: issueNumber
             });
 
-            if (comments.some(c => c.body?.includes('## 🔍 inner-lens Analysis'))) {
-              console.log('⏭️ SKIP: Analysis comment already exists');
-              return 'skip';
+            const labels = issue.labels.map(l => typeof l === 'string' ? l : l.name);
+
+            // For opened event: check if inner-lens label exists
+            if (context.eventName === 'issues') {
+              if (!labels.includes('inner-lens')) {
+                console.log('⏭️ SKIP: No inner-lens label');
+                return 'skip';
+              }
             }
 
-            console.log('✅ Ready to analyze');
+            // Skip if already analyzed (unless manual trigger)
+            if (context.eventName !== 'workflow_dispatch') {
+              if (labels.includes('status:analyzed')) {
+                console.log('⏭️ SKIP: Already analyzed');
+                return 'skip';
+              }
+            }
+
+            // Check for existing analysis comment (skip for manual re-run)
+            if (context.eventName !== 'workflow_dispatch') {
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                per_page: 100
+              });
+
+              if (comments.some(c => c.body?.includes('## 🔍 inner-lens Analysis'))) {
+                console.log('⏭️ SKIP: Analysis comment already exists');
+                return 'skip';
+              }
+            }
+
+            console.log(`✅ Ready to analyze issue #${issueNumber}`);
+            core.setOutput('issue_number', issueNumber);
             return 'run';
           result-encoding: string
 

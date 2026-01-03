@@ -5,7 +5,7 @@
 # - Chain-of-Thought prompt engineering
 # - Retry logic with exponential backoff
 # - Automatic issue labeling
-# - Concurrency control to prevent duplicate analysis
+# - Concurrency control to prevent duplicate analysis (via concurrency setting)
 #
 # Usage in consumer repo:
 #   uses: jhlee0409/inner-lens/.github/workflows/analysis-engine.yml@v1
@@ -66,6 +66,11 @@ jobs:
     name: Analyze Bug Report
     runs-on: ubuntu-latest
     timeout-minutes: 10
+
+    # Prevent duplicate analysis for the same issue
+    concurrency:
+      group: inner-lens-analysis-${{ github.repository }}-${{ github.event.issue.number }}
+      cancel-in-progress: true  # Cancel previous runs
 
     permissions:
       issues: write

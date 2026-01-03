@@ -107,7 +107,14 @@ name: inner-lens Analysis
 
 on:
   issues:
-    types: [opened, labeled]
+    types: [opened]  # Triggers once on issue creation
+
+  workflow_dispatch:  # Manual trigger for existing issues
+    inputs:
+      issue_number:
+        description: 'Issue number to analyze'
+        required: true
+        type: number
 
 jobs:
   analyze:
