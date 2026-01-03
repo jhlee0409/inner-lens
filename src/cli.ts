@@ -907,7 +907,9 @@ program
         : 'anthropic';
       model = PROVIDER_CONFIGS[provider].defaultModel;
       repository = detectedRepo || 'owner/repo';
-      [owner, repo] = repository.split('/');
+      const [parsedOwner, parsedRepo] = repository.split('/');
+      owner = parsedOwner || '';
+      repo = parsedRepo || '';
       const detected = await detectFramework(cwd);
       framework = detected || 'nextjs-app';
       deploymentMode = 'hosted';
@@ -976,7 +978,9 @@ program
         }
 
         repository = inputRepo;
-        [owner, repo] = repository.split('/');
+        const [parsedOwner2, parsedRepo2] = repository.split('/');
+        owner = parsedOwner2 || '';
+        repo = parsedRepo2 || '';
 
       } else {
         // Self-hosted mode: full setup with GitHub token
@@ -1147,7 +1151,9 @@ program
         }
 
         repository = inputRepo;
-        [owner, repo] = repository.split('/');
+        const [parsedOwner3, parsedRepo3] = repository.split('/');
+        owner = parsedOwner3 || '';
+        repo = parsedRepo3 || '';
       }
       } // End of self-hosted block
 
