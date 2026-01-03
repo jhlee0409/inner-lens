@@ -1,13 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "name": "inner-lens-api",
-  "buildCommand": "",
-  "outputDirectory": "",
-  "framework": null,
   "functions": {
     "api/**/*.ts": {
-      "runtime": "@vercel/node@3.0.0",
       "maxDuration": 30
     }
   },
