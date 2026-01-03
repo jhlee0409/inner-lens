@@ -15,7 +15,7 @@ inner-lens captures console logs, network requests, and session replays when use
 - **AI-Powered Analysis** — Anthropic Claude, OpenAI GPT-4, or Google Gemini
 - **Automatic Data Capture** — Console logs, network errors, DOM state
 - **Security-First** — PII, API keys, and tokens are masked automatically
-- **Multi-Language** — Analysis in 8 languages (EN, KO, JA, ZH, ES, DE, FR, PT)
+- **Multi-Language** — Analysis in 5 languages (EN, KO, JA, ZH, ES)
 - **Zero External CSS** — Inline styles prevent conflicts with your design
 
 ---
@@ -133,9 +133,32 @@ Add your API key to **Settings → Secrets and variables → Actions**.
 
 | Provider | Default Model | API Key Secret |
 |----------|---------------|----------------|
-| Anthropic | `claude-sonnet-4-5` | `ANTHROPIC_API_KEY` |
-| OpenAI | `gpt-4.1` | `OPENAI_API_KEY` |
+| Anthropic | `claude-sonnet-4-5-20250929` | `ANTHROPIC_API_KEY` |
+| OpenAI | `gpt-5.2` | `OPENAI_API_KEY` |
 | Google | `gemini-2.0-flash` | `GOOGLE_GENERATIVE_AI_API_KEY` |
+
+<details>
+<summary>All Supported Models (January 2026)</summary>
+
+**Anthropic Claude:**
+- Claude 4.5: `claude-opus-4-5-20251124`, `claude-sonnet-4-5-20250929`
+- Claude 4: `claude-opus-4-20250514`, `claude-sonnet-4-20250514`
+- Claude 3.7: `claude-3-7-sonnet-20250219`
+- Claude 3.5: `claude-3-5-sonnet-20241022`, `claude-3-5-haiku-20241022`
+
+**OpenAI GPT:**
+- GPT-5.2: `gpt-5.2`, `gpt-5.2-pro`, `gpt-5.2-chat-latest`
+- GPT-5: `gpt-5.1`, `gpt-5`, `gpt-5-mini`, `gpt-5-nano`
+- GPT-4: `gpt-4.1`, `gpt-4o`, `gpt-4o-mini`
+- Reasoning: `o4-mini`, `o3`, `o3-mini`
+
+**Google Gemini:**
+- Gemini 3 (Preview): `gemini-3-pro`, `gemini-3-flash`
+- Gemini 2.5: `gemini-2.5-flash`, `gemini-2.5-flash-lite`
+- Gemini 2.0: `gemini-2.0-flash`, `gemini-2.0-flash-lite`
+- Gemini 1.5: `gemini-1.5-pro`, `gemini-1.5-flash`
+
+</details>
 
 ### Workflow Options
 
@@ -299,8 +322,10 @@ wrangler deploy
 | Option | Default | Description |
 |--------|---------|-------------|
 | `buttonText` | `Report a bug` | Button tooltip |
-| `dialogTitle` | `Report an Issue` | Dialog title |
-| `submitText` | `Submit Report` | Submit button text |
+| `dialogTitle` | `Let us know what happened` | Dialog title |
+| `submitText` | `Send Report` | Submit button text |
+| `cancelText` | `Close` | Cancel button text |
+| `successMessage` | `Got it!` | Success message title |
 
 ### Callbacks
 

@@ -341,10 +341,10 @@ describe('QA Issue Flow Integration Tests', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should handle report with maximum 20 logs', async () => {
+    it('should handle report with maximum 50 logs', async () => {
       const manyLogsReport: BugReportPayload = {
         ...validQAReport,
-        logs: Array.from({ length: 30 }, (_, i) => ({
+        logs: Array.from({ length: 60 }, (_, i) => ({
           level: 'error' as const,
           message: `Error ${i + 1}`,
           timestamp: Date.now() - i * 1000,
@@ -354,9 +354,9 @@ describe('QA Issue Flow Integration Tests', () => {
       await createGitHubIssue(manyLogsReport, mockConfig);
 
       const callArgs = mockCreate.mock.calls[0]![0];
-      // Should only include last 20 logs (as per server.ts:68)
+      // Should only include last 50 logs (MAX_LOG_ENTRIES)
       const logMatches = callArgs.body.match(/\[ERROR\]/g);
-      expect(logMatches!.length).toBeLessThanOrEqual(20);
+      expect(logMatches!.length).toBeLessThanOrEqual(50);
     });
 
     it('should handle report with empty URL', async () => {

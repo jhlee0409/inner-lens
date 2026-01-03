@@ -9,6 +9,7 @@
 import { Octokit } from '@octokit/rest';
 import { z } from 'zod';
 import type { BugReportPayload, BugReportResponse, GitHubIssuePayload } from './types';
+import { MAX_LOG_ENTRIES } from './types';
 import { maskSensitiveData } from './utils/masking';
 
 /**
@@ -106,7 +107,7 @@ export async function createGitHubIssue(
 
   // Format logs for the issue body
   const formattedLogs = payload.logs
-    .slice(-20) // Limit to last 20 logs
+    .slice(-MAX_LOG_ENTRIES)
     .map((log) => {
       const timestamp = new Date(log.timestamp).toISOString();
       return `[${timestamp}] [${log.level.toUpperCase()}] ${maskSensitiveData(log.message)}${
