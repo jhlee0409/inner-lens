@@ -312,3 +312,38 @@ export interface GitHubIssuePayload {
   labels: string[];
   repository: string;
 }
+
+// ============================================
+// Shared Constants
+// ============================================
+
+/**
+ * Maximum number of log entries to keep
+ * Used consistently across Core, Hosted API, and Self-hosted server
+ */
+export const MAX_LOG_ENTRIES = 50;
+
+// ============================================
+// Hosted API Types (Centralized Mode)
+// ============================================
+
+/**
+ * Bug report payload for Hosted API (centralized mode)
+ * Extends base payload with required owner/repo fields
+ */
+export interface HostedBugReportPayload {
+  // Required: Repository info
+  owner: string;
+  repo: string;
+
+  // Required: Bug details
+  description: string;
+
+  // Optional: Additional context
+  logs?: LogEntry[];
+  url?: string;
+  userAgent?: string;
+  timestamp?: number;
+  metadata?: Record<string, unknown>;
+  sessionReplay?: string; // Base64 encoded rrweb data
+}

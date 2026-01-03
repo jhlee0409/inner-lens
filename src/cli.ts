@@ -200,30 +200,42 @@ const PROVIDER_CONFIGS: Record<AIProvider, ProviderConfig> = {
     name: 'Anthropic (Claude)',
     defaultModel: 'claude-sonnet-4-5-20250929',
     modelSuggestions: [
-      // Latest (2026)
-      'claude-sonnet-4-5-20250929',
+      // Claude 4.5 series (Latest - 2026)
       'claude-opus-4-5-20251124',
-      'claude-haiku-4-5-20251015',
-      // Previous generation
-      'claude-sonnet-4-20250514',
+      'claude-sonnet-4-5-20250929',
+      // Claude 4 series
       'claude-opus-4-20250514',
+      'claude-sonnet-4-20250514',
+      // Claude 3.7 series
+      'claude-3-7-sonnet-20250219',
+      // Claude 3.5 series
+      'claude-3-5-sonnet-20241022',
+      'claude-3-5-haiku-20241022',
     ],
     secretName: 'ANTHROPIC_API_KEY',
     envVar: 'ANTHROPIC_API_KEY',
   },
   openai: {
     name: 'OpenAI (GPT)',
-    defaultModel: 'gpt-4.1',
+    defaultModel: 'gpt-5.2',
     modelSuggestions: [
-      // Latest (2026)
+      // GPT-5.2 series (Latest - 2026)
+      'gpt-5.2',
+      'gpt-5.2-pro',
+      'gpt-5.2-chat-latest',
+      // GPT-5 series
+      'gpt-5.1',
+      'gpt-5',
+      'gpt-5-mini',
+      'gpt-5-nano',
+      // GPT-4 series
       'gpt-4.1',
-      'gpt-4.1-mini',
-      'gpt-4.1-nano',
-      'o3',
-      'o4-mini',
-      // Previous generation
       'gpt-4o',
       'gpt-4o-mini',
+      // Reasoning models
+      'o4-mini',
+      'o3',
+      'o3-mini',
     ],
     secretName: 'OPENAI_API_KEY',
     envVar: 'OPENAI_API_KEY',
@@ -232,14 +244,18 @@ const PROVIDER_CONFIGS: Record<AIProvider, ProviderConfig> = {
     name: 'Google (Gemini)',
     defaultModel: 'gemini-2.0-flash',
     modelSuggestions: [
-      // Latest (2026)
-      'gemini-3-flash',
+      // Gemini 3 series (Latest - 2026, Preview)
       'gemini-3-pro',
+      'gemini-3-flash',
+      // Gemini 2.5 series
+      'gemini-2.5-flash',
       'gemini-2.5-flash-lite',
-      'gemini-2.5-pro',
-      // Previous generation
+      // Gemini 2.0 series
       'gemini-2.0-flash',
       'gemini-2.0-flash-lite',
+      // Gemini 1.5 series
+      'gemini-1.5-pro',
+      'gemini-1.5-flash',
     ],
     secretName: 'GOOGLE_GENERATIVE_AI_API_KEY',
     envVar: 'GOOGLE_GENERATIVE_AI_API_KEY',

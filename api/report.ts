@@ -7,8 +7,10 @@
  */
 
 import { App } from '@octokit/app';
-import { Octokit } from '@octokit/rest';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { HostedBugReportPayload } from '../src/types';
+import { MAX_LOG_ENTRIES } from '../src/types';
+import { maskSensitiveData } from '../src/utils/masking';
 
 // Type for the Octokit instance returned by the App
 type InstallationOctokit = Awaited<ReturnType<App['getInstallationOctokit']>>;
@@ -41,45 +43,8 @@ const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 10; // requests per minute per IP
 const RATE_WINDOW = 60 * 1000; // 1 minute
 
-interface BugReportPayload {
-  // Required: Repository info
-  owner: string;
-  repo: string;
-
-  // Required: Bug details
-  description: string;
-
-  // Optional: Additional context
-  logs?: Array<{
-    level: 'error' | 'warn' | 'info' | 'log';
-    message: string;
-    timestamp: number;
-    stack?: string;
-  }>;
-  url?: string;
-  userAgent?: string;
-  timestamp?: number;
-  metadata?: Record<string, unknown>;
-  sessionReplay?: string; // Base64 encoded rrweb data
-}
-
-// Sensitive data masking patterns
-const MASKING_PATTERNS = [
-  { pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, replacement: '[EMAIL]' },
-  { pattern: /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, replacement: '[PHONE]' },
-  { pattern: /\b\d{3}-\d{2}-\d{4}\b/g, replacement: '[SSN]' },
-  { pattern: /\b(?:sk-|pk_live_|pk_test_|sk_live_|sk_test_)[a-zA-Z0-9]{20,}\b/g, replacement: '[API_KEY]' },
-  { pattern: /\bBearer\s+[a-zA-Z0-9._-]+\b/gi, replacement: 'Bearer [TOKEN]' },
-  { pattern: /\beyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*/g, replacement: '[JWT]' },
-];
-
-function maskSensitiveData(text: string): string {
-  let masked = text;
-  for (const { pattern, replacement } of MASKING_PATTERNS) {
-    masked = masked.replace(pattern, replacement);
-  }
-  return masked;
-}
+// Note: BugReportPayload type is now imported from '../src/types' as HostedBugReportPayload
+// Note: maskSensitiveData is now imported from '../src/utils/masking' for consistency
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
@@ -133,7 +98,7 @@ async function getInstallationOctokit(owner: string, repo: string): Promise<Inst
   }
 }
 
-function formatIssueBody(payload: BugReportPayload): string {
+function formatIssueBody(payload: HostedBugReportPayload): string {
   const maskedDescription = maskSensitiveData(payload.description);
   const maskedLogs =
     payload.logs
@@ -142,7 +107,7 @@ function formatIssueBody(payload: BugReportPayload): string {
         message: maskSensitiveData(log.message),
         stack: log.stack ? maskSensitiveData(log.stack) : undefined,
       }))
-      .slice(-50) || []; // Keep last 50 logs
+      .slice(-MAX_LOG_ENTRIES) || []; // Keep last MAX_LOG_ENTRIES logs
 
   let body = `## Bug Report
 
@@ -215,7 +180,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const payload = req.body as BugReportPayload;
+    const payload = req.body as HostedBugReportPayload;
 
     // Validate required fields
     if (!payload.owner || !payload.repo) {
