@@ -3008,37 +3008,50 @@ async function analyzeIssue(): Promise<void> {
   const uniqueLabels = [...new Set(labelsToAdd)];
 
   // Label color definitions (GitHub-style hex colors without #)
+  // Design principles:
+  // - Type: distinct primary colors
+  // - Severity: traffic light (red→orange→yellow→green)
+  // - Area: each has unique, meaningful color
+  // - Status: professional blues and purples
+  // - AI: trust indicator (blue=verified, gray=unverified)
   const labelColors: Record<string, { color: string; description: string }> = {
-    // Type labels - Blue family
-    'type:bug': { color: 'd73a4a', description: 'Something isn\'t working' },
-    'type:enhancement': { color: 'a2eeef', description: 'New feature or request' },
-    'type:invalid': { color: 'e4e669', description: 'Invalid or incomplete report' },
-    // Severity labels - Red to Green gradient
-    'severity:critical': { color: 'b60205', description: 'Critical: System down or data loss' },
-    'severity:high': { color: 'd93f0b', description: 'High: Major functionality broken' },
-    'severity:medium': { color: 'fbca04', description: 'Medium: Minor functionality issue' },
-    'severity:low': { color: '0e8a16', description: 'Low: Cosmetic or minor issue' },
-    // Area labels - Purple family
-    'area:runtime': { color: '5319e7', description: 'Runtime errors and crashes' },
-    'area:logic': { color: '7057ff', description: 'Logic errors and wrong behavior' },
-    'area:performance': { color: 'd4c5f9', description: 'Performance issues' },
-    'area:security': { color: 'b60205', description: 'Security vulnerabilities' },
-    'area:ui-ux': { color: 'c5def5', description: 'UI/UX issues' },
-    'area:config': { color: 'bfdadc', description: 'Configuration issues' },
-    // Status labels - Gray family
-    'status:analyzed': { color: '0052cc', description: 'AI analysis complete' },
-    'status:needs-info': { color: 'd876e3', description: 'More information needed' },
-    'status:needs-repro': { color: 'e99695', description: 'Reproduction steps needed' },
-    // AI labels - Teal family
-    'ai:verified': { color: '1d76db', description: 'Bug verified in code by AI' },
-    'ai:unverified': { color: 'c2e0c6', description: 'Needs manual verification' },
+    // Type labels - Primary colors for instant recognition
+    'type:bug': { color: 'FF0000', description: 'Something isn\'t working' },           // Pure red - danger
+    'type:enhancement': { color: '0066FF', description: 'New feature or request' },     // Blue - new idea
+    'type:invalid': { color: 'CCCCCC', description: 'Invalid or incomplete report' },   // Gray - dismissed
+
+    // Severity labels - Traffic light system (instantly recognizable)
+    'severity:critical': { color: '8B0000', description: 'Critical: System down or data loss' },  // Dark red - emergency
+    'severity:high': { color: 'FF4500', description: 'High: Major functionality broken' },        // Orange red - urgent
+    'severity:medium': { color: 'FFA500', description: 'Medium: Minor functionality issue' },     // Orange - attention
+    'severity:low': { color: '32CD32', description: 'Low: Cosmetic or minor issue' },             // Lime green - minor
+
+    // Area labels - Unique colors representing the domain
+    'area:runtime': { color: '8B008B', description: 'Runtime errors and crashes' },      // Dark magenta - runtime crash
+    'area:logic': { color: '9932CC', description: 'Logic errors and wrong behavior' },   // Purple - logic/brain
+    'area:performance': { color: 'FF8C00', description: 'Performance issues' },          // Dark orange - speed warning
+    'area:security': { color: 'DC143C', description: 'Security vulnerabilities' },       // Crimson - security alert
+    'area:ui-ux': { color: '1E90FF', description: 'UI/UX issues' },                       // Dodger blue - UI/design
+    'area:config': { color: '708090', description: 'Configuration issues' },             // Slate gray - settings/config
+
+    // Status labels - Progress indicator colors
+    'status:analyzed': { color: '006400', description: 'AI analysis complete' },         // Dark green - done
+    'status:needs-info': { color: 'FF69B4', description: 'More information needed' },    // Hot pink - needs attention
+    'status:needs-repro': { color: 'FFD700', description: 'Reproduction steps needed' }, // Gold - warning/wait
+
+    // AI verification labels - Trust indicator
+    'ai:verified': { color: '228B22', description: 'Bug verified in code by AI' },       // Forest green - confirmed
+    'ai:unverified': { color: 'A9A9A9', description: 'Needs manual verification' },      // Dark gray - uncertain
+
     // Resolution labels
-    'resolution:not-a-bug': { color: 'ffffff', description: 'Not a bug - working as intended' },
-    // Kind labels
-    'kind:feature': { color: '006b75', description: 'Feature request' },
-    'kind:improvement': { color: '84b6eb', description: 'Improvement suggestion' },
-    // Multiple causes
-    'multi-cause': { color: 'f9d0c4', description: 'Multiple root causes identified' },
+    'resolution:not-a-bug': { color: 'E0E0E0', description: 'Not a bug - working as intended' },  // Light gray - closed
+
+    // Kind labels - Feature types
+    'kind:feature': { color: '00CED1', description: 'Feature request' },                 // Dark turquoise - new feature
+    'kind:improvement': { color: '20B2AA', description: 'Improvement suggestion' },      // Light sea green - enhance
+
+    // Multiple causes indicator
+    'multi-cause': { color: 'FF6347', description: 'Multiple root causes identified' }, // Tomato - complex issue
   };
 
   // Ensure labels exist with correct colors
