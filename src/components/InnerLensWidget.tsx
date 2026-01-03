@@ -72,7 +72,7 @@ type SubmissionState = 'idle' | 'submitting' | 'success' | 'error';
 export function InnerLensWidget({
   endpoint = '/api/inner-lens/report',
   repository,
-  labels = ['bug', 'inner-lens'],
+  labels = ['inner-lens'],
   captureConsoleLogs = true,
   maxLogEntries = 50,
   maskSensitiveData: enableMasking = true,

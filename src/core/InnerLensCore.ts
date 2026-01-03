@@ -26,7 +26,7 @@ export interface InnerLensCoreConfig {
 
   /**
    * Custom labels to add to created issues
-   * @default ['bug', 'inner-lens']
+   * @default ['inner-lens']
    */
   labels?: string[];
 
@@ -210,7 +210,7 @@ export class InnerLensCore {
 
     this.config = {
       endpoint: '/api/inner-lens/report',
-      labels: ['bug', 'inner-lens'],
+      labels: ['inner-lens'],
       captureConsoleLogs: true,
       maxLogEntries: 50,
       maskSensitiveData: true,

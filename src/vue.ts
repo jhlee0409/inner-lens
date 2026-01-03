@@ -126,7 +126,7 @@ export const InnerLensWidget = defineComponent({
     },
     labels: {
       type: Array as PropType<string[]>,
-      default: () => ['bug', 'inner-lens'],
+      default: () => ['inner-lens'],
     },
     captureConsoleLogs: {
       type: Boolean,

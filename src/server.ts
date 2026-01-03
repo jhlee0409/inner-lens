@@ -147,7 +147,7 @@ ${formattedLogs || 'No logs captured'}
       title,
       body: issueBody,
       labels: [
-        ...(config.defaultLabels ?? ['bug', 'inner-lens']),
+        ...(config.defaultLabels ?? ['inner-lens']),
         ...((payload.metadata as { labels?: string[] } | undefined)?.labels ?? []),
       ],
     });

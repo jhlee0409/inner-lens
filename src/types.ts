@@ -23,7 +23,7 @@ export interface InnerLensConfig {
 
   /**
    * Custom labels to add to created issues
-   * @default ['bug', 'inner-lens']
+   * @default ['inner-lens']
    */
   labels?: string[];
 
