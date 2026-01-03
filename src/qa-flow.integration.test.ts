@@ -247,7 +247,7 @@ describe('QA Issue Flow Integration Tests', () => {
 
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: expect.stringMatching(/^\[Bug Report\] .{1,80}\.\.\.$/),
+          title: expect.stringMatching(/^.{1,80}\.\.\.$/),
         })
       );
     });

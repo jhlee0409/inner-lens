@@ -136,7 +136,7 @@ ${formattedLogs || 'No logs captured'}
 *Awaiting AI analysis...*
 `;
 
-  const title = `[Bug Report] ${payload.description.slice(0, 80)}${
+  const title = `${payload.description.slice(0, 80)}${
     payload.description.length > 80 ? '...' : ''
   }`;
 
