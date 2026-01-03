@@ -1,0 +1,77 @@
+# Auto-update v1 tag when analysis-related files change
+#
+# This ensures users referencing @v1 always get the latest stable version
+# of the analysis workflow and scripts.
+#
+# Triggered files:
+#   - .github/workflows/analysis-engine.yml (workflow definition)
+#   - scripts/** (analysis scripts)
+#
+# NOT triggered by:
+#   - src/** (npm package)
+#   - api/** (Vercel deployment)
+#   - docs/**, README.md (documentation)
+
+name: Update v1 Tag
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/analysis-engine.yml'
+      - 'scripts/**'
+
+jobs:
+  update-tag:
+    name: Update v1 Tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Update v1 tag
+        run: |
+          # Get current commit info
+          COMMIT_SHA=$(git rev-parse HEAD)
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+
+          echo "📍 Updating v1 tag to: $COMMIT_SHA"
+          echo "📝 Commit: $COMMIT_MSG"
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Delete existing v1 tag (local and remote)
+          git tag -d v1 2>/dev/null || true
+          git push origin :refs/tags/v1 2>/dev/null || true
+
+          # Create new v1 tag pointing to current commit
+          git tag -a v1 -m "Latest stable release (auto-updated)
+
+          Points to: $COMMIT_SHA
+          Commit: $COMMIT_MSG
+          Updated: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          # Push new tag
+          git push origin v1
+
+          echo "✅ v1 tag updated successfully"
+
+      - name: Summary
+        run: |
+          echo "## v1 Tag Updated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The \`v1\` tag has been updated to point to the latest commit." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Changed Files" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          git diff-tree --no-commit-id --name-only -r HEAD >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Users referencing \`@v1\` will now get these changes." >> $GITHUB_STEP_SUMMARY
