@@ -893,6 +893,7 @@ program
     let repo: string = '';
     let provider: AIProvider;
     let model: string;
+    let language: string;
     let framework: Framework;
     let backendFramework: BackendFramework | null = null;
     let githubToken: string | null = null;
@@ -906,6 +907,7 @@ program
         ? options.provider as AIProvider
         : 'anthropic';
       model = PROVIDER_CONFIGS[provider].defaultModel;
+      language = 'en';
       repository = detectedRepo || 'owner/repo';
       const [parsedOwner, parsedRepo] = repository.split('/');
       owner = parsedOwner || '';
@@ -1284,6 +1286,29 @@ program
         model = selectedModel as string;
       }
 
+      // Language selection
+      const selectedLanguage = await p.select({
+        message: 'Analysis output language:',
+        options: [
+          { value: 'en', label: 'English' },
+          { value: 'ko', label: '한국어 (Korean)' },
+          { value: 'ja', label: '日本語 (Japanese)' },
+          { value: 'zh', label: '中文 (Chinese)' },
+          { value: 'es', label: 'Español (Spanish)' },
+          { value: 'de', label: 'Deutsch (German)' },
+          { value: 'fr', label: 'Français (French)' },
+          { value: 'pt', label: 'Português (Portuguese)' },
+        ],
+        initialValue: 'en',
+      });
+
+      if (p.isCancel(selectedLanguage)) {
+        p.cancel('Setup cancelled.');
+        process.exit(0);
+      }
+
+      language = selectedLanguage as string;
+
       // Backend setup only needed for self-hosted mode
       if (deploymentMode === 'self-hosted') {
         // Fullstack frameworks (Next.js, SvelteKit) have built-in API routes
@@ -1351,9 +1376,9 @@ program
     let workflowContent: string;
 
     if (options.eject) {
-      workflowContent = generateEjectedWorkflow(provider, model, providerConfig);
+      workflowContent = generateEjectedWorkflow(provider, model, language, providerConfig);
     } else {
-      workflowContent = generateReusableWorkflow(provider, model, providerConfig);
+      workflowContent = generateReusableWorkflow(provider, model, language, providerConfig);
     }
 
     await fs.writeFile(workflowPath, workflowContent);
@@ -1722,6 +1747,7 @@ program
 function generateReusableWorkflow(
   provider: AIProvider,
   model: string,
+  language: string,
   config: ProviderConfig
 ): string {
   return `# inner-lens - AI-Powered Bug Analysis
@@ -1748,6 +1774,7 @@ jobs:
     with:
       provider: '${provider}'
       model: '${model}'
+      language: '${language}'
     secrets:
       ${config.secretName}: \${{ secrets.${config.secretName} }}
 `;
@@ -1757,6 +1784,7 @@ jobs:
 function generateEjectedWorkflow(
   provider: AIProvider,
   model: string,
+  language: string,
   config: ProviderConfig
 ): string {
   return `# inner-lens - AI-Powered Bug Analysis (Ejected)
@@ -1779,6 +1807,7 @@ on:
 env:
   AI_PROVIDER: '${provider}'
   AI_MODEL: '${model}'
+  OUTPUT_LANGUAGE: '${language}'
 
 jobs:
   analyze:

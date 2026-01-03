@@ -122,6 +122,7 @@ jobs:
     uses: jhlee0409/inner-lens/.github/workflows/analysis-engine.yml@v1
     with:
       provider: 'anthropic'  # or 'openai', 'google'
+      language: 'en'         # en, ko, ja, zh, es, de, fr, pt
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
