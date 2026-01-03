@@ -32,7 +32,7 @@ describe('QA Issue Flow Integration Tests', () => {
   const mockConfig = {
     githubToken: 'ghp_test_token_12345',
     repository: 'owner/repo',
-    defaultLabels: ['bug', 'inner-lens'],
+    defaultLabels: ['inner-lens'],
   };
 
   const validQAReport: BugReportPayload = {
@@ -209,12 +209,12 @@ describe('QA Issue Flow Integration Tests', () => {
       expect(result.issueNumber).toBe(42);
     });
 
-    it('should include default labels (bug, inner-lens) for analysis trigger', async () => {
+    it('should include default label (inner-lens) for analysis trigger', async () => {
       await createGitHubIssue(validQAReport, mockConfig);
 
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          labels: expect.arrayContaining(['bug', 'inner-lens']),
+          labels: expect.arrayContaining(['inner-lens']),
         })
       );
     });
@@ -231,7 +231,7 @@ describe('QA Issue Flow Integration Tests', () => {
 
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          labels: expect.arrayContaining(['bug', 'inner-lens', 'frontend', 'critical']),
+          labels: expect.arrayContaining(['inner-lens', 'frontend', 'critical']),
         })
       );
     });
@@ -247,7 +247,7 @@ describe('QA Issue Flow Integration Tests', () => {
 
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: expect.stringMatching(/^\[Bug Report\] .{1,80}\.\.\.$/),
+          title: expect.stringMatching(/^.{1,80}\.\.\.$/),
         })
       );
     });

@@ -7,7 +7,8 @@ import React, {
   useRef,
   type CSSProperties,
 } from 'react';
-import type { InnerLensConfig, LogEntry, BugReportPayload } from '../types';
+import type { InnerLensConfig, LogEntry, BugReportPayload, WidgetLanguage } from '../types';
+import { WIDGET_TEXTS } from '../types';
 import {
   initLogCapture,
   getCapturedLogs,
@@ -72,21 +73,22 @@ type SubmissionState = 'idle' | 'submitting' | 'success' | 'error';
 export function InnerLensWidget({
   endpoint = '/api/inner-lens/report',
   repository,
-  labels = ['bug', 'inner-lens'],
+  labels = ['inner-lens'],
   captureConsoleLogs = true,
   maxLogEntries = 50,
   maskSensitiveData: enableMasking = true,
   styles: styleConfig,
+  language = 'en',
   // Convenience options (map to styles)
   position,
   buttonColor,
-  // UI text customization
-  buttonText = 'Report a bug',
-  dialogTitle = 'Report an Issue',
-  dialogDescription = 'Describe the issue',
-  submitText = 'Submit Report',
-  cancelText = 'Cancel',
-  successMessage = 'Report Submitted',
+  // UI text customization (override i18n defaults)
+  buttonText,
+  dialogTitle,
+  dialogDescription,
+  submitText,
+  cancelText,
+  successMessage,
   // Callbacks
   onSuccess,
   onError,
@@ -96,6 +98,24 @@ export function InnerLensWidget({
   disabled = false,
   devOnly = true,
 }: InnerLensWidgetProps) {
+  // Get i18n texts with custom overrides
+  const texts = WIDGET_TEXTS[language] ?? WIDGET_TEXTS.en;
+  const t = {
+    buttonText: buttonText ?? texts.buttonText,
+    dialogTitle: dialogTitle ?? texts.dialogTitle,
+    dialogDescription: dialogDescription ?? texts.dialogDescription,
+    placeholder: texts.placeholder,
+    submitText: submitText ?? texts.submitText,
+    cancelText: cancelText ?? texts.cancelText,
+    successMessage: successMessage ?? texts.successMessage,
+    successDescription: texts.successDescription,
+    viewIssue: texts.viewIssue,
+    capturedLogs: texts.capturedLogs,
+    entry: texts.entry,
+    entries: texts.entries,
+    privacyNotice: texts.privacyNotice,
+    submitting: texts.submitting,
+  };
   const [isOpen, setIsOpen] = useState(false);
   const [description, setDescription] = useState('');
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -315,8 +335,8 @@ export function InnerLensWidget({
         style={buttonStyle}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        aria-label={buttonText}
-        title={buttonText}
+        aria-label={t.buttonText}
+        title={t.buttonText}
       >
         <BugIcon />
       </button>
@@ -331,7 +351,7 @@ export function InnerLensWidget({
             <CheckIcon />
           </div>
           <h3 style={{ ...styles.headerTitle, marginBottom: '8px' }}>
-            {successMessage}
+            {t.successMessage}
           </h3>
           <p
             style={{
@@ -340,7 +360,7 @@ export function InnerLensWidget({
               marginBottom: '16px',
             }}
           >
-            Thank you for your feedback! Our team will look into this.
+            {t.successDescription}
           </p>
           {issueUrl && (
             <a
@@ -353,7 +373,7 @@ export function InnerLensWidget({
                 fontSize: '14px',
               }}
             >
-              View Issue on GitHub
+              {t.viewIssue}
             </a>
           )}
         </div>
@@ -369,14 +389,14 @@ export function InnerLensWidget({
       <>
         <div style={styles.content}>
           <label style={styles.label} htmlFor="inner-lens-description">
-            {dialogDescription}
+            {t.dialogDescription}
           </label>
           <textarea
             ref={textareaRef}
             id="inner-lens-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="What went wrong? Please be as specific as possible..."
+            placeholder={t.placeholder}
             style={textareaStyle}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
@@ -385,9 +405,9 @@ export function InnerLensWidget({
           {logs.length > 0 && (
             <div style={styles.logPreview}>
               <div style={styles.logPreviewHeader}>
-                <span style={styles.logPreviewTitle}>Captured Logs</span>
+                <span style={styles.logPreviewTitle}>{t.capturedLogs}</span>
                 <span style={styles.logCount}>
-                  {logs.length} {logs.length === 1 ? 'entry' : 'entries'}
+                  {logs.length} {logs.length === 1 ? t.entry : t.entries}
                 </span>
               </div>
               <div style={styles.logList}>
@@ -412,9 +432,7 @@ export function InnerLensWidget({
           )}
 
           <div style={styles.privacyNotice}>
-            <strong>Privacy Notice:</strong> Sensitive data (emails, API keys,
-            tokens) is automatically masked before submission. Your report will
-            be processed by AI for analysis.
+            {t.privacyNotice}
           </div>
 
           {submissionState === 'error' && errorMessage && (
@@ -428,7 +446,7 @@ export function InnerLensWidget({
             onClick={handleClose}
             style={styles.cancelButton}
           >
-            {cancelText}
+            {t.cancelText}
           </button>
           <button
             type="button"
@@ -452,11 +470,11 @@ export function InnerLensWidget({
                 role="status"
                 aria-live="polite"
               >
-                <span style={styles.spinner} aria-hidden="true" />
-                Submitting...
+                <span className="inner-lens-spinner" aria-hidden="true" />
+                {t.submitting}
               </span>
             ) : (
-              submitText
+              t.submitText
             )}
           </button>
         </div>
@@ -483,7 +501,7 @@ export function InnerLensWidget({
           <div ref={dialogRef} style={styles.dialog} onClick={(e) => e.stopPropagation()}>
             <div style={styles.header}>
               <h2 id="inner-lens-title" style={styles.headerTitle}>
-                {dialogTitle}
+                {t.dialogTitle}
               </h2>
               <button
                 type="button"

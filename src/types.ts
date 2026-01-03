@@ -6,6 +6,117 @@ import type { ReactNode } from 'react';
 export type AIProvider = 'anthropic' | 'openai' | 'google';
 
 /**
+ * Supported languages for widget UI
+ */
+export type WidgetLanguage = 'en' | 'ko' | 'ja' | 'zh' | 'es';
+
+/**
+ * Widget UI text strings for i18n
+ */
+export interface WidgetTexts {
+  buttonText: string;
+  dialogTitle: string;
+  dialogDescription: string;
+  placeholder: string;
+  submitText: string;
+  cancelText: string;
+  successMessage: string;
+  successDescription: string;
+  viewIssue: string;
+  capturedLogs: string;
+  entry: string;
+  entries: string;
+  privacyNotice: string;
+  submitting: string;
+}
+
+/**
+ * i18n text definitions for all supported languages
+ */
+export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
+  en: {
+    buttonText: 'Report a bug',
+    dialogTitle: 'Report an Issue',
+    dialogDescription: 'Describe the issue',
+    placeholder: 'What went wrong? Please be as specific as possible...',
+    submitText: 'Submit Report',
+    cancelText: 'Cancel',
+    successMessage: 'Report Submitted',
+    successDescription: 'Thank you for your feedback! Our team will look into this.',
+    viewIssue: 'View Issue on GitHub',
+    capturedLogs: 'Captured Logs',
+    entry: 'entry',
+    entries: 'entries',
+    privacyNotice: 'Privacy Notice: Sensitive data (emails, API keys, tokens) is automatically masked before submission.',
+    submitting: 'Submitting...',
+  },
+  ko: {
+    buttonText: '버그 신고',
+    dialogTitle: '이슈 신고',
+    dialogDescription: '이슈를 설명해 주세요',
+    placeholder: '무엇이 잘못되었나요? 최대한 구체적으로 설명해 주세요...',
+    submitText: '신고하기',
+    cancelText: '취소',
+    successMessage: '신고 완료',
+    successDescription: '피드백 감사합니다! 팀에서 확인하겠습니다.',
+    viewIssue: 'GitHub에서 이슈 보기',
+    capturedLogs: '캡처된 로그',
+    entry: '개',
+    entries: '개',
+    privacyNotice: '개인정보 보호: 이메일, API 키, 토큰 등 민감한 데이터는 제출 전 자동으로 마스킹됩니다.',
+    submitting: '제출 중...',
+  },
+  ja: {
+    buttonText: 'バグを報告',
+    dialogTitle: '問題を報告',
+    dialogDescription: '問題を説明してください',
+    placeholder: '何が問題でしたか？できるだけ具体的に説明してください...',
+    submitText: '報告する',
+    cancelText: 'キャンセル',
+    successMessage: '報告完了',
+    successDescription: 'フィードバックありがとうございます！チームが確認します。',
+    viewIssue: 'GitHubで確認',
+    capturedLogs: 'キャプチャされたログ',
+    entry: '件',
+    entries: '件',
+    privacyNotice: 'プライバシー: メール、APIキー、トークンなどの機密データは送信前に自動的にマスクされます。',
+    submitting: '送信中...',
+  },
+  zh: {
+    buttonText: '报告问题',
+    dialogTitle: '报告问题',
+    dialogDescription: '描述问题',
+    placeholder: '发生了什么问题？请尽可能具体地描述...',
+    submitText: '提交报告',
+    cancelText: '取消',
+    successMessage: '报告已提交',
+    successDescription: '感谢您的反馈！我们的团队会尽快处理。',
+    viewIssue: '在 GitHub 上查看',
+    capturedLogs: '捕获的日志',
+    entry: '条',
+    entries: '条',
+    privacyNotice: '隐私提示：邮箱、API密钥、令牌等敏感数据在提交前会自动脱敏。',
+    submitting: '提交中...',
+  },
+  es: {
+    buttonText: 'Reportar error',
+    dialogTitle: 'Reportar un problema',
+    dialogDescription: 'Describe el problema',
+    placeholder: '¿Qué salió mal? Por favor, sé lo más específico posible...',
+    submitText: 'Enviar reporte',
+    cancelText: 'Cancelar',
+    successMessage: 'Reporte enviado',
+    successDescription: '¡Gracias por tu feedback! Nuestro equipo lo revisará.',
+    viewIssue: 'Ver en GitHub',
+    capturedLogs: 'Logs capturados',
+    entry: 'entrada',
+    entries: 'entradas',
+    privacyNotice: 'Aviso de privacidad: Los datos sensibles (emails, claves API, tokens) se enmascaran automáticamente antes del envío.',
+    submitting: 'Enviando...',
+  },
+};
+
+/**
  * Configuration for the InnerLens Widget
  */
 export interface InnerLensConfig {
@@ -23,7 +134,7 @@ export interface InnerLensConfig {
 
   /**
    * Custom labels to add to created issues
-   * @default ['bug', 'inner-lens']
+   * @default ['inner-lens']
    */
   labels?: string[];
 
@@ -52,6 +163,12 @@ export interface InnerLensConfig {
     buttonColor?: string;
     buttonPosition?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
   };
+
+  /**
+   * Widget UI language
+   * @default 'en'
+   */
+  language?: WidgetLanguage;
 
   // ============================================
   // Convenience Options (top-level shortcuts)

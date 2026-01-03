@@ -39,6 +39,7 @@ export type {
   BugReportPayload,
   BugReportResponse,
   GitHubIssuePayload,
+  WidgetLanguage,
 } from './types';
 
 // Re-export utilities
@@ -126,7 +127,7 @@ export const InnerLensWidget = defineComponent({
     },
     labels: {
       type: Array as PropType<string[]>,
-      default: () => ['bug', 'inner-lens'],
+      default: () => ['inner-lens'],
     },
     captureConsoleLogs: {
       type: Boolean,
@@ -143,6 +144,10 @@ export const InnerLensWidget = defineComponent({
     styles: {
       type: Object as PropType<StyleConfig>,
       default: undefined,
+    },
+    language: {
+      type: String as PropType<'en' | 'ko' | 'ja' | 'zh' | 'es'>,
+      default: 'en',
     },
     disabled: {
       type: Boolean,
@@ -171,6 +176,7 @@ export const InnerLensWidget = defineComponent({
         maxLogEntries: props.maxLogEntries,
         maskSensitiveData: props.maskSensitiveData,
         styles: props.styles,
+        language: props.language,
         disabled: props.disabled,
         devOnly: props.devOnly,
         onSuccess: (url) => emit('success', url),
@@ -200,6 +206,7 @@ export const InnerLensWidget = defineComponent({
       () => [
         props.endpoint,
         props.repository,
+        props.language,
         props.disabled,
         props.devOnly,
         props.styles?.buttonColor,
