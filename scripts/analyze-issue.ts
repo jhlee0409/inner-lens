@@ -2902,55 +2902,104 @@ async function analyzeIssue(): Promise<void> {
   }
 
   // Step 7: Add labels based on analysis
+  // Label schema (inspired by Kubernetes, VS Code, React):
+  // - type:     Issue type (bug, enhancement, invalid)
+  // - severity: Urgency level (critical, high, medium, low)
+  // - area:     Affected area (runtime, logic, performance, security, ui-ux, config)
+  // - status:   Analysis state (analyzed, needs-info, needs-repro)
+  // - ai:       AI verification (verified, unverified)
   console.log('\n🏷️ Step 7: Adding labels...');
-  const labelsToAdd: string[] = ['analyzed']; // Always add 'analyzed' to prevent duplicate runs
+  const labelsToAdd: string[] = ['status:analyzed']; // Always add to prevent duplicate runs
+
+  // Category to area label mapping
+  const categoryToArea: Record<string, string> = {
+    runtime_error: 'area:runtime',
+    logic_error: 'area:logic',
+    performance: 'area:performance',
+    security: 'area:security',
+    ui_ux: 'area:ui-ux',
+    configuration: 'area:config',
+  };
 
   // Handle invalid reports
   if (!analysis.isValidReport) {
-    labelsToAdd.push('needs-more-info');
+    labelsToAdd.push('type:invalid', 'status:needs-info');
     console.log('   📋 Report marked as invalid/insufficient');
   } else {
     // Add labels based on report type
     switch (analysis.reportType) {
       case 'bug':
-        // Check all analyses for severity and verification
+        labelsToAdd.push('type:bug');
+
+        // Collect unique severities and areas from all analyses
+        const severities = new Set<string>();
+        const areas = new Set<string>();
+        let hasVerifiedBug = false;
+        let hasUnverifiedBug = false;
+
         for (const rootCauseAnalysis of analysis.analyses) {
-          if (rootCauseAnalysis.severity === 'critical' || rootCauseAnalysis.severity === 'high') {
-            labelsToAdd.push('priority:high');
+          // Add severity label (use highest severity found)
+          if (rootCauseAnalysis.severity && rootCauseAnalysis.severity !== 'none') {
+            severities.add(`severity:${rootCauseAnalysis.severity}`);
           }
+
+          // Add area label based on category
+          const areaLabel = categoryToArea[rootCauseAnalysis.category];
+          if (areaLabel) {
+            areas.add(areaLabel);
+          }
+
+          // Track verification status
           if (rootCauseAnalysis.codeVerification?.bugExistsInCode) {
-            labelsToAdd.push('ai:bug-confirmed');
-          }
-          if (rootCauseAnalysis.category === 'security') {
-            labelsToAdd.push('security');
+            hasVerifiedBug = true;
+          } else {
+            hasUnverifiedBug = true;
           }
         }
-        // Add confidence indicator based on highest confidence analysis
-        const maxConfidence = Math.max(...analysis.analyses.map(a => a.confidence));
-        if (maxConfidence >= 80) {
-          labelsToAdd.push('ai:high-confidence');
-        } else if (maxConfidence < 50) {
-          labelsToAdd.push('ai:low-confidence');
+
+        // Add highest severity (priority order: critical > high > medium > low)
+        const severityPriority = ['severity:critical', 'severity:high', 'severity:medium', 'severity:low'];
+        for (const sev of severityPriority) {
+          if (severities.has(sev)) {
+            labelsToAdd.push(sev);
+            break; // Only add highest severity
+          }
         }
-        // Add label indicating multiple root causes
+
+        // Add all unique areas (can have multiple affected areas)
+        areas.forEach(area => labelsToAdd.push(area));
+
+        // Add AI verification status
+        if (hasVerifiedBug) {
+          labelsToAdd.push('ai:verified');
+        } else if (hasUnverifiedBug) {
+          labelsToAdd.push('ai:unverified');
+        }
+
+        // Add label for multiple root causes
         if (analysis.analyses.length > 1) {
-          labelsToAdd.push('multiple-causes');
+          labelsToAdd.push('multi-cause');
         }
         break;
+
       case 'not_a_bug':
-        labelsToAdd.push('not-a-bug');
+        labelsToAdd.push('type:invalid', 'resolution:not-a-bug');
         break;
+
       case 'feature_request':
-        labelsToAdd.push('enhancement');
+        labelsToAdd.push('type:enhancement', 'kind:feature');
         break;
+
       case 'improvement':
-        labelsToAdd.push('enhancement');
+        labelsToAdd.push('type:enhancement', 'kind:improvement');
         break;
+
       case 'cannot_verify':
-        labelsToAdd.push('needs-reproduction');
+        labelsToAdd.push('type:bug', 'status:needs-repro', 'ai:unverified');
         break;
+
       case 'needs_info':
-        labelsToAdd.push('needs-more-info');
+        labelsToAdd.push('status:needs-info');
         break;
     }
   }
@@ -2958,7 +3007,74 @@ async function analyzeIssue(): Promise<void> {
   // Add labels (filter out duplicates)
   const uniqueLabels = [...new Set(labelsToAdd)];
 
+  // Label color definitions (GitHub-style hex colors without #)
+  const labelColors: Record<string, { color: string; description: string }> = {
+    // Type labels - Blue family
+    'type:bug': { color: 'd73a4a', description: 'Something isn\'t working' },
+    'type:enhancement': { color: 'a2eeef', description: 'New feature or request' },
+    'type:invalid': { color: 'e4e669', description: 'Invalid or incomplete report' },
+    // Severity labels - Red to Green gradient
+    'severity:critical': { color: 'b60205', description: 'Critical: System down or data loss' },
+    'severity:high': { color: 'd93f0b', description: 'High: Major functionality broken' },
+    'severity:medium': { color: 'fbca04', description: 'Medium: Minor functionality issue' },
+    'severity:low': { color: '0e8a16', description: 'Low: Cosmetic or minor issue' },
+    // Area labels - Purple family
+    'area:runtime': { color: '5319e7', description: 'Runtime errors and crashes' },
+    'area:logic': { color: '7057ff', description: 'Logic errors and wrong behavior' },
+    'area:performance': { color: 'd4c5f9', description: 'Performance issues' },
+    'area:security': { color: 'b60205', description: 'Security vulnerabilities' },
+    'area:ui-ux': { color: 'c5def5', description: 'UI/UX issues' },
+    'area:config': { color: 'bfdadc', description: 'Configuration issues' },
+    // Status labels - Gray family
+    'status:analyzed': { color: '0052cc', description: 'AI analysis complete' },
+    'status:needs-info': { color: 'd876e3', description: 'More information needed' },
+    'status:needs-repro': { color: 'e99695', description: 'Reproduction steps needed' },
+    // AI labels - Teal family
+    'ai:verified': { color: '1d76db', description: 'Bug verified in code by AI' },
+    'ai:unverified': { color: 'c2e0c6', description: 'Needs manual verification' },
+    // Resolution labels
+    'resolution:not-a-bug': { color: 'ffffff', description: 'Not a bug - working as intended' },
+    // Kind labels
+    'kind:feature': { color: '006b75', description: 'Feature request' },
+    'kind:improvement': { color: '84b6eb', description: 'Improvement suggestion' },
+    // Multiple causes
+    'multi-cause': { color: 'f9d0c4', description: 'Multiple root causes identified' },
+  };
+
+  // Ensure labels exist with correct colors
   if (uniqueLabels.length > 0) {
+    console.log('   Creating/updating labels if needed...');
+    for (const labelName of uniqueLabels) {
+      const labelDef = labelColors[labelName];
+      if (labelDef) {
+        try {
+          // Try to update the label (creates if doesn't exist)
+          await octokit.issues.updateLabel({
+            owner: config.owner,
+            repo: config.repo,
+            name: labelName,
+            color: labelDef.color,
+            description: labelDef.description,
+          });
+        } catch {
+          // Label doesn't exist, create it
+          try {
+            await octokit.issues.createLabel({
+              owner: config.owner,
+              repo: config.repo,
+              name: labelName,
+              color: labelDef.color,
+              description: labelDef.description,
+            });
+            console.log(`   Created label: ${labelName}`);
+          } catch {
+            // Label might already exist, ignore
+          }
+        }
+      }
+    }
+
+    // Add labels to the issue
     try {
       await octokit.issues.addLabels({
         owner: config.owner,
@@ -2966,9 +3082,9 @@ async function analyzeIssue(): Promise<void> {
         issue_number: config.issueNumber,
         labels: uniqueLabels,
       });
-      console.log(`   Added labels: ${uniqueLabels.join(', ')}`);
+      console.log(`   ✅ Added labels: ${uniqueLabels.join(', ')}`);
     } catch {
-      console.log('   ⚠️ Could not add labels (may not exist in repo)');
+      console.log('   ⚠️ Could not add labels');
     }
   }
 

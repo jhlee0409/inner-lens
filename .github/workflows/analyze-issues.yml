@@ -3,7 +3,7 @@
 #
 # Duplicate Prevention (2025):
 # - Checks if analysis comment already exists before running
-# - Skips if 'analyzed' label is present
+# - Skips if 'status:analyzed' label is present
 # - Uses concurrency control to prevent race conditions
 
 name: Analyze Issues
@@ -42,9 +42,9 @@ jobs:
               c.body && c.body.includes('## 🔍 inner-lens Analysis')
             );
 
-            // Check for 'analyzed' label
+            // Check for 'status:analyzed' label
             const labels = context.payload.issue.labels || [];
-            const hasAnalyzedLabel = labels.some(l => l.name === 'analyzed');
+            const hasAnalyzedLabel = labels.some(l => l.name === 'status:analyzed');
 
             core.setOutput('already_analyzed', hasAnalysis || hasAnalyzedLabel);
 
@@ -52,7 +52,7 @@ jobs:
               console.log('⏭️ Skipping: Analysis comment already exists');
             }
             if (hasAnalyzedLabel) {
-              console.log('⏭️ Skipping: Issue already has "analyzed" label');
+              console.log('⏭️ Skipping: Issue already has "status:analyzed" label');
             }
 
       - name: Check if analysis should run
