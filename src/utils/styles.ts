@@ -293,6 +293,7 @@ export const createStyles = (config?: StyleConfig) => {
 
     // Loading spinner
     spinner: {
+      display: 'inline-block',
       width: '16px',
       height: '16px',
       border: '2px solid #ffffff',
