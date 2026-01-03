@@ -9,10 +9,16 @@
  * <script type="module">
  *   import { InnerLens } from 'inner-lens/vanilla';
  *
+ *   // Hosted mode (default) - just specify repository
  *   const widget = new InnerLens({
- *     endpoint: '/api/bug-report',
  *     repository: 'owner/repo',
  *   });
+ *
+ *   // Self-hosted mode - specify custom endpoint
+ *   // const widget = new InnerLens({
+ *   //   endpoint: '/api/bug-report',
+ *   //   repository: 'owner/repo',
+ *   // });
  *
  *   widget.mount();
  * </script>

@@ -8,7 +8,7 @@ import React, {
   type CSSProperties,
 } from 'react';
 import type { InnerLensConfig, LogEntry, BugReportPayload, WidgetLanguage } from '../types';
-import { WIDGET_TEXTS } from '../types';
+import { WIDGET_TEXTS, HOSTED_API_ENDPOINT } from '../types';
 import {
   initLogCapture,
   getCapturedLogs,
@@ -71,7 +71,7 @@ const CheckIcon = () => (
 type SubmissionState = 'idle' | 'submitting' | 'success' | 'error';
 
 export function InnerLensWidget({
-  endpoint = '/api/inner-lens/report',
+  endpoint,
   repository,
   labels = ['inner-lens'],
   captureConsoleLogs = true,
@@ -250,7 +250,10 @@ export function InnerLensWidget({
         },
       };
 
-      const response = await fetch(endpoint, {
+      // Use hosted endpoint by default, allow override for self-hosted
+      const apiEndpoint = endpoint ?? HOSTED_API_ENDPOINT;
+
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

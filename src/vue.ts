@@ -30,6 +30,7 @@ import {
 } from 'vue';
 import { InnerLensCore, type InnerLensCoreConfig } from './core/InnerLensCore';
 import type { StyleConfig } from './utils/styles';
+import { HOSTED_API_ENDPOINT } from './types';
 
 // Re-export types
 export type {
@@ -119,7 +120,7 @@ export const InnerLensWidget = defineComponent({
   props: {
     endpoint: {
       type: String,
-      default: '/api/inner-lens/report',
+      default: HOSTED_API_ENDPOINT,
     },
     repository: {
       type: String,

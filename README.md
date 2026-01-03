@@ -44,10 +44,7 @@ function App() {
   return (
     <>
       <YourApp />
-      <InnerLensWidget
-        endpoint="https://inner-lens-one.vercel.app/api/report"
-        repository="your-org/your-repo"
-      />
+      <InnerLensWidget repository="your-org/your-repo" />
     </>
   );
 }
@@ -61,10 +58,7 @@ import { InnerLensWidget } from 'inner-lens/vue';
 
 <template>
   <YourApp />
-  <InnerLensWidget
-    endpoint="https://inner-lens-one.vercel.app/api/report"
-    repository="your-org/your-repo"
-  />
+  <InnerLensWidget repository="your-org/your-repo" />
 </template>
 ```
 
@@ -73,7 +67,6 @@ import { InnerLensWidget } from 'inner-lens/vue';
 import { InnerLens } from 'inner-lens/vanilla';
 
 const widget = new InnerLens({
-  endpoint: 'https://inner-lens-one.vercel.app/api/report',
   repository: 'your-org/your-repo',
 });
 widget.mount();

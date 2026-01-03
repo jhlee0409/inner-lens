@@ -10,6 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import { createStyles } from '../utils/styles';
 import type { InnerLensConfig } from '../types';
+import { HOSTED_API_ENDPOINT } from '../types';
 
 describe('InnerLensWidget Configuration', () => {
   describe('createStyles - Position Options', () => {
@@ -259,5 +260,15 @@ describe('Convenience Options Mapping', () => {
     expect(styles.triggerButton.top).toBe('20px');
     expect(styles.triggerButton.right).toBe('20px');
     expect(styles.triggerButton.backgroundColor).toBe('#ef4444');
+  });
+});
+
+describe('HOSTED_API_ENDPOINT Constant', () => {
+  it('should export the hosted API endpoint URL', () => {
+    expect(HOSTED_API_ENDPOINT).toBe('https://inner-lens-one.vercel.app/api/report');
+  });
+
+  it('should be a valid HTTPS URL', () => {
+    expect(HOSTED_API_ENDPOINT).toMatch(/^https:\/\//);
   });
 });
