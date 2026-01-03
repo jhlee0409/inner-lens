@@ -9,11 +9,28 @@
 import { App, Octokit } from '@octokit/app';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// GitHub App configuration (set in Vercel environment variables)
-const app = new App({
-  appId: process.env.GITHUB_APP_ID!,
-  privateKey: process.env.GITHUB_APP_PRIVATE_KEY!.replace(/\\n/g, '\n'),
-});
+// Lazy-initialized GitHub App (to avoid crashes on missing env vars)
+let _app: App | null = null;
+
+function getApp(): App {
+  if (_app) return _app;
+
+  const appId = process.env.GITHUB_APP_ID;
+  const privateKey = process.env.GITHUB_APP_PRIVATE_KEY;
+
+  if (!appId || !privateKey) {
+    throw new Error(
+      'Missing GitHub App configuration. Please set GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY environment variables.'
+    );
+  }
+
+  _app = new App({
+    appId,
+    privateKey: privateKey.replace(/\\n/g, '\n'),
+  });
+
+  return _app;
+}
 
 // Rate limiting (simple in-memory, consider Redis for production)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -79,6 +96,7 @@ function checkRateLimit(ip: string): boolean {
 
 async function getInstallationOctokit(owner: string, repo: string): Promise<Octokit | null> {
   try {
+    const app = getApp();
     // Find the installation for this repository
     const iterator = app.eachInstallation.iterator();
 
@@ -238,8 +256,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     console.error('Error creating issue:', error);
 
-    if (error instanceof Error && error.message.includes('Not Found')) {
-      return res.status(404).json({ error: 'Repository not found or no access' });
+    if (error instanceof Error) {
+      // Missing environment variables
+      if (error.message.includes('Missing GitHub App configuration')) {
+        return res.status(500).json({
+          error: 'Server configuration error',
+          details: 'GitHub App is not configured. Please contact the administrator.',
+        });
+      }
+
+      // Repository not found
+      if (error.message.includes('Not Found')) {
+        return res.status(404).json({ error: 'Repository not found or no access' });
+      }
+
+      // Bad credentials
+      if (error.message.includes('Bad credentials') || error.message.includes('401')) {
+        return res.status(500).json({
+          error: 'Authentication error',
+          details: 'GitHub App credentials are invalid.',
+        });
+      }
     }
 
     return res.status(500).json({ error: 'Failed to create issue' });
