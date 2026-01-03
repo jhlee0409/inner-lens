@@ -542,7 +542,7 @@ export class InnerLensCore {
           ${
             this.submissionState === 'submitting'
               ? `<span style="display: flex; align-items: center; gap: 8px; justify-content: center;" role="status" aria-live="polite">
-                  <span style="${this.styleToString(styles.spinner)}" aria-hidden="true"></span>
+                  <span class="inner-lens-spinner" aria-hidden="true"></span>
                   Submitting...
                 </span>`
               : this.escapeHtml(this.config.submitText)

@@ -323,6 +323,17 @@ export const keyframesCSS = `
   to { transform: rotate(360deg); }
 }
 
+/* Spinner class - ensures animation works regardless of inline style order */
+.inner-lens-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: inner-lens-spin 0.8s linear infinite;
+}
+
 /* Reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   #inner-lens-widget * {

@@ -452,7 +452,7 @@ export function InnerLensWidget({
                 role="status"
                 aria-live="polite"
               >
-                <span style={styles.spinner} aria-hidden="true" />
+                <span className="inner-lens-spinner" aria-hidden="true" />
                 Submitting...
               </span>
             ) : (
