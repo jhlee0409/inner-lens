@@ -2,7 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "name": "inner-lens-api",
-  "public": false,
+  "buildCommand": "",
+  "outputDirectory": "",
+  "framework": null,
   "functions": {
     "api/**/*.ts": {
       "runtime": "@vercel/node@3.0.0",
@@ -11,8 +13,8 @@
   },
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "source": "/",
+      "destination": "/api/health"
     }
   ],
   "headers": [
