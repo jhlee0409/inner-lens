@@ -6,8 +6,12 @@
  * using the inner-lens GitHub App.
  */
 
-import { App, Octokit } from '@octokit/app';
+import { App } from '@octokit/app';
+import { Octokit } from '@octokit/rest';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+// Type for the Octokit instance returned by the App
+type InstallationOctokit = Awaited<ReturnType<App['getInstallationOctokit']>>;
 
 // Lazy-initialized GitHub App (to avoid crashes on missing env vars)
 let _app: App | null = null;
@@ -94,7 +98,7 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
-async function getInstallationOctokit(owner: string, repo: string): Promise<Octokit | null> {
+async function getInstallationOctokit(owner: string, repo: string): Promise<InstallationOctokit | null> {
   try {
     const app = getApp();
     // Find the installation for this repository
@@ -105,16 +109,17 @@ async function getInstallationOctokit(owner: string, repo: string): Promise<Octo
         const octokit = await app.getInstallationOctokit(installation.id);
 
         // Check if this installation has access to the repo
-        const { data: repos } = await octokit.apps.listReposAccessibleToInstallation({
+        const { data: repos } = await octokit.request('GET /installation/repositories', {
           per_page: 100,
         });
 
         const hasAccess = repos.repositories.some(
-          (r) => r.owner.login.toLowerCase() === owner.toLowerCase() && r.name.toLowerCase() === repo.toLowerCase()
+          (r: { owner: { login: string }; name: string }) =>
+            r.owner.login.toLowerCase() === owner.toLowerCase() && r.name.toLowerCase() === repo.toLowerCase()
         );
 
         if (hasAccess) {
-          return octokit as Octokit;
+          return octokit;
         }
       } catch {
         // Continue to next installation
@@ -240,7 +245,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const title = `[Bug Report] ${payload.description.slice(0, 80)}${payload.description.length > 80 ? '...' : ''}`;
     const body = formatIssueBody(payload);
 
-    const { data: issue } = await octokit.issues.create({
+    const { data: issue } = await octokit.request('POST /repos/{owner}/{repo}/issues', {
       owner: payload.owner,
       repo: payload.repo,
       title,
