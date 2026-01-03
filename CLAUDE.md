@@ -279,3 +279,75 @@ API Validation
 2. **Bundle Size**: Session replay adds ~77KB (loaded on-demand)
 3. **SSR Safe**: Widget renders client-side only
 4. **Peer Dependencies**: React and Vue are optional
+
+---
+
+## Claude Code 바이브코딩 가이드
+
+### 행동 규칙
+
+#### 필수 (MUST)
+- 코드 변경 전 관련 파일 먼저 읽기
+- 변경 후 `npm run typecheck && npm run test` 실행
+- 기존 패턴 따르기 (새 패턴 도입 금지)
+- 불확실하면 먼저 질문하기
+
+#### 금지 (NEVER)
+- 요청하지 않은 리팩토링
+- 불필요한 추상화/헬퍼 함수 생성
+- 변경하지 않은 코드에 주석 추가
+- console.log 남기기
+- TODO/FIXME 주석 남기기 (완전히 구현)
+
+### 가드레일
+
+```
+# 자율 실행 모드
+"허락 묻지 말고 끝까지 진행해"
+"테스트 통과할 때까지 계속해"
+
+# 확인 필요 모드
+"커밋 전에 멈추고 확인받아"
+"5개 이상 파일 수정 시 중간 확인"
+
+# 범위 제한
+"src/components만 수정해"
+"타입 정의만 변경하고 구현은 건드리지 마"
+```
+
+### Sub-agent 활용
+
+다음 상황에서 sub-agent로 검증 요청:
+- 보안 관련 코드 (masking.ts, auth 관련)
+- 여러 파일 동시 수정 시 일관성 확인
+- API 페이로드 변경 시 end-to-end 검증
+
+### 슬래시 명령어
+
+| 명령어 | 용도 |
+|--------|------|
+| `/project:fix-issue` | GitHub 이슈 분석 및 수정 |
+| `/project:new-feature` | 새 기능 구현 (체크리스트 포함) |
+| `/project:review` | 코드 리뷰 |
+| `/project:test` | 테스트 작성 |
+
+### 컨텍스트 제공 패턴
+
+```bash
+# 파일 참조
+"@src/types.ts 의 InnerLensConfig 타입 확장해줘"
+
+# 패턴 참조
+"Button 컴포넌트 패턴 따라서 새 컴포넌트 만들어줘"
+
+# 문서 참조
+/url https://docs.github.com/en/rest/issues
+"이 API 스펙에 맞게 구현해줘"
+```
+
+### 작업 흐름
+
+1. **시작**: 관련 파일 파악 → 영향 범위 확인
+2. **구현**: 타입 먼저 → 로직 구현 → 테스트 작성
+3. **검증**: typecheck → test → 수동 확인
+4. **완료**: 커밋 (conventional commits 형식)
