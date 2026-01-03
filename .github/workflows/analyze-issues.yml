@@ -13,10 +13,10 @@ on:
     types: [opened, labeled]
 
 # Prevent race conditions: only one analysis per issue at a time
-# If a new workflow is triggered while one is running, the new one will wait
+# If a new workflow is triggered while one is running, cancel pending ones
 concurrency:
   group: analyze-issue-${{ github.event.issue.number }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   check-trigger:
@@ -73,13 +73,18 @@ jobs:
 
           SHOULD_ANALYZE="false"
 
-          # Case 1: Issue opened with 'bug' label
+          # Case 1: Issue opened with 'bug' label (but NOT if inner-lens label also present)
+          # If inner-lens label is present, let the labeled event handle it to avoid duplicates
           if [[ "$EVENT_NAME" == "opened" ]] && echo "$LABELS" | grep -q '"bug"'; then
-            echo "✅ New bug issue opened"
-            SHOULD_ANALYZE="true"
+            if echo "$LABELS" | grep -q '"inner-lens"'; then
+              echo "⏭️ Skipping opened event: inner-lens label present, will be handled by labeled event"
+            else
+              echo "✅ New bug issue opened"
+              SHOULD_ANALYZE="true"
+            fi
           fi
 
-          # Case 2: 'inner-lens' label was added (but not if bug label was just added at open)
+          # Case 2: 'inner-lens' label was added
           if [[ "$EVENT_NAME" == "labeled" ]] && [[ "$ADDED_LABEL" == "inner-lens" ]]; then
             echo "✅ inner-lens label added"
             SHOULD_ANALYZE="true"
