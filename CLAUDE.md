@@ -59,8 +59,13 @@ inner-lens/
 │       ├── session-replay.ts # rrweb integration module
 │       ├── analysis.ts      # Analysis utilities (error extraction, code chunking)
 │       └── styles.ts        # Inline CSS generation
+├── api/                     # Vercel Serverless Functions (Hosted Mode)
+│   ├── report.ts            # Centralized bug report endpoint
+│   └── health.ts            # Health check endpoint
 ├── scripts/
 │   └── analyze-issue.ts     # AI analysis engine (GitHub Actions)
+├── docs/
+│   └── CENTRALIZED_SETUP.md # Hosted mode setup guide
 ├── .github/workflows/
 │   ├── test.yml             # CI: tests + build
 │   ├── analyze-issues.yml   # Trigger: runs analysis on new bug issues
@@ -158,6 +163,32 @@ export const BugReportSchema = z.object({
 - Compression support for transmission
 - Dynamic loading of rrweb to minimize bundle impact
 
+### 6. Centralized API (Hosted Mode)
+`api/report.ts` provides a hosted API endpoint deployed on Vercel:
+- **GitHub App Authentication**: Uses `@octokit/app` for `inner-lens-app[bot]` identity
+- **Lazy Initialization**: App credentials loaded on first request (avoids startup crashes)
+- **Rate Limiting**: 10 requests/min per IP (in-memory)
+- **Sensitive Data Masking**: Email, API keys, JWT, etc. masked before issue creation
+- **Installation Detection**: Finds correct GitHub App installation for target repository
+
+**Endpoint**: `https://inner-lens-one.vercel.app/api/report`
+
+**Request Format**:
+```typescript
+{
+  owner: string;      // GitHub owner/org
+  repo: string;       // Repository name
+  description: string; // Bug description
+  logs?: LogEntry[];  // Console logs
+  url?: string;       // Page URL
+  userAgent?: string; // Browser info
+}
+```
+
+**Environment Variables** (Vercel):
+- `GITHUB_APP_ID` - GitHub App ID
+- `GITHUB_APP_PRIVATE_KEY` - Private key (.pem contents)
+
 ## Data Collection Architecture
 
 ```
@@ -200,6 +231,8 @@ export const BugReportSchema = z.object({
 | `src/utils/analysis.ts` | Error extraction, code chunking, call graph utilities |
 | `src/cli.ts` | CLI with GitHub OAuth Device Flow, framework detection |
 | `scripts/analyze-issue.ts` | AI analysis engine with Chain-of-Thought prompts |
+| `api/report.ts` | Centralized API endpoint (Hosted Mode on Vercel) |
+| `api/health.ts` | Health check endpoint for monitoring |
 
 ## Testing
 

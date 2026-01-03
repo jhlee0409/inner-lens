@@ -537,6 +537,57 @@ main = "src/inner-lens/index.ts"  # Custom path
 
 ---
 
+## ☁️ Hosted Mode (Recommended for Quick Start)
+
+Don't want to set up your own backend? Use our hosted API — just install the GitHub App and start reporting bugs!
+
+### Step 1: Install GitHub App
+
+Visit [github.com/apps/inner-lens-app](https://github.com/apps/inner-lens-app) and install it on your repository.
+
+### Step 2: Add Widget
+
+```tsx
+// React
+import { InnerLensWidget } from 'inner-lens/react';
+
+function App() {
+  return (
+    <>
+      <YourApp />
+      <InnerLensWidget
+        endpoint="https://inner-lens-one.vercel.app/api/report"
+        owner="your-org"
+        repo="your-repo"
+      />
+    </>
+  );
+}
+```
+
+```ts
+// Vanilla JS
+import { InnerLens } from 'inner-lens/vanilla';
+
+const widget = new InnerLens({
+  endpoint: 'https://inner-lens-one.vercel.app/api/report',
+  owner: 'your-org',
+  repo: 'your-repo',
+});
+widget.mount();
+```
+
+### That's it! 🎉
+
+- Bug reports are created by `inner-lens-app[bot]`
+- No backend setup required
+- No GitHub token management
+- Rate limited to 10 requests/min per IP
+
+> 💡 **Self-hosted option:** If you prefer to run your own backend, see [Backend Setup](#️-backend-setup) above.
+
+---
+
 ## 🛠️ CLI Setup
 
 Initialize GitHub Actions workflow:

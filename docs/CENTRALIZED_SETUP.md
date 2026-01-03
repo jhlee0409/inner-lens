@@ -1,7 +1,7 @@
 # inner-lens 중앙화 서버 설정 가이드
 
 이 가이드는 inner-lens를 중앙화 모드로 운영하는 방법을 설명합니다.
-모든 버그 리포트가 `inner-lens[bot]`으로 생성됩니다.
+모든 버그 리포트가 `inner-lens-app[bot]`으로 생성됩니다.
 
 ## 아키텍처 개요
 
@@ -9,19 +9,19 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                         사용자 앱                                │
 │  ┌─────────────┐                                                │
-│  │ inner-lens  │ ──POST──> api.inner-lens.dev/api/report        │
+│  │ inner-lens  │ ──POST──> inner-lens-one.vercel.app/api/report │
 │  │   Widget    │                      │                         │
 │  └─────────────┘                      │                         │
 └───────────────────────────────────────│─────────────────────────┘
                                         │
                                         ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Vercel (당신이 운영)                          │
+│                    Vercel (inner-lens 운영)                      │
 │  ┌─────────────────────────────────────────────────────────────┐│
 │  │ api/report.ts                                               ││
 │  │                                                             ││
 │  │ 1. 요청 검증                                                 ││
-│  │ 2. Rate limiting                                            ││
+│  │ 2. Rate limiting (10 req/min/IP)                            ││
 │  │ 3. 민감 정보 마스킹                                          ││
 │  │ 4. GitHub App 토큰 발급                                      ││
 │  │ 5. 이슈 생성                                                 ││
@@ -33,7 +33,7 @@
 │                         GitHub                                   │
 │  ┌─────────────────────────────────────────────────────────────┐│
 │  │ 이슈 생성됨                                                  ││
-│  │ Author: inner-lens[bot]                                     ││
+│  │ Author: inner-lens-app[bot]                                 ││
 │  │ Labels: bug, inner-lens                                     ││
 │  └─────────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────────┘
@@ -51,7 +51,7 @@ https://github.com/settings/apps/new
 
 | 필드 | 값 |
 |------|---|
-| GitHub App name | `inner-lens` |
+| GitHub App name | `inner-lens-app` |
 | Homepage URL | `https://github.com/jhlee0409/inner-lens` |
 | Webhook | ☐ Active (체크 해제) |
 
@@ -142,8 +142,9 @@ vercel --prod
 ```typescript
 // inner-lens 중앙 서버 사용
 <InnerLensWidget
-  endpoint="https://api.inner-lens.dev/api/report"
-  repo="owner/repo-name"  // 이슈 생성할 레포
+  endpoint="https://inner-lens-one.vercel.app/api/report"
+  owner="your-org"
+  repo="your-repo"
 />
 ```
 
@@ -156,7 +157,7 @@ inner-lens를 사용하는 개발자들에게 안내할 내용:
 ### 설치 방법
 
 1. **GitHub App 설치**
-   - https://github.com/apps/inner-lens 방문
+   - https://github.com/apps/inner-lens-app 방문
    - "Install" 클릭
    - 버그 리포트 받을 레포 선택
 
@@ -169,7 +170,9 @@ inner-lens를 사용하는 개발자들에게 안내할 내용:
        <>
          <YourApp />
          <InnerLensWidget
-           repo="your-org/your-repo"
+           endpoint="https://inner-lens-one.vercel.app/api/report"
+           owner="your-org"
+           repo="your-repo"
          />
        </>
      );
@@ -177,7 +180,7 @@ inner-lens를 사용하는 개발자들에게 안내할 내용:
    ```
 
 3. **끝!**
-   - 버그 리포트 → `inner-lens[bot]`이 이슈 생성
+   - 버그 리포트 → `inner-lens-app[bot]`이 이슈 생성
    - AI 분석 자동 실행 (워크플로우 설정된 경우)
 
 ---
@@ -224,7 +227,7 @@ vercel logs --follow
 
 사용자가 GitHub App을 설치하지 않았거나, 해당 레포에 권한을 부여하지 않음.
 
-**해결:** https://github.com/apps/inner-lens에서 App 설치
+**해결:** https://github.com/apps/inner-lens-app 에서 App 설치
 
 ### "Rate limit exceeded"
 
