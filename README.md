@@ -283,6 +283,7 @@ wrangler deploy
 |--------|------|---------|-------------|
 | `endpoint` | `string` | `/api/inner-lens/report` | API endpoint URL |
 | `repository` | `string` | - | GitHub repository in `owner/repo` format |
+| `language` | `string` | `en` | Widget UI language (`en`, `ko`, `ja`, `zh`, `es`) |
 | `devOnly` | `boolean` | `true` | Hide in production |
 | `disabled` | `boolean` | `false` | Disable widget |
 
