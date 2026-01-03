@@ -10,6 +10,10 @@ const PACKAGE_VERSION = '1.0.0';
 // GitHub OAuth App Client ID for inner-lens
 const GITHUB_CLIENT_ID = 'Ov23li3zMscAsVeYVXt5';
 
+// Hosted API endpoint
+const HOSTED_API_ENDPOINT = 'https://inner-lens-one.vercel.app/api/report';
+const GITHUB_APP_URL = 'https://github.com/apps/inner-lens-app';
+
 interface DeviceCodeResponse {
   device_code: string;
   user_code: string;
@@ -168,6 +172,7 @@ interface InitOptions {
 type AIProvider = 'anthropic' | 'openai' | 'google';
 type Framework = 'nextjs-app' | 'nextjs-pages' | 'vite-react' | 'vite-vue' | 'sveltekit' | 'vanilla';
 type BackendFramework = 'nextjs-app' | 'nextjs-pages' | 'sveltekit' | 'express' | 'fastify' | 'hono' | 'node';
+type DeploymentMode = 'hosted' | 'self-hosted';
 
 interface ProviderConfig {
   name: string;
@@ -563,10 +568,119 @@ async function detectBackendFramework(cwd: string, frontendFramework: Framework 
 }
 
 /**
+ * Get hosted mode widget example for each framework
+ */
+function getHostedWidgetExample(framework: Framework, owner: string, repo: string): string {
+  switch (framework) {
+    case 'nextjs-app':
+      return `import { InnerLensWidget } from 'inner-lens/react';
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        {children}
+        <InnerLensWidget
+          endpoint="${HOSTED_API_ENDPOINT}"
+          owner="${owner}"
+          repo="${repo}"
+        />
+      </body>
+    </html>
+  );
+}`;
+    case 'nextjs-pages':
+      return `import { InnerLensWidget } from 'inner-lens/react';
+
+export default function App({ Component, pageProps }) {
+  return (
+    <>
+      <Component {...pageProps} />
+      <InnerLensWidget
+        endpoint="${HOSTED_API_ENDPOINT}"
+        owner="${owner}"
+        repo="${repo}"
+      />
+    </>
+  );
+}`;
+    case 'vite-react':
+      return `import { InnerLensWidget } from 'inner-lens/react';
+
+function App() {
+  return (
+    <div>
+      {/* Your app content */}
+      <InnerLensWidget
+        endpoint="${HOSTED_API_ENDPOINT}"
+        owner="${owner}"
+        repo="${repo}"
+      />
+    </div>
+  );
+}`;
+    case 'vite-vue':
+      return `<script setup>
+import { InnerLensWidget } from 'inner-lens/vue';
+</script>
+
+<template>
+  <div>
+    <!-- Your app content -->
+    <InnerLensWidget
+      endpoint="${HOSTED_API_ENDPOINT}"
+      owner="${owner}"
+      repo="${repo}"
+    />
+  </div>
+</template>`;
+    case 'sveltekit':
+      return `<script>
+  import { onMount } from 'svelte';
+  import { InnerLensCore } from 'inner-lens';
+
+  onMount(() => {
+    const lens = new InnerLensCore({
+      endpoint: '${HOSTED_API_ENDPOINT}',
+      owner: '${owner}',
+      repo: '${repo}',
+    });
+    lens.mount();
+    return () => lens.unmount();
+  });
+</script>
+
+<slot />`;
+    case 'vanilla':
+    default:
+      return `<script type="module">
+  import { InnerLens } from 'inner-lens/vanilla';
+
+  const widget = new InnerLens({
+    endpoint: '${HOSTED_API_ENDPOINT}',
+    owner: '${owner}',
+    repo: '${repo}',
+  });
+  widget.mount();
+</script>`;
+  }
+}
+
+/**
  * Generate widget file content based on existing file (if any)
  */
-function generateWidgetFileContent(framework: Framework, existingContent: string | null): string {
+function generateWidgetFileContent(
+  framework: Framework,
+  existingContent: string | null,
+  mode: DeploymentMode = 'self-hosted',
+  hostedConfig?: { owner: string; repo: string }
+): string {
   const config = FRAMEWORK_CONFIGS[framework];
+
+  // For hosted mode, generate widget with hosted endpoint
+  if (mode === 'hosted' && hostedConfig) {
+    return getHostedWidgetExample(framework, hostedConfig.owner, hostedConfig.repo);
+  }
 
   if (!existingContent) {
     return config.example;
@@ -781,6 +895,8 @@ program
     }
 
     let repository: string;
+    let owner: string = '';
+    let repo: string = '';
     let provider: AIProvider;
     let model: string;
     let framework: Framework;
@@ -788,21 +904,89 @@ program
     let githubToken: string | null = null;
     let generateFiles = true;
     let backendDeploy: string = 'cloudflare';
+    let deploymentMode: DeploymentMode = 'hosted';
 
     if (options.yes) {
-      // Skip all prompts
+      // Skip all prompts - default to hosted mode
       provider = options.provider && options.provider in PROVIDER_CONFIGS
         ? options.provider as AIProvider
         : 'anthropic';
       model = PROVIDER_CONFIGS[provider].defaultModel;
       repository = detectedRepo || 'owner/repo';
+      [owner, repo] = repository.split('/');
       const detected = await detectFramework(cwd);
       framework = detected || 'nextjs-app';
-      backendFramework = await detectBackendFramework(cwd, framework);
+      deploymentMode = 'hosted';
     } else {
       // Interactive setup
-      // Step 1: GitHub Integration
-      p.log.step(chalk.bold('Step 1/4: GitHub Integration'));
+      // Step 1: Deployment Mode
+      p.log.step(chalk.bold('Step 1/5: Deployment Mode'));
+
+      const selectedMode = await p.select({
+        message: 'How do you want to deploy bug reports?',
+        options: [
+          {
+            value: 'hosted',
+            label: 'Hosted Mode (Recommended)',
+            hint: 'No backend setup — uses inner-lens-app[bot]',
+          },
+          {
+            value: 'self-hosted',
+            label: 'Self-Hosted',
+            hint: 'Run your own backend with GitHub token',
+          },
+        ],
+        initialValue: 'hosted',
+      });
+
+      if (p.isCancel(selectedMode)) {
+        p.cancel('Setup cancelled.');
+        process.exit(0);
+      }
+
+      deploymentMode = selectedMode as DeploymentMode;
+
+      if (deploymentMode === 'hosted') {
+        // Hosted mode: simpler setup
+        p.log.step(chalk.bold('Step 2/5: Repository'));
+
+        p.note(
+          `Install the GitHub App on your repository:\n${chalk.cyan(GITHUB_APP_URL)}`,
+          'GitHub App Required'
+        );
+
+        // Try to open browser automatically
+        try {
+          const openCommand = process.platform === 'darwin' ? 'open' :
+                             process.platform === 'win32' ? 'start' : 'xdg-open';
+          execSync(`${openCommand} ${GITHUB_APP_URL}`, { stdio: 'ignore' });
+          p.log.info('Browser opened automatically.');
+        } catch {
+          p.log.info('Please open your browser manually.');
+        }
+
+        const inputRepo = await p.text({
+          message: 'GitHub repository (owner/repo):',
+          placeholder: detectedRepo || 'owner/repo',
+          initialValue: detectedRepo,
+          validate: (value) => {
+            if (!value || !value.includes('/')) {
+              return 'Please enter in owner/repo format';
+            }
+          },
+        });
+
+        if (p.isCancel(inputRepo)) {
+          p.cancel('Setup cancelled.');
+          process.exit(0);
+        }
+
+        repository = inputRepo;
+        [owner, repo] = repository.split('/');
+
+      } else {
+        // Self-hosted mode: full setup with GitHub token
+        p.log.step(chalk.bold('Step 2/5: GitHub Integration'));
 
       const authMethod = await p.select({
         message: 'GitHub authentication method:',
@@ -969,10 +1153,13 @@ program
         }
 
         repository = inputRepo;
+        [owner, repo] = repository.split('/');
       }
+      } // End of self-hosted block
 
-      // Step 2: Framework Detection
-      p.log.step(chalk.bold('Step 2/4: Framework'));
+      // Step 3/5: Framework Detection
+      const stepFramework = deploymentMode === 'hosted' ? '3/5' : '3/5';
+      p.log.step(chalk.bold(`Step ${stepFramework}: Framework`));
 
       const detectedFramework = await detectFramework(cwd);
 
@@ -1024,8 +1211,9 @@ program
         framework = selectedFramework as Framework;
       }
 
-      // Step 3: AI Provider & Model
-      p.log.step(chalk.bold('Step 3/4: AI Provider & Model'));
+      // Step 4/5: AI Provider & Model
+      const stepAI = deploymentMode === 'hosted' ? '4/5' : '4/5';
+      p.log.step(chalk.bold(`Step ${stepAI}: AI Provider & Model`));
 
       const selectedProvider = await p.select({
         message: 'Select AI Provider:',
@@ -1096,31 +1284,34 @@ program
         model = selectedModel as string;
       }
 
-      // Fullstack frameworks (Next.js, SvelteKit) have built-in API routes
-      if (isFullstackFramework(framework)) {
-        backendFramework = await detectBackendFramework(cwd, framework);
-      } else {
-        // Frontend-only frameworks: ask where to deploy backend
-        p.log.step(chalk.bold('Step 4/4: Backend Deployment'));
+      // Backend setup only needed for self-hosted mode
+      if (deploymentMode === 'self-hosted') {
+        // Fullstack frameworks (Next.js, SvelteKit) have built-in API routes
+        if (isFullstackFramework(framework)) {
+          backendFramework = await detectBackendFramework(cwd, framework);
+        } else {
+          // Frontend-only frameworks: ask where to deploy backend
+          p.log.step(chalk.bold('Step 5/5: Backend Deployment'));
 
-        const selectedBackend = await p.select({
-          message: 'Backend deployment method:',
-          options: [
-            { value: 'cloudflare', label: 'Cloudflare Workers', hint: 'standalone, free 100k/day' },
-            { value: 'vercel', label: 'Vercel', hint: 'deploy with frontend' },
-            { value: 'netlify', label: 'Netlify', hint: 'deploy with frontend' },
-            { value: 'existing', label: 'Use existing backend server', hint: 'Express, Fastify, etc.' },
-            { value: 'skip', label: 'Set up later' },
-          ],
-          initialValue: 'cloudflare',
-        });
+          const selectedBackend = await p.select({
+            message: 'Backend deployment method:',
+            options: [
+              { value: 'cloudflare', label: 'Cloudflare Workers', hint: 'standalone, free 100k/day' },
+              { value: 'vercel', label: 'Vercel', hint: 'deploy with frontend' },
+              { value: 'netlify', label: 'Netlify', hint: 'deploy with frontend' },
+              { value: 'existing', label: 'Use existing backend server', hint: 'Express, Fastify, etc.' },
+              { value: 'skip', label: 'Set up later' },
+            ],
+            initialValue: 'cloudflare',
+          });
 
-        if (p.isCancel(selectedBackend)) {
-          p.cancel('Setup cancelled.');
-          process.exit(0);
+          if (p.isCancel(selectedBackend)) {
+            p.cancel('Setup cancelled.');
+            process.exit(0);
+          }
+
+          backendDeploy = selectedBackend;
         }
-
-        backendDeploy = selectedBackend;
       }
 
       // Ask whether to generate files
@@ -1214,7 +1405,13 @@ program
           existingContent = await fs.readFile(fullWidgetPath, 'utf-8');
         }
 
-        const newContent = generateWidgetFileContent(framework, existingContent);
+        // Pass deployment mode and owner/repo for hosted mode
+        const newContent = generateWidgetFileContent(
+          framework,
+          existingContent,
+          deploymentMode,
+          deploymentMode === 'hosted' ? { owner, repo } : undefined
+        );
 
         // Only write if content changed
         if (newContent !== existingContent) {
@@ -1224,8 +1421,8 @@ program
         }
       }
 
-      // Generate API route file
-      if (backendFramework) {
+      // Generate API route file (only for self-hosted mode)
+      if (deploymentMode === 'self-hosted' && backendFramework) {
         apiRouteFilePath = await findApiRoutePath(cwd, backendFramework);
         const fullApiRoutePath = path.join(cwd, apiRouteFilePath);
 
@@ -1246,16 +1443,18 @@ program
         }
       }
 
-      // Update .env.local with GITHUB_REPOSITORY if not exists
-      const envLocalPath = path.join(cwd, '.env.local');
-      let envContent = '';
-      if (await fs.pathExists(envLocalPath)) {
-        envContent = await fs.readFile(envLocalPath, 'utf-8');
-      }
+      // Update .env.local with GITHUB_REPOSITORY (only for self-hosted mode)
+      if (deploymentMode === 'self-hosted') {
+        const envLocalPath = path.join(cwd, '.env.local');
+        let envContent = '';
+        if (await fs.pathExists(envLocalPath)) {
+          envContent = await fs.readFile(envLocalPath, 'utf-8');
+        }
 
-      if (!envContent.includes('GITHUB_REPOSITORY=')) {
-        envContent = envContent.trim() + (envContent ? '\n' : '') + `GITHUB_REPOSITORY=${repository}\n`;
-        await fs.writeFile(envLocalPath, envContent);
+        if (!envContent.includes('GITHUB_REPOSITORY=')) {
+          envContent = envContent.trim() + (envContent ? '\n' : '') + `GITHUB_REPOSITORY=${repository}\n`;
+          await fs.writeFile(envLocalPath, envContent);
+        }
       }
     }
 
@@ -1269,115 +1468,154 @@ program
 
     p.note(generatedFiles.map(f => `  ${chalk.green('+')} ${f}`).join('\n'), 'Generated Files');
 
-    // Build next steps
+    // Build next steps based on deployment mode
     const nextSteps: string[] = [];
     let stepNumber = 1;
 
-    // GitHub Secrets
-    nextSteps.push(
-      `${chalk.bold(`${stepNumber}. Configure GitHub Secrets`)}\n` +
-      `   GitHub repository → Settings → Secrets → Actions\n` +
-      (githubToken ? '' : `   ${chalk.yellow('GITHUB_TOKEN')} (requires repo scope)\n`) +
-      `   ${chalk.yellow(providerConfig.secretName)}\n` +
-      `   ${chalk.dim(`Link: https://github.com/${repository}/settings/secrets/actions`)}`
-    );
-    stepNumber++;
-
-    // Environment Variable (only if not already set)
-    if (!githubToken) {
+    if (deploymentMode === 'hosted') {
+      // Hosted mode next steps
+      // 1. Confirm GitHub App installation
       nextSteps.push(
-        `${chalk.bold(`${stepNumber}. Set environment variables (.env.local)`)}\n` +
-        `   ${chalk.gray('# .env.local')}\n` +
-        `   ${chalk.green('GITHUB_TOKEN=')}${chalk.gray('ghp_xxxxxxxxxxxx')}`
+        `${chalk.bold(`${stepNumber}. Install GitHub App (if not done)`)}\n` +
+        `   ${chalk.cyan(GITHUB_APP_URL)}\n` +
+        `   Select your repository: ${chalk.yellow(repository)}`
       );
       stepNumber++;
-    }
 
-    // Widget (if not generated)
-    if (!widgetFileCreated) {
+      // 2. Set up AI secret
       nextSteps.push(
-        `${chalk.bold(`${stepNumber}. Add widget (${frameworkConfig.name})`)}\n` +
-        `   ${chalk.gray(`// ${frameworkConfig.widgetFile}`)}\n` +
-        frameworkConfig.example.split('\n').map(l => `   ${chalk.cyan(l)}`).join('\n')
+        `${chalk.bold(`${stepNumber}. Configure GitHub Secret for AI`)}\n` +
+        `   GitHub repository → Settings → Secrets → Actions\n` +
+        `   ${chalk.yellow(providerConfig.secretName)}\n` +
+        `   ${chalk.dim(`Link: https://github.com/${repository}/settings/secrets/actions`)}`
       );
       stepNumber++;
-    }
 
-    // API Route (for fullstack, if not generated)
-    if (isFullstackFramework(framework) && !apiRouteFileCreated && backendFramework) {
-      const backendConfig = BACKEND_CONFIGS[backendFramework];
-      nextSteps.push(
-        `${chalk.bold(`${stepNumber}. Add API route (${backendConfig.name})`)}\n` +
-        `   ${chalk.gray(`// ${backendConfig.apiRouteFile}`)}\n` +
-        backendConfig.apiRouteTemplate.split('\n').map(l => `   ${chalk.cyan(l)}`).join('\n')
-      );
-      stepNumber++;
-    }
-
-    // Backend setup (for frontend-only)
-    if (!isFullstackFramework(framework)) {
-      let backendInstructions = '';
-
-      switch (backendDeploy) {
-        case 'cloudflare':
-          backendInstructions =
-            `${chalk.bold.yellow('Cloudflare Workers')} (free 100k requests/day)\n\n` +
-            `   See the Serverless deployment section in README.md:\n` +
-            `   ${chalk.cyan('https://github.com/jhlee0409/inner-lens#serverless-deployment')}`;
-          break;
-        case 'vercel':
-          backendInstructions =
-            `${chalk.bold.cyan('Vercel Serverless Function')}\n\n` +
-            `   See the Serverless deployment section in README.md:\n` +
-            `   ${chalk.cyan('https://github.com/jhlee0409/inner-lens#serverless-deployment')}`;
-          break;
-        case 'netlify':
-          backendInstructions =
-            `${chalk.bold.cyan('Netlify Function')}\n\n` +
-            `   See the Serverless deployment section in README.md:\n` +
-            `   ${chalk.cyan('https://github.com/jhlee0409/inner-lens#serverless-deployment')}`;
-          break;
-        case 'existing':
-          backendInstructions =
-            `${chalk.bold.dim('Use existing backend server')}\n\n` +
-            `   ${chalk.gray('// Express example:')}\n` +
-            `   ${chalk.cyan(`import { createExpressHandler } from 'inner-lens/server';`)}\n` +
-            `   ${chalk.cyan(`app.post('/api/inner-lens/report', createExpressHandler({`)}\n` +
-            `   ${chalk.cyan(`  githubToken: process.env.GITHUB_TOKEN,`)}\n` +
-            `   ${chalk.cyan(`  repository: '${repository}',`)}\n` +
-            `   ${chalk.cyan(`}));`)}\n\n` +
-            `   ${chalk.gray('// Supported: Express, Fastify, Hono, Koa, Node HTTP')}`;
-          break;
-        default:
-          backendInstructions =
-            `To set up later, see the guide:\n` +
-            `   ${chalk.cyan('https://github.com/jhlee0409/inner-lens#backend-setup')}`;
+      // 3. Widget (if not generated)
+      if (!widgetFileCreated) {
+        const hostedExample = getHostedWidgetExample(framework, owner, repo);
+        nextSteps.push(
+          `${chalk.bold(`${stepNumber}. Add widget (${frameworkConfig.name})`)}\n` +
+          `   ${chalk.gray(`// ${frameworkConfig.widgetFile}`)}\n` +
+          hostedExample.split('\n').map(l => `   ${chalk.cyan(l)}`).join('\n')
+        );
+        stepNumber++;
       }
 
+      // 4. Test
       nextSteps.push(
-        `${chalk.bold(`${stepNumber}. Backend setup`)}\n` +
-        `   ${backendInstructions}`
+        `${chalk.bold(`${stepNumber}. Test`)}\n` +
+        `   npm run dev → Click the bug report button!`
+      );
+
+    } else {
+      // Self-hosted mode next steps
+      // 1. GitHub Secrets (GITHUB_TOKEN + AI key)
+      nextSteps.push(
+        `${chalk.bold(`${stepNumber}. Configure GitHub Secrets`)}\n` +
+        `   GitHub repository → Settings → Secrets → Actions\n` +
+        (githubToken ? '' : `   ${chalk.yellow('GITHUB_TOKEN')} (requires repo scope)\n`) +
+        `   ${chalk.yellow(providerConfig.secretName)}\n` +
+        `   ${chalk.dim(`Link: https://github.com/${repository}/settings/secrets/actions`)}`
       );
       stepNumber++;
-    }
 
-    // Test
-    nextSteps.push(
-      `${chalk.bold(`${stepNumber}. Test`)}\n` +
-      `   npm run dev → Click the bug report button in the bottom right!`
-    );
+      // 2. Environment Variable (only if not already set)
+      if (!githubToken) {
+        nextSteps.push(
+          `${chalk.bold(`${stepNumber}. Set environment variables (.env.local)`)}\n` +
+          `   ${chalk.gray('# .env.local')}\n` +
+          `   ${chalk.green('GITHUB_TOKEN=')}${chalk.gray('ghp_xxxxxxxxxxxx')}`
+        );
+        stepNumber++;
+      }
+
+      // 3. Widget (if not generated)
+      if (!widgetFileCreated) {
+        nextSteps.push(
+          `${chalk.bold(`${stepNumber}. Add widget (${frameworkConfig.name})`)}\n` +
+          `   ${chalk.gray(`// ${frameworkConfig.widgetFile}`)}\n` +
+          frameworkConfig.example.split('\n').map(l => `   ${chalk.cyan(l)}`).join('\n')
+        );
+        stepNumber++;
+      }
+
+      // 4. API Route (for fullstack, if not generated)
+      if (isFullstackFramework(framework) && !apiRouteFileCreated && backendFramework) {
+        const backendConfig = BACKEND_CONFIGS[backendFramework];
+        nextSteps.push(
+          `${chalk.bold(`${stepNumber}. Add API route (${backendConfig.name})`)}\n` +
+          `   ${chalk.gray(`// ${backendConfig.apiRouteFile}`)}\n` +
+          backendConfig.apiRouteTemplate.split('\n').map(l => `   ${chalk.cyan(l)}`).join('\n')
+        );
+        stepNumber++;
+      }
+
+      // 5. Backend setup (for frontend-only)
+      if (!isFullstackFramework(framework)) {
+        let backendInstructions = '';
+
+        switch (backendDeploy) {
+          case 'cloudflare':
+            backendInstructions =
+              `${chalk.bold.yellow('Cloudflare Workers')} (free 100k requests/day)\n\n` +
+              `   See: ${chalk.cyan('https://github.com/jhlee0409/inner-lens#cloudflare-workers')}`;
+            break;
+          case 'vercel':
+            backendInstructions =
+              `${chalk.bold.cyan('Vercel Serverless Function')}\n\n` +
+              `   See: ${chalk.cyan('https://github.com/jhlee0409/inner-lens#self-hosted-backend-advanced')}`;
+            break;
+          case 'netlify':
+            backendInstructions =
+              `${chalk.bold.cyan('Netlify Function')}\n\n` +
+              `   See: ${chalk.cyan('https://github.com/jhlee0409/inner-lens#self-hosted-backend-advanced')}`;
+            break;
+          case 'existing':
+            backendInstructions =
+              `${chalk.bold.dim('Use existing backend server')}\n\n` +
+              `   ${chalk.gray('// Express example:')}\n` +
+              `   ${chalk.cyan(`import { createExpressHandler } from 'inner-lens/server';`)}\n` +
+              `   ${chalk.cyan(`app.post('/api/inner-lens/report', createExpressHandler({`)}\n` +
+              `   ${chalk.cyan(`  githubToken: process.env.GITHUB_TOKEN,`)}\n` +
+              `   ${chalk.cyan(`  repository: '${repository}',`)}\n` +
+              `   ${chalk.cyan(`}));`)}`;
+            break;
+          default:
+            backendInstructions =
+              `See: ${chalk.cyan('https://github.com/jhlee0409/inner-lens#self-hosted-backend-advanced')}`;
+        }
+
+        nextSteps.push(
+          `${chalk.bold(`${stepNumber}. Backend setup`)}\n` +
+          `   ${backendInstructions}`
+        );
+        stepNumber++;
+      }
+
+      // Test
+      nextSteps.push(
+        `${chalk.bold(`${stepNumber}. Test`)}\n` +
+        `   npm run dev → Click the bug report button!`
+      );
+    }
 
     p.note(nextSteps.join('\n\n'), 'Next Steps');
 
     // Final message
-    if (githubToken) {
+    if (deploymentMode === 'hosted') {
+      if (widgetFileCreated) {
+        p.log.success('Hosted mode configured! Widget file generated.');
+        p.log.info('Make sure the GitHub App is installed on your repository.');
+      }
+    } else if (githubToken) {
       p.log.success('GitHub integration complete! Token saved automatically.');
     }
 
-    if (isFullstackFramework(framework) && widgetFileCreated && apiRouteFileCreated) {
+    if (deploymentMode === 'self-hosted' && isFullstackFramework(framework) && widgetFileCreated && apiRouteFileCreated) {
       p.log.success('Widget and API route configured automatically!');
       p.log.info('Run npm run dev to test immediately.');
-    } else if (!isFullstackFramework(framework) && widgetFileCreated) {
+    } else if (deploymentMode === 'self-hosted' && !isFullstackFramework(framework) && widgetFileCreated) {
       p.log.success('Widget configured automatically!');
       p.log.info('Configure your backend server before testing.');
     }
