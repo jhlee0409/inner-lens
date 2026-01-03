@@ -3,7 +3,8 @@
  * Framework-agnostic implementation of the bug reporting widget
  */
 
-import type { LogEntry, BugReportPayload, BugReportResponse } from '../types';
+import type { LogEntry, BugReportPayload, BugReportResponse, WidgetLanguage } from '../types';
+import { WIDGET_TEXTS } from '../types';
 import {
   initLogCapture,
   getCapturedLogs,
@@ -52,6 +53,12 @@ export interface InnerLensCoreConfig {
    * Custom CSS styles for the widget
    */
   styles?: StyleConfig;
+
+  /**
+   * Widget UI language
+   * @default 'en'
+   */
+  language?: WidgetLanguage;
 
   // ============================================
   // Convenience Options (mapped to styles)
@@ -208,6 +215,10 @@ export class InnerLensCore {
       buttonColor: config.buttonColor ?? config.styles?.buttonColor ?? '#6366f1',
     };
 
+    // Get i18n texts based on language
+    const lang = config.language ?? 'en';
+    const texts = WIDGET_TEXTS[lang] ?? WIDGET_TEXTS.en;
+
     this.config = {
       endpoint: '/api/inner-lens/report',
       labels: ['inner-lens'],
@@ -216,16 +227,25 @@ export class InnerLensCore {
       maskSensitiveData: true,
       disabled: false,
       devOnly: true,
-      // UI Text defaults
-      buttonText: 'Report a bug',
-      dialogTitle: 'Report an Issue',
-      dialogDescription: 'Describe the issue',
-      submitText: 'Submit Report',
-      cancelText: 'Cancel',
-      successMessage: 'Report Submitted',
+      language: lang,
+      // UI Text defaults from i18n (can be overridden by config)
+      buttonText: texts.buttonText,
+      dialogTitle: texts.dialogTitle,
+      dialogDescription: texts.dialogDescription,
+      submitText: texts.submitText,
+      cancelText: texts.cancelText,
+      successMessage: texts.successMessage,
       ...config,
       styles: mergedStyles,
     };
+  }
+
+  /**
+   * Get i18n texts for the current language
+   */
+  private getTexts() {
+    const lang = this.config.language ?? 'en';
+    return WIDGET_TEXTS[lang] ?? WIDGET_TEXTS.en;
   }
 
   /**
@@ -473,21 +493,22 @@ export class InnerLensCore {
   }
 
   private renderSuccess(styles: ReturnType<typeof createStyles>): string {
+    const t = this.getTexts();
     return `
       <div style="${this.styleToString(styles.successMessage)}" role="status" aria-live="polite">
         <div style="${this.styleToString(styles.successIcon)}" aria-hidden="true">
           ${this.getCheckIcon()}
         </div>
         <h3 style="${this.styleToString({ ...styles.headerTitle, marginBottom: '8px' })}">
-          ${this.escapeHtml(this.config.successMessage)}
+          ${this.escapeHtml(this.config.successMessage ?? t.successMessage)}
         </h3>
         <p style="color: #4b5563; font-size: 14px; margin-bottom: 16px;">
-          Thank you for your feedback! Our team will look into this.
+          ${this.escapeHtml(t.successDescription)}
         </p>
         ${
           this.issueUrl
             ? `<a href="${this.issueUrl}" target="_blank" rel="noopener noreferrer" style="color: #6366f1; text-decoration: underline; font-size: 14px;">
-                View Issue on GitHub
+                ${this.escapeHtml(t.viewIssue)}
               </a>`
             : ''
         }
@@ -496,6 +517,7 @@ export class InnerLensCore {
   }
 
   private renderForm(styles: ReturnType<typeof createStyles>): string {
+    const t = this.getTexts();
     const logsHtml = this.logs.length > 0 ? this.renderLogs(styles) : '';
     const errorHtml =
       this.submissionState === 'error' && this.errorMessage
@@ -505,18 +527,18 @@ export class InnerLensCore {
     return `
       <div style="${this.styleToString(styles.content)}">
         <label style="${this.styleToString(styles.label)}" for="inner-lens-description">
-          ${this.escapeHtml(this.config.dialogDescription)}
+          ${this.escapeHtml(this.config.dialogDescription ?? t.dialogDescription)}
         </label>
         <textarea
           id="inner-lens-description"
-          placeholder="What went wrong? Please be as specific as possible..."
+          placeholder="${this.escapeHtml(t.placeholder)}"
           style="${this.styleToString(styles.textarea)}"
         >${this.escapeHtml(this.description)}</textarea>
 
         ${logsHtml}
 
         <div style="${this.styleToString(styles.privacyNotice)}">
-          <strong>Privacy Notice:</strong> Sensitive data (emails, API keys, tokens) is automatically masked before submission.
+          ${this.escapeHtml(t.privacyNotice)}
         </div>
 
         ${errorHtml}
@@ -528,7 +550,7 @@ export class InnerLensCore {
           id="inner-lens-cancel"
           style="${this.styleToString(styles.cancelButton)}"
         >
-          ${this.escapeHtml(this.config.cancelText)}
+          ${this.escapeHtml(this.config.cancelText ?? t.cancelText)}
         </button>
         <button
           type="button"
@@ -543,9 +565,9 @@ export class InnerLensCore {
             this.submissionState === 'submitting'
               ? `<span style="display: flex; align-items: center; gap: 8px; justify-content: center;" role="status" aria-live="polite">
                   <span class="inner-lens-spinner" aria-hidden="true"></span>
-                  Submitting...
+                  ${this.escapeHtml(t.submitting)}
                 </span>`
-              : this.escapeHtml(this.config.submitText)
+              : this.escapeHtml(this.config.submitText ?? t.submitText)
           }
         </button>
       </div>
@@ -553,6 +575,7 @@ export class InnerLensCore {
   }
 
   private renderLogs(styles: ReturnType<typeof createStyles>): string {
+    const t = this.getTexts();
     const recentLogs = this.logs.slice(-10);
     const logsHtml = recentLogs
       .map((log) => {
@@ -575,9 +598,9 @@ export class InnerLensCore {
     return `
       <div style="${this.styleToString(styles.logPreview)}">
         <div style="${this.styleToString(styles.logPreviewHeader)}">
-          <span style="${this.styleToString(styles.logPreviewTitle)}">Captured Logs</span>
+          <span style="${this.styleToString(styles.logPreviewTitle)}">${this.escapeHtml(t.capturedLogs)}</span>
           <span style="${this.styleToString(styles.logCount)}">
-            ${this.logs.length} ${this.logs.length === 1 ? 'entry' : 'entries'}
+            ${this.logs.length} ${this.logs.length === 1 ? t.entry : t.entries}
           </span>
         </div>
         <div style="${this.styleToString(styles.logList)}">
