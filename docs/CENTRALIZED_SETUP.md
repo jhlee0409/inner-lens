@@ -147,8 +147,7 @@ Visit `https://github.com/apps/your-app-name` and install on repositories.
 ```tsx
 <InnerLensWidget
   endpoint="https://your-domain.vercel.app/api/report"
-  owner="their-org"
-  repo="their-repo"
+  repository="their-org/their-repo"
 />
 ```
 

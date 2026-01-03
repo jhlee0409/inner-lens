@@ -210,6 +210,9 @@ export function InnerLensWidget({
     setErrorMessage(null);
 
     try {
+      // Parse repository into owner/repo for Hosted API compatibility
+      const [owner, repo] = (repository || '').split('/');
+
       const payload: BugReportPayload = {
         description: enableMasking
           ? maskSensitiveData(description)
@@ -218,6 +221,9 @@ export function InnerLensWidget({
         url: typeof window !== 'undefined' ? window.location.href : '',
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
         timestamp: Date.now(),
+        // Required for Hosted API (api/report.ts)
+        owner: owner || undefined,
+        repo: repo || undefined,
         metadata: {
           repository,
           labels,

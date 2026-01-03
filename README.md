@@ -46,8 +46,7 @@ function App() {
       <YourApp />
       <InnerLensWidget
         endpoint="https://inner-lens-one.vercel.app/api/report"
-        owner="your-org"
-        repo="your-repo"
+        repository="your-org/your-repo"
       />
     </>
   );
@@ -64,8 +63,7 @@ import { InnerLensWidget } from 'inner-lens/vue';
   <YourApp />
   <InnerLensWidget
     endpoint="https://inner-lens-one.vercel.app/api/report"
-    owner="your-org"
-    repo="your-repo"
+    repository="your-org/your-repo"
   />
 </template>
 ```
@@ -76,8 +74,7 @@ import { InnerLens } from 'inner-lens/vanilla';
 
 const widget = new InnerLens({
   endpoint: 'https://inner-lens-one.vercel.app/api/report',
-  owner: 'your-org',
-  repo: 'your-repo',
+  repository: 'your-org/your-repo',
 });
 widget.mount();
 ```
@@ -276,10 +273,8 @@ wrangler deploy
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `endpoint` | `string` | - | API endpoint URL |
-| `owner` | `string` | - | GitHub owner (for hosted mode) |
-| `repo` | `string` | - | GitHub repo (for hosted mode) |
-| `repository` | `string` | - | `owner/repo` format (for self-hosted) |
+| `endpoint` | `string` | `/api/inner-lens/report` | API endpoint URL |
+| `repository` | `string` | - | GitHub repository in `owner/repo` format |
 | `devOnly` | `boolean` | `true` | Hide in production |
 | `disabled` | `boolean` | `false` | Disable widget |
 
