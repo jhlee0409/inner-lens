@@ -237,7 +237,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!octokit) {
       return res.status(403).json({
         error: 'inner-lens app is not installed on this repository',
-        installUrl: `https://github.com/apps/inner-lens/installations/new?target_id=${payload.owner}`,
+        installUrl: `https://github.com/apps/inner-lens-app/installations/new`,
       });
     }
 
