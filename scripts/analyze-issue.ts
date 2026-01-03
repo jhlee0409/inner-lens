@@ -3035,6 +3035,7 @@ async function analyzeIssue(): Promise<void> {
     'area:config': { color: '708090', description: 'Configuration issues' },             // Slate gray - settings/config
 
     // Status labels - Progress indicator colors
+    'status:analyzing': { color: 'FFA500', description: 'AI analysis in progress' },     // Orange - in progress
     'status:analyzed': { color: '006400', description: 'AI analysis complete' },         // Dark green - done
     'status:needs-info': { color: 'FF69B4', description: 'More information needed' },    // Hot pink - needs attention
     'status:needs-repro': { color: 'FFD700', description: 'Reproduction steps needed' }, // Gold - warning/wait
@@ -3098,6 +3099,19 @@ async function analyzeIssue(): Promise<void> {
       console.log(`   ✅ Added labels: ${uniqueLabels.join(', ')}`);
     } catch {
       console.log('   ⚠️ Could not add labels');
+    }
+
+    // Remove 'status:analyzing' label (lock release) - analysis is complete
+    try {
+      await octokit.issues.removeLabel({
+        owner: config.owner,
+        repo: config.repo,
+        issue_number: config.issueNumber,
+        name: 'status:analyzing',
+      });
+      console.log('   🔓 Removed status:analyzing label (lock released)');
+    } catch {
+      // Label might not exist, ignore
     }
   }
 

@@ -1,10 +1,11 @@
 # Trigger workflow for inner-lens AI Analysis
 # This workflow triggers the reusable analysis-engine when issues are created/labeled
 #
-# Duplicate Prevention (2025):
-# - Checks if analysis comment already exists before running
-# - Skips if 'status:analyzed' label is present
-# - Uses concurrency control to prevent race conditions
+# Duplicate Prevention (2025) - CRITICAL:
+# - Adds 'status:analyzing' label IMMEDIATELY when analysis starts (prevents race condition)
+# - Checks for 'status:analyzing' OR 'status:analyzed' labels before running
+# - Checks if analysis comment already exists
+# - Uses concurrency control at both workflow and job levels
 
 name: Analyze Issues
 
@@ -13,99 +14,142 @@ on:
     types: [opened, labeled]
 
 # Prevent race conditions: only one analysis per issue at a time
-# If a new workflow is triggered while one is running, cancel pending ones
 concurrency:
   group: analyze-issue-${{ github.event.issue.number }}
   cancel-in-progress: true
 
 jobs:
-  check-trigger:
-    name: Check Trigger Conditions
+  check-and-lock:
+    name: Check & Lock for Analysis
     runs-on: ubuntu-latest
     outputs:
-      should_analyze: ${{ steps.check.outputs.should_analyze || steps.set-skip.outputs.should_analyze || 'false' }}
+      should_analyze: ${{ steps.acquire-lock.outputs.should_analyze }}
     steps:
-      - name: Check if analysis already exists
-        id: check-existing
+      - name: Check conditions and acquire lock
+        id: acquire-lock
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           script: |
-            // Check for existing analysis comment
-            const comments = await github.rest.issues.listComments({
+            const issue = context.payload.issue;
+            const eventAction = context.payload.action;
+            const addedLabel = context.payload.label?.name || '';
+
+            console.log(`📋 Issue #${issue.number}: "${issue.title}"`);
+            console.log(`📌 Event: ${eventAction}, Added label: ${addedLabel || 'N/A'}`);
+
+            // Step 1: Get current labels (fresh from API to avoid race condition)
+            const { data: issueData } = await github.rest.issues.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.payload.issue.number,
+              issue_number: issue.number
+            });
+
+            const currentLabels = issueData.labels.map(l => l.name);
+            console.log(`🏷️ Current labels: ${currentLabels.join(', ') || 'none'}`);
+
+            // Step 2: Check if already analyzing or analyzed (SKIP if either exists)
+            if (currentLabels.includes('status:analyzing')) {
+              console.log('⏭️ SKIP: Analysis already in progress (status:analyzing label exists)');
+              core.setOutput('should_analyze', 'false');
+              return;
+            }
+
+            if (currentLabels.includes('status:analyzed')) {
+              console.log('⏭️ SKIP: Already analyzed (status:analyzed label exists)');
+              core.setOutput('should_analyze', 'false');
+              return;
+            }
+
+            // Step 3: Check for existing analysis comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
               per_page: 100
             });
 
-            const hasAnalysis = comments.data.some(c =>
+            const hasAnalysisComment = comments.some(c =>
               c.body && c.body.includes('## 🔍 inner-lens Analysis')
             );
 
-            // Check for 'status:analyzed' label
-            const labels = context.payload.issue.labels || [];
-            const hasAnalyzedLabel = labels.some(l => l.name === 'status:analyzed');
-
-            core.setOutput('already_analyzed', hasAnalysis || hasAnalyzedLabel);
-
-            if (hasAnalysis) {
-              console.log('⏭️ Skipping: Analysis comment already exists');
-            }
-            if (hasAnalyzedLabel) {
-              console.log('⏭️ Skipping: Issue already has "status:analyzed" label');
+            if (hasAnalysisComment) {
+              console.log('⏭️ SKIP: Analysis comment already exists');
+              core.setOutput('should_analyze', 'false');
+              return;
             }
 
-      - name: Check if analysis should run
-        id: check
-        if: steps.check-existing.outputs.already_analyzed != 'true'
-        run: |
-          # Run analysis if:
-          # 1. Issue was just opened with 'bug' label, OR
-          # 2. Issue was labeled with 'inner-lens' label
+            // Step 4: Determine if this event should trigger analysis
+            let shouldAnalyze = false;
 
-          EVENT_NAME="${{ github.event.action }}"
-          LABELS='${{ toJson(github.event.issue.labels.*.name) }}'
-          ADDED_LABEL="${{ github.event.label.name }}"
+            if (eventAction === 'opened' && currentLabels.includes('bug')) {
+              // Only trigger on 'opened' if inner-lens label is NOT present
+              // (if inner-lens is present, the labeled event will handle it)
+              if (currentLabels.includes('inner-lens')) {
+                console.log('⏭️ SKIP opened event: inner-lens label present, will be handled by labeled event');
+              } else {
+                console.log('✅ Trigger: New bug issue opened');
+                shouldAnalyze = true;
+              }
+            } else if (eventAction === 'labeled' && addedLabel === 'inner-lens') {
+              console.log('✅ Trigger: inner-lens label was added');
+              shouldAnalyze = true;
+            }
 
-          echo "Event: $EVENT_NAME"
-          echo "Labels: $LABELS"
-          echo "Added label: $ADDED_LABEL"
+            if (!shouldAnalyze) {
+              console.log('⏭️ SKIP: No matching trigger condition');
+              core.setOutput('should_analyze', 'false');
+              return;
+            }
 
-          SHOULD_ANALYZE="false"
-
-          # Case 1: Issue opened with 'bug' label (but NOT if inner-lens label also present)
-          # If inner-lens label is present, let the labeled event handle it to avoid duplicates
-          if [[ "$EVENT_NAME" == "opened" ]] && echo "$LABELS" | grep -q '"bug"'; then
-            if echo "$LABELS" | grep -q '"inner-lens"'; then
-              echo "⏭️ Skipping opened event: inner-lens label present, will be handled by labeled event"
-            else
-              echo "✅ New bug issue opened"
-              SHOULD_ANALYZE="true"
-            fi
-          fi
-
-          # Case 2: 'inner-lens' label was added
-          if [[ "$EVENT_NAME" == "labeled" ]] && [[ "$ADDED_LABEL" == "inner-lens" ]]; then
-            echo "✅ inner-lens label added"
-            SHOULD_ANALYZE="true"
-          fi
-
-          echo "should_analyze=$SHOULD_ANALYZE" >> $GITHUB_OUTPUT
-
-      - name: Set output for skipped analysis
-        id: set-skip
-        if: steps.check-existing.outputs.already_analyzed == 'true'
-        run: echo "should_analyze=false" >> $GITHUB_OUTPUT
+            // Step 5: ACQUIRE LOCK - Add 'status:analyzing' label IMMEDIATELY
+            // This prevents other concurrent workflows from also running analysis
+            console.log('🔒 Acquiring lock: Adding status:analyzing label...');
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: ['status:analyzing']
+              });
+              console.log('✅ Lock acquired: status:analyzing label added');
+              core.setOutput('should_analyze', 'true');
+            } catch (error) {
+              // If we fail to add the label, another workflow might have beat us
+              console.log(`⚠️ Failed to acquire lock: ${error.message}`);
+              core.setOutput('should_analyze', 'false');
+            }
 
   analyze:
     name: Run Analysis
-    needs: check-trigger
-    if: needs.check-trigger.outputs.should_analyze == 'true'
+    needs: check-and-lock
+    if: needs.check-and-lock.outputs.should_analyze == 'true'
     uses: ./.github/workflows/analysis-engine.yml
     with:
       provider: 'anthropic'
       max_files: 25
       max_tokens: 4000
-      language: 'ko'  # Output language: en, ko, ja, zh, es, de, fr, pt
+      language: 'ko'
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+  cleanup-on-failure:
+    name: Cleanup Lock on Failure
+    needs: [check-and-lock, analyze]
+    if: always() && needs.check-and-lock.outputs.should_analyze == 'true' && needs.analyze.result == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove analyzing label on failure
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            console.log('🧹 Cleaning up: Removing status:analyzing label due to failure');
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                name: 'status:analyzing'
+              });
+            } catch (e) {
+              console.log('Label might already be removed:', e.message);
+            }

@@ -5,6 +5,7 @@
 # - Chain-of-Thought prompt engineering
 # - Retry logic with exponential backoff
 # - Automatic issue labeling
+# - Concurrency control to prevent duplicate analysis
 #
 # Usage in consumer repo:
 #   uses: jhlee0409/inner-lens/.github/workflows/analysis-engine.yml@v1
