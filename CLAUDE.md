@@ -49,9 +49,6 @@ npm run build        # 빌드
 | Build | tsup (ESM + CJS) |
 | Test | Vitest + jsdom |
 | Validation | Zod |
-| Session Replay | rrweb |
-| AI | Vercel AI SDK |
-| GitHub | Octokit, @octokit/app |
 
 ## 프로젝트 구조
 
@@ -62,15 +59,12 @@ src/
 ├── components/           # React 컴포넌트
 ├── hooks/                # React 훅
 ├── utils/
-│   ├── masking.ts        # 민감정보 마스킹 ⭐
-│   ├── log-capture.ts    # 콘솔/네트워크 캡처
-│   └── analysis.ts       # 코드 분석
+│   └── masking.ts        # 민감정보 마스킹 ⭐
 ├── server.ts             # Self-hosted 백엔드
 └── cli.ts                # CLI
 
-api/                      # Vercel Serverless
-├── report.ts             # POST /api/report ⭐
-└── health.ts
+api/
+└── report.ts             # POST /api/report ⭐
 
 scripts/
 └── analyze-issue.ts      # AI 분석 엔진 ⭐
@@ -78,24 +72,19 @@ scripts/
 
 ---
 
-## 코드 스타일
+## 상세 규칙 (자동 로드)
 
-```typescript
-// ✅ 타입 임포트
-import type { InnerLensConfig } from './types';
+`.claude/rules/` 디렉토리에 상세 규칙이 모듈화되어 있습니다:
 
-// ✅ undefined 처리
-const [owner, repo] = repository.split('/');
-const safeOwner = owner ?? '';
-const safeRepo = repo ?? '';
+| 파일 | 적용 대상 | 내용 |
+|------|----------|------|
+| `typescript.md` | 모든 TS 파일 | 타입 임포트, undefined 처리, 금지 사항 |
+| `testing.md` | `*.test.ts` | 테스트 구조, 모킹, 필수 케이스 |
+| `security.md` | masking, server, api | 마스킹 규칙, 인증, 체크리스트 |
+| `react.md` | components, hooks | 컴포넌트 구조, 훅 규칙, SSR |
+| `api.md` | api/, server.ts | 페이로드 검증, 에러 응답 |
 
-// ✅ 옵셔널 체이닝 + 기본값
-const value = obj?.prop ?? defaultValue;
-
-// ❌ 금지
-const [owner, repo] = repository.split('/'); // undefined 가능
-const value = obj?.prop; // undefined 타입 남음
-```
+> 조건부 규칙: 해당 파일 작업 시에만 컨텍스트에 로드됩니다.
 
 ---
 
@@ -106,62 +95,29 @@ const value = obj?.prop; // undefined 타입 남음
 | `src/types.ts` | 모든 컴포넌트, API, 문서 |
 | API 페이로드 | `api/report.ts`, `src/server.ts`, `types.ts` |
 | CLI 예시 | README.md, docs/ |
-| Workflow | README.md, CLI 생성 코드 |
-
-**데이터 흐름:**
-```
-InnerLensConfig.repository ("owner/repo")
-  → BugReportPayload.owner, .repo (파싱 필수!)
-  → API 검증
-```
-
----
-
-## 테스트 규칙
-
-```typescript
-import { describe, it, expect, vi } from 'vitest';
-
-describe('기능명', () => {
-  it('should 동작 설명', () => {
-    // Given - When - Then
-  });
-});
-```
-
-- 파일 위치: `src/foo.ts` → `src/foo.test.ts`
-- 외부 의존성 모킹 필수
-- 새 기능 = 테스트 필수
 
 ---
 
 ## 배포 모드
 
-### Hosted (권장)
-- Endpoint: `inner-lens-one.vercel.app/api/report`
-- Auth: GitHub App
-- Env: `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`
-
-### Self-Hosted
-- Auth: GitHub PAT
-- Env: `GITHUB_TOKEN`, `GITHUB_REPOSITORY`
+| 모드 | 인증 | 환경변수 |
+|------|------|----------|
+| Hosted | GitHub App | `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY` |
+| Self-Hosted | GitHub PAT | `GITHUB_TOKEN`, `GITHUB_REPOSITORY` |
 
 ---
 
-## 가드레일 예시
+## 가드레일
 
 ```bash
 # 자율 실행
 "허락 묻지 말고 끝까지 진행해"
-"테스트 통과할 때까지 계속해"
 
 # 확인 필요
 "커밋 전에 멈춰"
-"5개 이상 파일 수정 시 확인"
 
 # 범위 제한
 "src/utils만 수정해"
-"타입만 변경하고 구현은 건드리지 마"
 ```
 
 ---
@@ -175,24 +131,8 @@ describe('기능명', () => {
 
 ---
 
-## 컨텍스트 제공
-
-```bash
-# 파일 참조
-"@src/types.ts 의 InnerLensConfig 확장해줘"
-
-# 패턴 참조
-"InnerLensWidget 패턴 따라서 새 컴포넌트 만들어줘"
-
-# 문서 참조
-/url https://docs.github.com/en/rest/issues
-```
-
----
-
 ## 주의사항
 
 1. **보안**: AI 처리 전 반드시 마스킹
 2. **번들**: Session replay ~77KB (on-demand 로드)
 3. **SSR**: 위젯은 클라이언트만
-4. **Peer Deps**: React, Vue는 선택적
