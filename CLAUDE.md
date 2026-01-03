@@ -205,6 +205,74 @@ describe('function', () => {
 4. Target ES2022
 5. No external CSS (inline styles only)
 
+## CRITICAL: Post-Change Verification
+
+**After ANY code change, ALWAYS run these checks before committing:**
+
+```bash
+npm run typecheck    # REQUIRED - Must pass
+npm run test         # REQUIRED - Must pass
+# npm run build      # Skip (slow) - CI will catch build errors
+```
+
+### When to Run Full Verification
+
+| Change Type | typecheck | test | Consistency Check |
+|-------------|-----------|------|-------------------|
+| src/**/*.ts, src/**/*.tsx | ✅ | ✅ | ✅ |
+| api/**/*.ts | ✅ | ✅ | ✅ |
+| scripts/**/*.ts | ✅ | - | ✅ |
+| .github/workflows/** | - | - | ✅ |
+| README.md, docs/** | - | - | ✅ |
+
+### Consistency Check Required Files
+
+When modifying **any** of these, verify ALL related files match:
+
+| If you change... | Also check... |
+|------------------|---------------|
+| Widget props (`src/types.ts`) | `InnerLensWidget.tsx`, `InnerLensCore.ts`, `vue.ts`, README, docs |
+| API payload structure | `api/report.ts`, `src/server.ts`, `src/types.ts` (BugReportPayload) |
+| CLI examples (`src/cli.ts`) | README.md, docs/CENTRALIZED_SETUP.md |
+| Workflow files | README.md (workflow examples), CLI generated code |
+
+### Common Type Errors to Avoid
+
+```typescript
+// ❌ BAD: split() returns (string | undefined)[]
+const [owner, repo] = repository.split('/');
+
+// ✅ GOOD: Handle undefined
+const [parsedOwner, parsedRepo] = repository.split('/');
+owner = parsedOwner || '';
+repo = parsedRepo || '';
+
+// ❌ BAD: Optional chaining without fallback
+const value = obj?.prop;  // type: T | undefined
+
+// ✅ GOOD: Provide default
+const value = obj?.prop ?? defaultValue;
+```
+
+### Data Flow Consistency
+
+```
+Widget Props (InnerLensConfig)
+       ↓
+  repository: "owner/repo"
+       ↓
+Payload (BugReportPayload)
+       ↓
+  owner: string, repo: string  ← Must be parsed!
+       ↓
+API Validation
+       ↓
+  Hosted: owner/repo required
+  Self-hosted: config.repository used
+```
+
+**ALWAYS verify this flow works end-to-end when changing any part.**
+
 ## Important Notes
 
 1. **Security**: Always mask data before AI processing

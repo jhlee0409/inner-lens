@@ -582,8 +582,7 @@ export default function RootLayout({ children }) {
         {children}
         <InnerLensWidget
           endpoint="${HOSTED_API_ENDPOINT}"
-          owner="${owner}"
-          repo="${repo}"
+          repository="${owner}/${repo}"
         />
       </body>
     </html>
@@ -598,8 +597,7 @@ export default function App({ Component, pageProps }) {
       <Component {...pageProps} />
       <InnerLensWidget
         endpoint="${HOSTED_API_ENDPOINT}"
-        owner="${owner}"
-        repo="${repo}"
+        repository="${owner}/${repo}"
       />
     </>
   );
@@ -613,8 +611,7 @@ function App() {
       {/* Your app content */}
       <InnerLensWidget
         endpoint="${HOSTED_API_ENDPOINT}"
-        owner="${owner}"
-        repo="${repo}"
+        repository="${owner}/${repo}"
       />
     </div>
   );
@@ -629,8 +626,7 @@ import { InnerLensWidget } from 'inner-lens/vue';
     <!-- Your app content -->
     <InnerLensWidget
       endpoint="${HOSTED_API_ENDPOINT}"
-      owner="${owner}"
-      repo="${repo}"
+      :repository="'${owner}/${repo}'"
     />
   </div>
 </template>`;
@@ -642,8 +638,7 @@ import { InnerLensWidget } from 'inner-lens/vue';
   onMount(() => {
     const lens = new InnerLensCore({
       endpoint: '${HOSTED_API_ENDPOINT}',
-      owner: '${owner}',
-      repo: '${repo}',
+      repository: '${owner}/${repo}',
     });
     lens.mount();
     return () => lens.unmount();
@@ -658,8 +653,7 @@ import { InnerLensWidget } from 'inner-lens/vue';
 
   const widget = new InnerLens({
     endpoint: '${HOSTED_API_ENDPOINT}',
-    owner: '${owner}',
-    repo: '${repo}',
+    repository: '${owner}/${repo}',
   });
   widget.mount();
 </script>`;
@@ -913,7 +907,9 @@ program
         : 'anthropic';
       model = PROVIDER_CONFIGS[provider].defaultModel;
       repository = detectedRepo || 'owner/repo';
-      [owner, repo] = repository.split('/');
+      const [parsedOwner, parsedRepo] = repository.split('/');
+      owner = parsedOwner || '';
+      repo = parsedRepo || '';
       const detected = await detectFramework(cwd);
       framework = detected || 'nextjs-app';
       deploymentMode = 'hosted';
@@ -982,7 +978,9 @@ program
         }
 
         repository = inputRepo;
-        [owner, repo] = repository.split('/');
+        const [parsedOwner2, parsedRepo2] = repository.split('/');
+        owner = parsedOwner2 || '';
+        repo = parsedRepo2 || '';
 
       } else {
         // Self-hosted mode: full setup with GitHub token
@@ -1153,7 +1151,9 @@ program
         }
 
         repository = inputRepo;
-        [owner, repo] = repository.split('/');
+        const [parsedOwner3, parsedRepo3] = repository.split('/');
+        owner = parsedOwner3 || '';
+        repo = parsedRepo3 || '';
       }
       } // End of self-hosted block
 
