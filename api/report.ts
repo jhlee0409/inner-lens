@@ -42,9 +42,6 @@ const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 10; // requests per minute per IP
 const RATE_WINDOW = 60 * 1000; // 1 minute
 
-// Note: BugReportPayload type is now imported from '../src/types' as HostedBugReportPayload
-// Note: maskSensitiveData is now imported from '../src/utils/masking' for consistency
-
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
   const entry = rateLimitMap.get(ip);
