@@ -8,8 +8,8 @@
 
 import { App } from '@octokit/app';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import type { HostedBugReportPayload } from './_shared';
-import { MAX_LOG_ENTRIES, maskSensitiveData } from './_shared';
+import type { HostedBugReportPayload } from './_shared.js';
+import { MAX_LOG_ENTRIES, maskSensitiveData } from './_shared.js';
 
 // Type for the Octokit instance returned by the App
 type InstallationOctokit = Awaited<ReturnType<App['getInstallationOctokit']>>;
