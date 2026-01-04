@@ -4,7 +4,7 @@
  */
 
 import type { LogEntry, BugReportPayload, BugReportResponse, WidgetLanguage } from '../types';
-import { WIDGET_TEXTS } from '../types';
+import { WIDGET_TEXTS, HOSTED_API_ENDPOINT } from '../types';
 import {
   initLogCapture,
   getCapturedLogs,
@@ -16,7 +16,7 @@ import { createStyles, keyframesCSS, type StyleConfig } from '../utils/styles';
 export interface InnerLensCoreConfig {
   /**
    * API endpoint to submit bug reports
-   * @default '/api/inner-lens/report'
+   * @default HOSTED_API_ENDPOINT (for hosted mode)
    */
   endpoint?: string;
 
@@ -220,7 +220,7 @@ export class InnerLensCore {
     const texts = WIDGET_TEXTS[lang] ?? WIDGET_TEXTS.en;
 
     this.config = {
-      endpoint: '/api/inner-lens/report',
+      endpoint: HOSTED_API_ENDPOINT,
       labels: ['inner-lens'],
       captureConsoleLogs: true,
       maxLogEntries: 50,

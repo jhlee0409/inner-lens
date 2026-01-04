@@ -10,8 +10,8 @@ const PACKAGE_VERSION = '1.0.0';
 // GitHub OAuth App Client ID for inner-lens
 const GITHUB_CLIENT_ID = 'Ov23li3zMscAsVeYVXt5';
 
-// Hosted API endpoint
-const HOSTED_API_ENDPOINT = 'https://inner-lens-one.vercel.app/api/report';
+// Import hosted endpoint from shared types
+import { HOSTED_API_ENDPOINT } from './types';
 const GITHUB_APP_URL = 'https://github.com/apps/inner-lens-app';
 
 interface DeviceCodeResponse {
@@ -596,10 +596,7 @@ export default function RootLayout({ children }) {
     <html>
       <body>
         {children}
-        <InnerLensWidget
-          endpoint="${HOSTED_API_ENDPOINT}"
-          repository="${owner}/${repo}"
-        />
+        <InnerLensWidget repository="${owner}/${repo}" />
       </body>
     </html>
   );
@@ -611,10 +608,7 @@ export default function App({ Component, pageProps }) {
   return (
     <>
       <Component {...pageProps} />
-      <InnerLensWidget
-        endpoint="${HOSTED_API_ENDPOINT}"
-        repository="${owner}/${repo}"
-      />
+      <InnerLensWidget repository="${owner}/${repo}" />
     </>
   );
 }`;
@@ -625,10 +619,7 @@ function App() {
   return (
     <div>
       {/* Your app content */}
-      <InnerLensWidget
-        endpoint="${HOSTED_API_ENDPOINT}"
-        repository="${owner}/${repo}"
-      />
+      <InnerLensWidget repository="${owner}/${repo}" />
     </div>
   );
 }`;
@@ -640,10 +631,7 @@ import { InnerLensWidget } from 'inner-lens/vue';
 <template>
   <div>
     <!-- Your app content -->
-    <InnerLensWidget
-      endpoint="${HOSTED_API_ENDPOINT}"
-      :repository="'${owner}/${repo}'"
-    />
+    <InnerLensWidget :repository="'${owner}/${repo}'" />
   </div>
 </template>`;
     case 'sveltekit':
@@ -653,7 +641,6 @@ import { InnerLensWidget } from 'inner-lens/vue';
 
   onMount(() => {
     const lens = new InnerLensCore({
-      endpoint: '${HOSTED_API_ENDPOINT}',
       repository: '${owner}/${repo}',
     });
     lens.mount();
@@ -668,7 +655,6 @@ import { InnerLensWidget } from 'inner-lens/vue';
   import { InnerLens } from 'inner-lens/vanilla';
 
   const widget = new InnerLens({
-    endpoint: '${HOSTED_API_ENDPOINT}',
     repository: '${owner}/${repo}',
   });
   widget.mount();

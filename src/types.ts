@@ -122,7 +122,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
 export interface InnerLensConfig {
   /**
    * API endpoint to submit bug reports
-   * @default '/api/inner-lens/report'
+   * @default HOSTED_API_ENDPOINT ('https://inner-lens-one.vercel.app/api/report')
    */
   endpoint?: string;
 
@@ -316,6 +316,13 @@ export interface GitHubIssuePayload {
 // ============================================
 // Shared Constants
 // ============================================
+
+/**
+ * Hosted API endpoint for centralized mode
+ * Users don't need to specify this - it's the default when repository is provided
+ */
+export const HOSTED_API_ENDPOINT =
+  'https://inner-lens-one.vercel.app/api/report';
 
 /**
  * Maximum number of log entries to keep

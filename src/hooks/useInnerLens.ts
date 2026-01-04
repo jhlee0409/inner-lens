@@ -9,9 +9,15 @@ import { InnerLensCore, type InnerLensCoreConfig } from '../core/InnerLensCore';
  * @example
  * ```tsx
  * function MyComponent() {
+ *   // Hosted mode (default) - just specify repository
  *   const { open, close, isOpen } = useInnerLens({
- *     endpoint: '/api/bug-report',
+ *     repository: 'owner/repo',
  *   });
+ *
+ *   // Self-hosted mode - specify custom endpoint
+ *   // const { open } = useInnerLens({
+ *   //   endpoint: '/api/bug-report',
+ *   // });
  *
  *   return (
  *     <button onClick={open}>Report Bug</button>

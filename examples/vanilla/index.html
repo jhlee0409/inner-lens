@@ -94,8 +94,10 @@
     import { InnerLens } from '../../dist/vanilla.js';
 
     // Inner Lens 위젯 초기화
+    // NOTE: 이 예제는 로컬 테스트용 self-hosted 모드입니다.
+    // 실제 사용 시에는 endpoint를 생략하면 hosted API가 기본으로 사용됩니다.
     const widget = new InnerLens({
-      endpoint: '/api/bug-report',  // mock 서버 엔드포인트
+      endpoint: '/api/bug-report',  // 로컬 mock 서버 (self-hosted 모드)
       repository: 'jhlee0409/inner-lens',
       // 편의 옵션 (styles로 매핑됨)
       position: 'bottom-right',
