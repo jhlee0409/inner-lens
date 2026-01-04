@@ -21,6 +21,10 @@ on:
       - '.github/workflows/analysis-engine.yml'
       - 'scripts/**'
 
+concurrency:
+  group: update-v1-tag
+  cancel-in-progress: true
+
 jobs:
   update-tag:
     name: Update v1 Tag
@@ -47,19 +51,15 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Delete existing v1 tag (local and remote)
-          git tag -d v1 2>/dev/null || true
-          git push origin :refs/tags/v1 2>/dev/null || true
-
-          # Create new v1 tag pointing to current commit
-          git tag -a v1 -m "Latest stable release (auto-updated)
+          # Force update v1 tag (원자적 연산 - race condition 방지)
+          git tag -fa v1 -m "Latest stable release (auto-updated)
 
           Points to: $COMMIT_SHA
           Commit: $COMMIT_MSG
           Updated: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-          # Push new tag
-          git push origin v1
+          # Force push tag
+          git push origin v1 --force
 
           echo "✅ v1 tag updated successfully"
 
