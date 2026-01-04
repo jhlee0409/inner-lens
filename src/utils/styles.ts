@@ -205,6 +205,7 @@ export const createStyles = (config?: StyleConfig) => {
       padding: '4px 0',
       borderBottom: '1px solid #e5e7eb',
       wordBreak: 'break-word',
+      color: '#374151',
     } as CSSStyleDeclaration,
 
     logError: {
