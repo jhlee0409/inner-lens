@@ -1,6 +1,10 @@
 /**
  * Shared utilities for API functions
  * These are duplicated from src/ because Vercel Functions can't access src/ folder
+ *
+ * ⚠️ IMPORTANT: Keep in sync with:
+ * - src/types.ts (HostedBugReportPayload, LogEntry, MAX_LOG_ENTRIES)
+ * - src/utils/masking.ts (maskSensitiveData, MASKING_PATTERNS)
  */
 
 // ============================================

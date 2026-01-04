@@ -92,8 +92,9 @@ scripts/
 
 | 변경 시 | 함께 확인 |
 |---------|-----------|
-| `src/types.ts` | 모든 컴포넌트, API, 문서 |
-| API 페이로드 | `api/report.ts`, `src/server.ts`, `types.ts` |
+| `src/types.ts` | 모든 컴포넌트, API, 문서, **`api/_shared.ts`** |
+| API 페이로드 | `api/report.ts`, `src/server.ts`, `types.ts`, **`api/_shared.ts`** |
+| `src/utils/masking.ts` | **`api/_shared.ts`** (동기화 필수) |
 | CLI 예시 | README.md, docs/ |
 
 ---
@@ -136,3 +137,6 @@ scripts/
 1. **보안**: AI 처리 전 반드시 마스킹
 2. **번들**: Session replay ~77KB (on-demand 로드)
 3. **SSR**: 위젯은 클라이언트만
+4. **⚠️ Vercel Functions 제약**: `api/` 폴더는 `src/`에서 import 불가!
+   - `api/_shared.ts`에 필요한 타입/유틸 복제 유지
+   - `src/types.ts` 변경 시 `api/_shared.ts` 동기화 필수
