@@ -139,7 +139,7 @@ ${maskedLogs.map((log) => `[${log.level.toUpperCase()}] ${log.message}${log.stac
 ### Metadata
 
 \`\`\`json
-${JSON.stringify(payload.metadata, null, 2)}
+${maskSensitiveData(JSON.stringify(payload.metadata, null, 2))}
 \`\`\`
 `;
   }

@@ -91,6 +91,20 @@ The CLI will:
 - Generate the workflow file
 - Provide instructions for setting up secrets
 
+### Verify Configuration
+
+After setup, verify your configuration:
+
+```bash
+npx inner-lens check
+```
+
+This command checks:
+- ✓ GitHub workflow file (`.github/workflows/inner-lens.yml`)
+- ✓ Detected framework
+- ✓ inner-lens package installed
+- ✓ GITHUB_TOKEN in `.env.local` (self-hosted mode)
+
 ### Option B: Manual Setup
 
 Create `.github/workflows/inner-lens.yml`:

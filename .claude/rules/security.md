@@ -25,18 +25,30 @@ await analyzeWithAI(maskedLogs);
 await analyzeWithAI(rawLogs); // 마스킹 없이 전송
 ```
 
-## 마스킹 패턴 (18+)
+## 마스킹 패턴 (20개)
 
 | 패턴 | 치환값 |
 |------|--------|
-| 이메일 | `[EMAIL]` |
-| API 키 | `[API_KEY]` |
-| JWT 토큰 | `[JWT]` |
-| 비밀번호 | `[PASSWORD]` |
-| 신용카드 | `[CARD]` |
-| SSN | `[SSN]` |
-| IP 주소 | `[IP]` |
-| Bearer 토큰 | `[BEARER]` |
+| 이메일 | `[EMAIL_REDACTED]` |
+| Bearer 토큰 | `[TOKEN_REDACTED]` |
+| API 키 파라미터 | `[API_KEY_REDACTED]` |
+| Authorization 헤더 | `[AUTH_REDACTED]` |
+| 신용카드 (번호) | `[CARD_REDACTED]` |
+| 신용카드 (포맷) | `[CARD_REDACTED]` |
+| SSN | `[SSN_REDACTED]` |
+| 전화번호 | `[PHONE_REDACTED]` |
+| IPv4 주소 | `[IP_REDACTED]` |
+| AWS Access Key | `[AWS_KEY_REDACTED]` |
+| AWS Secret Key | `[AWS_SECRET_REDACTED]` |
+| GitHub 토큰 | `[GITHUB_TOKEN_REDACTED]` |
+| OpenAI API 키 | `[OPENAI_KEY_REDACTED]` |
+| Anthropic API 키 | `[ANTHROPIC_KEY_REDACTED]` |
+| Google API 키 | `[GOOGLE_KEY_REDACTED]` |
+| Stripe 키 | `[STRIPE_KEY_REDACTED]` |
+| JWT 토큰 | `[JWT_REDACTED]` |
+| 환경변수 시크릿 | `[SECRET_REDACTED]` |
+| 데이터베이스 URL | `[DATABASE_URL_REDACTED]` |
+| Private Key (PEM) | `[PRIVATE_KEY_REDACTED]` |
 
 ## API 보안
 

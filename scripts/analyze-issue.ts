@@ -16,6 +16,7 @@ import { Octokit } from '@octokit/rest';
 import { z } from 'zod';
 import * as fs from 'fs';
 import * as path from 'path';
+import { maskSensitiveData } from '../src/utils/masking.js';
 
 // ============================================
 // Type Definitions
@@ -810,39 +811,8 @@ function getModel() {
 // ============================================
 // Security: Enhanced Data Masking
 // ============================================
-
-const SENSITIVE_PATTERNS: Array<[RegExp, string]> = [
-  // Email addresses
-  [/\b[\w.-]+@[\w.-]+\.\w{2,4}\b/gi, '[EMAIL]'],
-  // Bearer tokens
-  [/Bearer\s+[a-zA-Z0-9\-._~+/]+=*/gi, 'Bearer [TOKEN]'],
-  // OpenAI keys
-  [/sk-[a-zA-Z0-9]{20,}/g, '[OPENAI_KEY]'],
-  // Anthropic keys
-  [/sk-ant-[a-zA-Z0-9\-]{20,}/g, '[ANTHROPIC_KEY]'],
-  // GitHub tokens
-  [/gh[pousr]_[a-zA-Z0-9]{36,}/g, '[GITHUB_TOKEN]'],
-  // AWS keys
-  [/AKIA[A-Z0-9]{16}/g, '[AWS_KEY]'],
-  // JWT tokens
-  [/eyJ[a-zA-Z0-9\-_]+\.eyJ[a-zA-Z0-9\-_]+\.[a-zA-Z0-9\-_.+/=]*/g, '[JWT]'],
-  // Generic secrets
-  [/(?:password|passwd|pwd|secret|token|apikey|api_key|private_key)[=:\s]+["']?[^\s"']{8,}["']?/gi, '[REDACTED]'],
-  // Database URLs
-  [/(?:mongodb|mysql|postgresql|postgres|redis):\/\/[^\s"']+/gi, '[DATABASE_URL]'],
-  // IP addresses
-  [/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, '[IP_ADDRESS]'],
-  // Credit card numbers
-  [/\b(?:\d{4}[-\s]?){3}\d{4}\b/g, '[CARD_NUMBER]'],
-];
-
-function maskSensitiveData(text: string): string {
-  let masked = text;
-  for (const [pattern, replacement] of SENSITIVE_PATTERNS) {
-    masked = masked.replace(pattern, replacement);
-  }
-  return masked;
-}
+// Note: maskSensitiveData is imported from src/utils/masking.ts
+// to ensure consistent masking patterns (20 patterns) across the codebase
 
 // ============================================
 // Import Graph Tracking (P1-1)

@@ -672,7 +672,18 @@ export class InnerLensCore {
 
     try {
       // Parse owner/repo from repository string (e.g., "owner/repo")
-      const [owner, repo] = (this.config.repository || '').split('/');
+      const [parsedOwner, parsedRepo] = (this.config.repository || '').split('/');
+      const owner = parsedOwner ?? '';
+      const repo = parsedRepo ?? '';
+
+      // Validate repository for hosted mode
+      if (this.config.endpoint === HOSTED_API_ENDPOINT && (!owner || !repo)) {
+        this.submissionState = 'error';
+        this.errorMessage =
+          'Repository not configured. Please set the repository option (e.g., "owner/repo").';
+        this.render();
+        return;
+      }
 
       const payload: BugReportPayload = {
         description: this.config.maskSensitiveData
