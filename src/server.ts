@@ -207,8 +207,49 @@ export async function createGitHubIssue(
     })
     .join('\n');
 
+  // Format user actions
+  const formattedUserActions = payload.userActions?.length
+    ? payload.userActions.slice(-20).map((action) => {
+        const time = new Date(action.timestamp).toISOString();
+        const value = action.value ? ` → "${maskSensitiveData(action.value.slice(0, 50))}"` : '';
+        return `[${time}] ${action.type.toUpperCase()} on ${action.target}${value}`;
+      }).join('\n')
+    : null;
+
+  // Format navigations
+  const formattedNavigations = payload.navigations?.length
+    ? payload.navigations.slice(-10).map((nav) => {
+        const time = new Date(nav.timestamp).toISOString();
+        const duration = nav.duration ? ` (${nav.duration}ms)` : '';
+        return `[${time}] ${nav.type}: ${maskSensitiveData(nav.from)} → ${maskSensitiveData(nav.to)}${duration}`;
+      }).join('\n')
+    : null;
+
+  // Format performance
+  const formattedPerformance = payload.performance
+    ? [
+        `LCP: ${payload.performance.coreWebVitals.LCP?.toFixed(0) ?? 'N/A'}ms`,
+        `FID: ${payload.performance.coreWebVitals.FID?.toFixed(0) ?? 'N/A'}ms`,
+        `CLS: ${payload.performance.coreWebVitals.CLS?.toFixed(3) ?? 'N/A'}`,
+        `TTFB: ${payload.performance.coreWebVitals.TTFB?.toFixed(0) ?? 'N/A'}ms`,
+        `DOM Loaded: ${payload.performance.timing.domContentLoaded}ms`,
+        `Load Complete: ${payload.performance.timing.loadComplete}ms`,
+        `Resources: ${payload.performance.resourceCount}`,
+      ].join(' | ')
+    : null;
+
+  // Format page context
+  const formattedPageContext = payload.pageContext
+    ? [
+        `**Route:** ${maskSensitiveData(payload.pageContext.pathname)}`,
+        `**Title:** ${payload.pageContext.title}`,
+        `**Time on Page:** ${(payload.pageContext.timeOnPage / 1000).toFixed(1)}s`,
+        payload.pageContext.componentStack ? `**Component:** ${payload.pageContext.componentStack}` : null,
+      ].filter(Boolean).join('\n')
+    : null;
+
   // Create issue body with structured format
-  const issueBody = `## Bug Report
+  let issueBody = `## Bug Report
 
 ### Description
 ${maskSensitiveData(payload.description)}
@@ -217,12 +258,55 @@ ${maskSensitiveData(payload.description)}
 - **URL:** ${maskSensitiveData(payload.url || 'N/A')}
 - **User Agent:** ${payload.userAgent || 'N/A'}
 - **Reported At:** ${new Date(payload.timestamp).toISOString()}
+`;
 
+  if (formattedPageContext) {
+    issueBody += `
+### Page Context
+${formattedPageContext}
+`;
+  }
+
+  if (formattedPerformance) {
+    issueBody += `
+### Performance
+${formattedPerformance}
+`;
+  }
+
+  issueBody += `
 ### Console Logs
 \`\`\`
 ${formattedLogs || 'No logs captured'}
 \`\`\`
+`;
 
+  if (formattedUserActions) {
+    issueBody += `
+### User Actions (Last 20)
+\`\`\`
+${formattedUserActions}
+\`\`\`
+`;
+  }
+
+  if (formattedNavigations) {
+    issueBody += `
+### Navigation History
+\`\`\`
+${formattedNavigations}
+\`\`\`
+`;
+  }
+
+  if (payload.sessionReplay) {
+    issueBody += `
+### Session Replay
+📹 Session replay data attached (${(payload.sessionReplay.length / 1024).toFixed(1)}KB compressed)
+`;
+  }
+
+  issueBody += `
 ---
 *This issue was automatically created by [inner-lens](https://github.com/jhlee0409/inner-lens).*
 *Awaiting AI analysis...*

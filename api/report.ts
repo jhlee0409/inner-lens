@@ -103,7 +103,44 @@ function formatIssueBody(payload: HostedBugReportPayload): string {
         message: maskSensitiveData(log.message),
         stack: log.stack ? maskSensitiveData(log.stack) : undefined,
       }))
-      .slice(-MAX_LOG_ENTRIES) || []; // Keep last MAX_LOG_ENTRIES logs
+      .slice(-MAX_LOG_ENTRIES) || [];
+
+  const formattedUserActions = payload.userActions?.length
+    ? payload.userActions.slice(-20).map((action) => {
+        const time = new Date(action.timestamp).toISOString();
+        const value = action.value ? ` → "${maskSensitiveData(action.value.slice(0, 50))}"` : '';
+        return `[${time}] ${action.type.toUpperCase()} on ${action.target}${value}`;
+      }).join('\n')
+    : null;
+
+  const formattedNavigations = payload.navigations?.length
+    ? payload.navigations.slice(-10).map((nav) => {
+        const time = new Date(nav.timestamp).toISOString();
+        const duration = nav.duration ? ` (${nav.duration}ms)` : '';
+        return `[${time}] ${nav.type}: ${maskSensitiveData(nav.from)} → ${maskSensitiveData(nav.to)}${duration}`;
+      }).join('\n')
+    : null;
+
+  const formattedPerformance = payload.performance
+    ? [
+        `LCP: ${payload.performance.coreWebVitals.LCP?.toFixed(0) ?? 'N/A'}ms`,
+        `FID: ${payload.performance.coreWebVitals.FID?.toFixed(0) ?? 'N/A'}ms`,
+        `CLS: ${payload.performance.coreWebVitals.CLS?.toFixed(3) ?? 'N/A'}`,
+        `TTFB: ${payload.performance.coreWebVitals.TTFB?.toFixed(0) ?? 'N/A'}ms`,
+        `DOM Loaded: ${payload.performance.timing.domContentLoaded}ms`,
+        `Load Complete: ${payload.performance.timing.loadComplete}ms`,
+        `Resources: ${payload.performance.resourceCount}`,
+      ].join(' | ')
+    : null;
+
+  const formattedPageContext = payload.pageContext
+    ? [
+        `**Route:** ${maskSensitiveData(payload.pageContext.pathname)}`,
+        `**Title:** ${payload.pageContext.title}`,
+        `**Time on Page:** ${(payload.pageContext.timeOnPage / 1000).toFixed(1)}s`,
+        payload.pageContext.componentStack ? `**Component:** ${payload.pageContext.componentStack}` : null,
+      ].filter(Boolean).join('\n')
+    : null;
 
   let body = `## Bug Report
 
@@ -120,6 +157,26 @@ ${maskedDescription}
 | Timestamp | ${payload.timestamp ? new Date(payload.timestamp).toISOString() : new Date().toISOString()} |
 `;
 
+  if (formattedPageContext) {
+    body += `
+---
+
+### Page Context
+
+${formattedPageContext}
+`;
+  }
+
+  if (formattedPerformance) {
+    body += `
+---
+
+### Performance
+
+${formattedPerformance}
+`;
+  }
+
   if (maskedLogs.length > 0) {
     body += `
 ---
@@ -129,6 +186,40 @@ ${maskedDescription}
 \`\`\`
 ${maskedLogs.map((log) => `[${log.level.toUpperCase()}] ${log.message}${log.stack ? '\n' + log.stack : ''}`).join('\n')}
 \`\`\`
+`;
+  }
+
+  if (formattedUserActions) {
+    body += `
+---
+
+### User Actions (Last 20)
+
+\`\`\`
+${formattedUserActions}
+\`\`\`
+`;
+  }
+
+  if (formattedNavigations) {
+    body += `
+---
+
+### Navigation History
+
+\`\`\`
+${formattedNavigations}
+\`\`\`
+`;
+  }
+
+  if (payload.sessionReplay) {
+    body += `
+---
+
+### Session Replay
+
+📹 Session replay data attached (${(payload.sessionReplay.length / 1024).toFixed(1)}KB compressed)
 `;
   }
 
