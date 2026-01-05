@@ -5,15 +5,51 @@ import React, {
   useEffect,
   useCallback,
   useRef,
+  isValidElement,
+  cloneElement,
   type CSSProperties,
+  type ReactElement,
 } from 'react';
-import type { InnerLensConfig, LogEntry, BugReportPayload, WidgetLanguage } from '../types';
+import type {
+  InnerLensConfig,
+  LogEntry,
+  BugReportPayload,
+  WidgetLanguage,
+  UserAction,
+  NavigationEntry,
+  PerformanceSummary,
+  PageContext,
+} from '../types';
 import { WIDGET_TEXTS, HOSTED_API_ENDPOINT } from '../types';
 import {
   initLogCapture,
   getCapturedLogs,
   clearCapturedLogs,
+  restoreConsole,
 } from '../utils/log-capture';
+import {
+  initUserActionCapture,
+  getCapturedUserActions,
+  clearCapturedUserActions,
+  stopUserActionCapture,
+} from '../utils/user-action-capture';
+import {
+  initNavigationCapture,
+  getCapturedNavigations,
+  clearCapturedNavigations,
+  stopNavigationCapture,
+} from '../utils/navigation-capture';
+import {
+  initPerformanceCapture,
+  getPerformanceData,
+  stopPerformanceCapture,
+} from '../utils/performance-capture';
+import {
+  startSessionReplay,
+  stopSessionReplay,
+  getSessionReplaySnapshot,
+  compressReplayData,
+} from '../utils/session-replay';
 import { createStyles, keyframesCSS } from '../utils/styles';
 import { maskSensitiveData } from '../utils/masking';
 
@@ -77,6 +113,11 @@ export function InnerLensWidget({
   captureConsoleLogs = true,
   maxLogEntries = 50,
   maskSensitiveData: enableMasking = true,
+  // Extended capture options
+  captureUserActions = true,
+  captureNavigation = true,
+  capturePerformance = true,
+  captureSessionReplay = false,
   styles: styleConfig,
   language = 'en',
   // Convenience options (map to styles)
@@ -119,6 +160,10 @@ export function InnerLensWidget({
   const [isOpen, setIsOpen] = useState(false);
   const [description, setDescription] = useState('');
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [userActions, setUserActions] = useState<UserAction[]>([]);
+  const [navigations, setNavigations] = useState<NavigationEntry[]>([]);
+  const [performance, setPerformance] = useState<PerformanceSummary | null>(null);
+  const [pageContext, setPageContext] = useState<PageContext | null>(null);
   const [submissionState, setSubmissionState] = useState<SubmissionState>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [issueUrl, setIssueUrl] = useState<string | null>(null);
@@ -128,6 +173,8 @@ export function InnerLensWidget({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const styleInjectedRef = useRef(false);
+  const pageLoadTimeRef = useRef(Date.now());
+  const sessionReplayDataRef = useRef<string | null>(null);
 
   // Merge convenience options with styleConfig
   const mergedStyleConfig = {
@@ -163,18 +210,90 @@ export function InnerLensWidget({
         maskSensitiveData: enableMasking,
       });
     }
+    return () => {
+      if (captureConsoleLogs) {
+        restoreConsole();
+      }
+    };
   }, [captureConsoleLogs, maxLogEntries, enableMasking]);
 
-  // Update logs when dialog opens
+  // Initialize extended captures
+  useEffect(() => {
+    if (captureUserActions) {
+      initUserActionCapture({ maskSensitiveData: enableMasking });
+    }
+    if (captureNavigation) {
+      initNavigationCapture({ maskSensitiveData: enableMasking });
+    }
+    if (capturePerformance) {
+      initPerformanceCapture();
+    }
+    if (captureSessionReplay) {
+      startSessionReplay({ maskInputs: true }).catch((err) => {
+        console.warn('[inner-lens] Session replay failed to start:', err);
+      });
+    }
+
+    return () => {
+      if (captureUserActions) stopUserActionCapture();
+      if (captureNavigation) stopNavigationCapture();
+      if (capturePerformance) stopPerformanceCapture();
+      if (captureSessionReplay) stopSessionReplay();
+    };
+  }, [captureUserActions, captureNavigation, capturePerformance, captureSessionReplay, enableMasking]);
+
+  // Collect captured data when dialog opens
   useEffect(() => {
     if (isOpen) {
       setLogs(getCapturedLogs());
-      // Focus textarea after opening
+
+      if (captureUserActions) {
+        setUserActions(getCapturedUserActions());
+      }
+      if (captureNavigation) {
+        setNavigations(getCapturedNavigations());
+      }
+      if (capturePerformance) {
+        const perfData = getPerformanceData();
+        setPerformance({
+          coreWebVitals: perfData.coreWebVitals,
+          timing: perfData.timing,
+          resourceCount: perfData.resources.total,
+          memoryUsage: perfData.memory?.usedJSHeapSize,
+        });
+      }
+      if (captureSessionReplay) {
+        const snapshot = getSessionReplaySnapshot();
+        if (snapshot && snapshot.events.length > 0) {
+          compressReplayData(snapshot)
+            .then((compressed) => compressed.arrayBuffer())
+            .then((buffer) => {
+              sessionReplayDataRef.current = btoa(
+                String.fromCharCode(...new Uint8Array(buffer))
+              );
+            })
+            .catch(() => {
+              sessionReplayDataRef.current = btoa(
+                JSON.stringify(snapshot.events)
+              );
+            });
+        }
+      }
+
+      setPageContext({
+        route: window.location.href,
+        pathname: window.location.pathname,
+        hash: window.location.hash,
+        title: document.title,
+        timeOnPage: Date.now() - pageLoadTimeRef.current,
+        referrer: document.referrer || undefined,
+      });
+
       setTimeout(() => {
         textareaRef.current?.focus();
       }, 100);
     }
-  }, [isOpen]);
+  }, [isOpen, captureUserActions, captureNavigation, capturePerformance, captureSessionReplay]);
 
   // Handle escape key and focus trap
   useEffect(() => {
@@ -230,7 +349,6 @@ export function InnerLensWidget({
     setErrorMessage(null);
 
     try {
-      // Parse repository into owner/repo for Hosted API compatibility
       const [owner, repo] = (repository || '').split('/');
 
       const payload: BugReportPayload = {
@@ -241,16 +359,19 @@ export function InnerLensWidget({
         url: typeof window !== 'undefined' ? window.location.href : '',
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
         timestamp: Date.now(),
-        // Required for Hosted API (api/report.ts)
         owner: owner || undefined,
         repo: repo || undefined,
+        userActions: userActions.length > 0 ? userActions : undefined,
+        navigations: navigations.length > 0 ? navigations : undefined,
+        performance: performance ?? undefined,
+        sessionReplay: sessionReplayDataRef.current ?? undefined,
+        pageContext: pageContext ?? undefined,
         metadata: {
           repository,
           labels,
         },
       };
 
-      // Use hosted endpoint by default, allow override for self-hosted
       const apiEndpoint = endpoint ?? HOSTED_API_ENDPOINT;
 
       const response = await fetch(apiEndpoint, {
@@ -274,7 +395,15 @@ export function InnerLensWidget({
 
       setSubmissionState('success');
       setIssueUrl(responseData.issueUrl ?? null);
+
       clearCapturedLogs();
+      if (captureUserActions) clearCapturedUserActions();
+      if (captureNavigation) clearCapturedNavigations();
+      if (captureSessionReplay) {
+        stopSessionReplay();
+        startSessionReplay({ maskInputs: true }).catch(() => {});
+        sessionReplayDataRef.current = null;
+      }
 
       onSuccess?.(responseData.issueUrl);
     } catch (error) {
@@ -286,10 +415,17 @@ export function InnerLensWidget({
   }, [
     description,
     logs,
+    userActions,
+    navigations,
+    performance,
+    pageContext,
     endpoint,
     repository,
     labels,
     enableMasking,
+    captureUserActions,
+    captureNavigation,
+    captureSessionReplay,
     onSuccess,
     onError,
   ]);
@@ -313,17 +449,26 @@ export function InnerLensWidget({
 
   const renderTrigger = () => {
     if (trigger) {
-      return (
-        <div
-          onClick={handleOpen}
-          style={{ cursor: 'pointer' }}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && handleOpen()}
-        >
-          {trigger}
-        </div>
-      );
+      if (isValidElement(trigger)) {
+        const triggerElement = trigger as ReactElement<{
+          onClick?: (e: React.MouseEvent) => void;
+          onKeyDown?: (e: React.KeyboardEvent) => void;
+        }>;
+        return cloneElement(triggerElement, {
+          onClick: (e: React.MouseEvent) => {
+            triggerElement.props.onClick?.(e);
+            handleOpen();
+          },
+          onKeyDown: (e: React.KeyboardEvent) => {
+            triggerElement.props.onKeyDown?.(e);
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleOpen();
+            }
+          },
+        });
+      }
+      return <span onClick={handleOpen}>{trigger}</span>;
     }
 
     const buttonStyle: CSSProperties = {
