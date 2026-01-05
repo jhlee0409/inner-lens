@@ -563,12 +563,6 @@ Look for issues labeled [`good first issue`](https://github.com/jhlee0409/inner-
 
 ---
 
-## Roadmap
-
-See [ROADMAP.md](ROADMAP.md) for planned features.
-
----
-
 ## Support
 
 - **Bug reports**: [GitHub Issues](https://github.com/jhlee0409/inner-lens/issues)
