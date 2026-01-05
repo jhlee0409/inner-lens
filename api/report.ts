@@ -115,7 +115,7 @@ ${maskedDescription}
 
 | Field | Value |
 |-------|-------|
-| URL | ${payload.url || 'N/A'} |
+| URL | ${maskSensitiveData(payload.url || 'N/A')} |
 | User Agent | ${payload.userAgent || 'N/A'} |
 | Timestamp | ${payload.timestamp ? new Date(payload.timestamp).toISOString() : new Date().toISOString()} |
 `;

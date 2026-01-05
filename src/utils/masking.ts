@@ -67,6 +67,12 @@ const MASKING_PATTERNS: MaskingPattern[] = [
     pattern: /\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/g,
     replacement: '[IP_REDACTED]',
   },
+  // IPv6 addresses (full and compressed forms)
+  {
+    name: 'ipv6',
+    pattern: /(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:)+:(?:[0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}|::(?:[0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}|::1/g,
+    replacement: '[IP_REDACTED]',
+  },
   // AWS Access Keys
   {
     name: 'aws_key',

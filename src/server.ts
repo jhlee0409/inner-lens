@@ -13,6 +13,91 @@ import { MAX_LOG_ENTRIES } from './types';
 import { maskSensitiveData } from './utils/masking';
 
 /**
+ * Zod schema for user actions
+ */
+const UserActionSchema = z.object({
+  type: z.enum([
+    'click',
+    'dblclick',
+    'input',
+    'change',
+    'focus',
+    'blur',
+    'scroll',
+    'keydown',
+    'submit',
+    'copy',
+    'paste',
+    'select',
+  ]),
+  target: z.string(),
+  timestamp: z.number(),
+  value: z.string().optional(),
+  position: z
+    .object({
+      x: z.number(),
+      y: z.number(),
+    })
+    .optional(),
+  key: z.string().optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+/**
+ * Zod schema for navigation entries
+ */
+const NavigationEntrySchema = z.object({
+  type: z.enum([
+    'pageload',
+    'pushstate',
+    'replacestate',
+    'popstate',
+    'hashchange',
+    'beforeunload',
+  ]),
+  timestamp: z.number(),
+  from: z.string(),
+  to: z.string(),
+  duration: z.number().optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+/**
+ * Zod schema for performance summary
+ */
+const PerformanceSummarySchema = z.object({
+  coreWebVitals: z.object({
+    LCP: z.number().optional(),
+    FID: z.number().optional(),
+    CLS: z.number().optional(),
+    INP: z.number().optional(),
+    TTFB: z.number().optional(),
+    FCP: z.number().optional(),
+  }),
+  timing: z.object({
+    domContentLoaded: z.number(),
+    loadComplete: z.number(),
+    timeToInteractive: z.number().optional(),
+  }),
+  resourceCount: z.number(),
+  memoryUsage: z.number().optional(),
+  score: z.number().optional(),
+});
+
+/**
+ * Zod schema for page context
+ */
+const PageContextSchema = z.object({
+  route: z.string(),
+  pathname: z.string(),
+  hash: z.string(),
+  componentStack: z.string().optional(),
+  title: z.string(),
+  timeOnPage: z.number(),
+  referrer: z.string().optional(),
+});
+
+/**
  * Zod schema for validating incoming bug reports
  */
 export const BugReportSchema = z.object({
@@ -34,6 +119,12 @@ export const BugReportSchema = z.object({
       labels: z.array(z.string()).optional(),
     })
     .optional(),
+  // Extended context fields
+  userActions: z.array(UserActionSchema).optional(),
+  navigations: z.array(NavigationEntrySchema).optional(),
+  performance: PerformanceSummarySchema.optional(),
+  sessionReplay: z.string().optional(),
+  pageContext: PageContextSchema.optional(),
 });
 
 export type ValidatedBugReport = z.infer<typeof BugReportSchema>;
@@ -123,7 +214,7 @@ export async function createGitHubIssue(
 ${maskSensitiveData(payload.description)}
 
 ### Environment
-- **URL:** ${payload.url || 'N/A'}
+- **URL:** ${maskSensitiveData(payload.url || 'N/A')}
 - **User Agent:** ${payload.userAgent || 'N/A'}
 - **Reported At:** ${new Date(payload.timestamp).toISOString()}
 

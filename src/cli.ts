@@ -171,7 +171,7 @@ interface InitOptions {
 
 type AIProvider = 'anthropic' | 'openai' | 'google';
 type Framework = 'nextjs-app' | 'nextjs-pages' | 'vite-react' | 'vite-vue' | 'sveltekit' | 'vanilla';
-type BackendFramework = 'nextjs-app' | 'nextjs-pages' | 'sveltekit' | 'express' | 'fastify' | 'hono' | 'node';
+type BackendFramework = 'nextjs-app' | 'nextjs-pages' | 'sveltekit' | 'express' | 'fastify' | 'hono' | 'node' | 'koa';
 type DeploymentMode = 'hosted' | 'self-hosted';
 
 interface ProviderConfig {
@@ -388,7 +388,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     labels: ['inner-lens', 'bug'],
   });
 
-  return res.status(result.success ? 200 : 500).json(result);
+  return res.status(result.status).json(result.body);
 }
 `,
   },
@@ -396,6 +396,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     name: 'SvelteKit',
     apiRouteFile: 'src/routes/api/inner-lens/report/+server.ts',
     apiRouteTemplate: `import { json } from '@sveltejs/kit';
+import { GITHUB_TOKEN } from '$env/static/private';
 import type { RequestHandler } from './$types';
 import { handleBugReport } from 'inner-lens/server';
 
@@ -403,12 +404,12 @@ export const POST: RequestHandler = async ({ request }) => {
   const body = await request.json();
 
   const result = await handleBugReport(body, {
-    githubToken: process.env.GITHUB_TOKEN!,
+    githubToken: GITHUB_TOKEN,
     repository: process.env.GITHUB_REPOSITORY || 'owner/repo',
     labels: ['inner-lens', 'bug'],
   });
 
-  return json(result, { status: result.success ? 200 : 500 });
+  return json(result.body, { status: result.status });
 };
 `,
   },
@@ -480,6 +481,27 @@ export const innerLensHandler = createNodeHandler({
 // if (req.url === '/api/inner-lens/report' && req.method === 'POST') {
 //   await innerLensHandler(req, res);
 // }
+`,
+  },
+  'koa': {
+    name: 'Koa',
+    apiRouteFile: 'src/routes/inner-lens.ts',
+    apiRouteTemplate: `import Router from '@koa/router';
+import { createKoaHandler } from 'inner-lens/server';
+
+const router = new Router();
+
+const handler = createKoaHandler({
+  githubToken: process.env.GITHUB_TOKEN!,
+  repository: process.env.GITHUB_REPOSITORY || 'owner/repo',
+  labels: ['inner-lens', 'bug'],
+});
+
+router.post('/api/inner-lens/report', async (ctx) => {
+  await handler(ctx);
+});
+
+export default router;
 `,
   },
 };
@@ -570,6 +592,11 @@ async function detectBackendFramework(cwd: string, frontendFramework: Framework 
     // Check for Fastify
     if (deps['fastify']) {
       return 'fastify';
+    }
+
+    // Check for Koa
+    if (deps['koa']) {
+      return 'koa';
     }
 
     // Check for Express
@@ -1867,14 +1894,14 @@ jobs:
                   return anthropic(modelName);
               }
             }
-            // Fallback to defaults
+            // Fallback to defaults (must match PROVIDER_CONFIGS)
             switch (provider) {
               case 'openai':
-                return openai('gpt-4o');
+                return openai('gpt-5.2');
               case 'google':
                 return google('gemini-2.0-flash');
               default:
-                return anthropic('claude-sonnet-4-20250514');
+                return anthropic('claude-sonnet-4-5-20250929');
             }
           }
 

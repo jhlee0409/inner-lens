@@ -79,6 +79,27 @@ describe('maskSensitiveData', () => {
     const text = 'This is a normal log message without secrets';
     expect(maskSensitiveData(text)).toBe(text);
   });
+
+  it('masks IPv4 addresses', () => {
+    expect(maskSensitiveData('Server IP: 192.168.1.100')).toBe(
+      'Server IP: [IP_REDACTED]'
+    );
+    expect(maskSensitiveData('Request from 10.0.0.1')).toBe(
+      'Request from [IP_REDACTED]'
+    );
+  });
+
+  it('masks IPv6 addresses', () => {
+    expect(maskSensitiveData('Server: 2001:0db8:85a3:0000:0000:8a2e:0370:7334')).toBe(
+      'Server: [IP_REDACTED]'
+    );
+    expect(maskSensitiveData('Compressed: 2001:db8:85a3::8a2e:370:7334')).toBe(
+      'Compressed: [IP_REDACTED]'
+    );
+    expect(maskSensitiveData('Loopback: ::1')).toBe(
+      'Loopback: [IP_REDACTED]'
+    );
+  });
 });
 
 describe('maskSensitiveObject', () => {

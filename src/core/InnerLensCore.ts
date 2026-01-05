@@ -3,13 +3,47 @@
  * Framework-agnostic implementation of the bug reporting widget
  */
 
-import type { LogEntry, BugReportPayload, BugReportResponse, WidgetLanguage } from '../types';
+import type {
+  LogEntry,
+  BugReportPayload,
+  BugReportResponse,
+  WidgetLanguage,
+  UserAction,
+  NavigationEntry,
+  PerformanceSummary,
+  PageContext,
+} from '../types';
 import { WIDGET_TEXTS, HOSTED_API_ENDPOINT } from '../types';
 import {
   initLogCapture,
   getCapturedLogs,
   clearCapturedLogs,
+  restoreConsole,
 } from '../utils/log-capture';
+import {
+  initUserActionCapture,
+  getCapturedUserActions,
+  clearCapturedUserActions,
+  stopUserActionCapture,
+} from '../utils/user-action-capture';
+import {
+  initNavigationCapture,
+  getCapturedNavigations,
+  clearCapturedNavigations,
+  stopNavigationCapture,
+} from '../utils/navigation-capture';
+import {
+  initPerformanceCapture,
+  getPerformanceData,
+  stopPerformanceCapture,
+} from '../utils/performance-capture';
+import {
+  startSessionReplay,
+  stopSessionReplay,
+  getSessionReplaySnapshot,
+  compressReplayData,
+  type SessionReplayData,
+} from '../utils/session-replay';
 import { maskSensitiveData } from '../utils/masking';
 import { createStyles, keyframesCSS, type StyleConfig } from '../utils/styles';
 
@@ -48,6 +82,34 @@ export interface InnerLensCoreConfig {
    * @default true
    */
   maskSensitiveData?: boolean;
+
+  // ============================================
+  // Extended Capture Options
+  // ============================================
+
+  /**
+   * Enable/disable user action tracking (clicks, inputs, etc.)
+   * @default true
+   */
+  captureUserActions?: boolean;
+
+  /**
+   * Enable/disable navigation tracking
+   * @default true
+   */
+  captureNavigation?: boolean;
+
+  /**
+   * Enable/disable performance metrics (Core Web Vitals)
+   * @default true
+   */
+  capturePerformance?: boolean;
+
+  /**
+   * Enable/disable session replay recording
+   * @default false (opt-in due to size)
+   */
+  captureSessionReplay?: boolean;
 
   /**
    * Custom CSS styles for the widget
@@ -184,6 +246,10 @@ export class InnerLensCore {
       | 'captureConsoleLogs'
       | 'maxLogEntries'
       | 'maskSensitiveData'
+      | 'captureUserActions'
+      | 'captureNavigation'
+      | 'capturePerformance'
+      | 'captureSessionReplay'
       | 'disabled'
       | 'devOnly'
       | 'buttonText'
@@ -202,6 +268,12 @@ export class InnerLensCore {
   private submissionState: SubmissionState = 'idle';
   private description = '';
   private logs: LogEntry[] = [];
+  private userActions: UserAction[] = [];
+  private navigations: NavigationEntry[] = [];
+  private performance: PerformanceSummary | null = null;
+  private sessionReplayData: SessionReplayData | null = null;
+  private pageContext: PageContext | null = null;
+  private pageLoadTime: number = Date.now();
   private errorMessage: string | null = null;
   private issueUrl: string | null = null;
   private styleElement: HTMLStyleElement | null = null;
@@ -225,6 +297,11 @@ export class InnerLensCore {
       captureConsoleLogs: true,
       maxLogEntries: 50,
       maskSensitiveData: true,
+      // Extended capture options
+      captureUserActions: true,
+      captureNavigation: true,
+      capturePerformance: true,
+      captureSessionReplay: false, // Opt-in due to size
       disabled: false,
       devOnly: true,
       language: lang,
@@ -302,6 +379,34 @@ export class InnerLensCore {
       });
     }
 
+    // Initialize user action capture
+    if (this.config.captureUserActions) {
+      initUserActionCapture({
+        maskSensitiveData: this.config.maskSensitiveData,
+      });
+    }
+
+    // Initialize navigation capture
+    if (this.config.captureNavigation) {
+      initNavigationCapture({
+        maskSensitiveData: this.config.maskSensitiveData,
+      });
+    }
+
+    // Initialize performance capture
+    if (this.config.capturePerformance) {
+      initPerformanceCapture();
+    }
+
+    // Initialize session replay (async, non-blocking)
+    if (this.config.captureSessionReplay) {
+      startSessionReplay({
+        maskInputs: true,
+      }).catch((err) => {
+        console.warn('[inner-lens] Session replay failed to start:', err);
+      });
+    }
+
     // Inject styles
     this.injectStyles();
 
@@ -328,6 +433,23 @@ export class InnerLensCore {
 
     document.removeEventListener('keydown', this.handleKeyDown);
 
+    // Stop all capture modules
+    if (this.config.captureConsoleLogs) {
+      restoreConsole();
+    }
+    if (this.config.captureUserActions) {
+      stopUserActionCapture();
+    }
+    if (this.config.captureNavigation) {
+      stopNavigationCapture();
+    }
+    if (this.config.capturePerformance) {
+      stopPerformanceCapture();
+    }
+    if (this.config.captureSessionReplay) {
+      stopSessionReplay();
+    }
+
     if (this.widgetRoot) {
       this.widgetRoot.remove();
       this.widgetRoot = null;
@@ -347,9 +469,85 @@ export class InnerLensCore {
   open(): void {
     if (this.isDisabledByEnvironment() || !this.mounted) return;
     this.isOpen = true;
+
+    // Collect all captured data
     this.logs = getCapturedLogs();
+
+    if (this.config.captureUserActions) {
+      this.userActions = getCapturedUserActions();
+    }
+
+    if (this.config.captureNavigation) {
+      this.navigations = getCapturedNavigations();
+    }
+
+    if (this.config.capturePerformance) {
+      const perfData = getPerformanceData();
+      this.performance = {
+        coreWebVitals: perfData.coreWebVitals,
+        timing: perfData.timing,
+        resourceCount: perfData.resources.total,
+        memoryUsage: perfData.memory?.usedJSHeapSize,
+      };
+    }
+
+    if (this.config.captureSessionReplay) {
+      this.sessionReplayData = getSessionReplaySnapshot();
+    }
+
+    this.pageContext = this.capturePageContext();
+
     this.render();
     this.config.onOpen?.();
+  }
+
+  private capturePageContext(): PageContext {
+    return {
+      route: window.location.href,
+      pathname: window.location.pathname,
+      hash: window.location.hash,
+      title: document.title,
+      timeOnPage: Date.now() - this.pageLoadTime,
+      referrer: document.referrer || undefined,
+      componentStack: this.getReactComponentStack(),
+    };
+  }
+
+  private getReactComponentStack(): string | undefined {
+    const errorBoundaryStack = (window as Window & { __INNER_LENS_COMPONENT_STACK__?: string }).__INNER_LENS_COMPONENT_STACK__;
+    if (errorBoundaryStack) {
+      return errorBoundaryStack;
+    }
+
+    const reactRoot = document.getElementById('root') || document.getElementById('__next');
+    if (reactRoot) {
+      const fiberKey = Object.keys(reactRoot).find(key => key.startsWith('__reactFiber$'));
+      if (fiberKey) {
+        try {
+          const fiber = (reactRoot as unknown as Record<string, unknown>)[fiberKey] as { type?: { name?: string }; return?: unknown } | undefined;
+          const componentNames: string[] = [];
+          let current = fiber;
+          let depth = 0;
+          const MAX_DEPTH = 10;
+
+          while (current && depth < MAX_DEPTH) {
+            if (current.type && typeof current.type === 'function' && current.type.name) {
+              componentNames.push(current.type.name);
+            }
+            current = current.return as typeof fiber;
+            depth++;
+          }
+
+          if (componentNames.length > 0) {
+            return componentNames.reverse().join(' > ');
+          }
+        } catch {
+          return undefined;
+        }
+      }
+    }
+
+    return undefined;
   }
 
   /**
@@ -685,6 +883,24 @@ export class InnerLensCore {
         return;
       }
 
+      // Prepare session replay data if available
+      let sessionReplayBase64: string | undefined;
+      if (this.sessionReplayData && this.sessionReplayData.events.length > 0) {
+        try {
+          const compressed = await compressReplayData(this.sessionReplayData);
+          const buffer = await compressed.arrayBuffer();
+          sessionReplayBase64 = btoa(
+            String.fromCharCode(...new Uint8Array(buffer))
+          );
+        } catch (error) {
+          // Fallback to uncompressed if compression fails
+          console.warn('[inner-lens] Session replay compression failed, using uncompressed:', error);
+          sessionReplayBase64 = btoa(
+            JSON.stringify(this.sessionReplayData.events)
+          );
+        }
+      }
+
       const payload: BugReportPayload = {
         description: this.config.maskSensitiveData
           ? maskSensitiveData(this.description)
@@ -696,6 +912,12 @@ export class InnerLensCore {
         // Centralized mode: send owner/repo directly
         owner: owner || undefined,
         repo: repo || undefined,
+        // Extended context
+        userActions: this.userActions.length > 0 ? this.userActions : undefined,
+        navigations: this.navigations.length > 0 ? this.navigations : undefined,
+        performance: this.performance ?? undefined,
+        sessionReplay: sessionReplayBase64,
+        pageContext: this.pageContext ?? undefined,
         // Legacy: keep metadata for backwards compatibility
         metadata: {
           repository: this.config.repository,
@@ -723,7 +945,20 @@ export class InnerLensCore {
 
       this.submissionState = 'success';
       this.issueUrl = data.issueUrl ?? null;
+
+      // Clear all captured data after successful submission
       clearCapturedLogs();
+      if (this.config.captureUserActions) {
+        clearCapturedUserActions();
+      }
+      if (this.config.captureNavigation) {
+        clearCapturedNavigations();
+      }
+      if (this.config.captureSessionReplay) {
+        // Stop and restart session replay for fresh recording
+        stopSessionReplay();
+        startSessionReplay({ maskInputs: true }).catch(() => {});
+      }
 
       this.config.onSuccess?.(data.issueUrl);
     } catch (error) {

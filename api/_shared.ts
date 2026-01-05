@@ -18,6 +18,81 @@ export interface LogEntry {
   stack?: string;
 }
 
+// User Action Types
+export type UserActionType =
+  | 'click'
+  | 'dblclick'
+  | 'input'
+  | 'change'
+  | 'focus'
+  | 'blur'
+  | 'scroll'
+  | 'keydown'
+  | 'submit'
+  | 'copy'
+  | 'paste'
+  | 'select';
+
+export interface UserAction {
+  type: UserActionType;
+  target: string;
+  timestamp: number;
+  value?: string;
+  position?: { x: number; y: number };
+  key?: string;
+  metadata?: Record<string, unknown>;
+}
+
+// Navigation Types
+export type NavigationType =
+  | 'pageload'
+  | 'pushstate'
+  | 'replacestate'
+  | 'popstate'
+  | 'hashchange'
+  | 'beforeunload';
+
+export interface NavigationEntry {
+  type: NavigationType;
+  timestamp: number;
+  from: string;
+  to: string;
+  duration?: number;
+  metadata?: Record<string, unknown>;
+}
+
+// Performance Types
+export interface CoreWebVitals {
+  LCP?: number;
+  FID?: number;
+  CLS?: number;
+  INP?: number;
+  TTFB?: number;
+  FCP?: number;
+}
+
+export interface PerformanceSummary {
+  coreWebVitals: CoreWebVitals;
+  timing: {
+    domContentLoaded: number;
+    loadComplete: number;
+    timeToInteractive?: number;
+  };
+  resourceCount: number;
+  memoryUsage?: number;
+  score?: number;
+}
+
+export interface PageContext {
+  route: string;
+  pathname: string;
+  hash: string;
+  componentStack?: string;
+  title: string;
+  timeOnPage: number;
+  referrer?: string;
+}
+
 export interface HostedBugReportPayload {
   owner: string;
   repo: string;
@@ -27,7 +102,12 @@ export interface HostedBugReportPayload {
   userAgent?: string;
   timestamp?: number;
   metadata?: Record<string, unknown>;
+  // Extended context
+  userActions?: UserAction[];
+  navigations?: NavigationEntry[];
+  performance?: PerformanceSummary;
   sessionReplay?: string;
+  pageContext?: PageContext;
 }
 
 // ============================================
@@ -99,6 +179,12 @@ const MASKING_PATTERNS: MaskingPattern[] = [
   {
     name: 'ipv4',
     pattern: /\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/g,
+    replacement: '[IP_REDACTED]',
+  },
+  // IPv6 addresses (full and compressed forms)
+  {
+    name: 'ipv6',
+    pattern: /(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:)+:(?:[0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}|::(?:[0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}|::1/g,
     replacement: '[IP_REDACTED]',
   },
   // AWS Access Keys

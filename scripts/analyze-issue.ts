@@ -190,6 +190,8 @@ function getModel() {
 // ============================================
 // Note: maskSensitiveData is imported from src/utils/masking.ts
 // to ensure consistent masking patterns (20 patterns) across the codebase
+
+/**
  * Apply confidence calibration to all analyses in a result
  */
 function calibrateAllAnalyses(
@@ -436,7 +438,53 @@ The output schema supports multiple root cause analyses. Use this when:
   - suggestedFix (steps, codeChanges)
   - prevention, confidence, additionalContext
 - Do NOT split one issue into multiple analyses just to fill the array
-- Maximum 3 analyses - if more potential causes exist, mention them in additionalContext`;
+- Maximum 3 analyses - if more potential causes exist, mention them in additionalContext
+
+## ANTI-HALLUCINATION RULES (CRITICAL - VIOLATION = INVALID ANALYSIS)
+
+These rules prevent you from fabricating information. Violations will be automatically detected and penalized.
+
+### Rule 1: File Reference Constraint
+- ONLY mention files that appear in the "## Code Context" section below
+- If a file is not shown, you CANNOT know its contents - do NOT guess
+- Before referencing a file, verify it exists in the provided context
+- ❌ WRONG: "The bug is in UserService.ts" (if UserService.ts is not in context)
+- ✅ RIGHT: "Based on the provided files, I cannot locate the exact source"
+
+### Rule 2: Line Number Constraint
+- ONLY cite line numbers if you can quote the EXACT code at that line
+- Line numbers in context are shown as "00042| code here" format
+- ❌ WRONG: "Fix line 127 in server.ts" (without quoting line 127's content)
+- ✅ RIGHT: "Fix line 42 in server.ts where \`const user = null\` should be..."
+
+### Rule 3: Code Citation Constraint
+- Every "before" code in suggestedFix MUST be copy-pasted from context
+- Do NOT paraphrase or "clean up" the original code
+- If you can't find the exact code to change, use codeChanges: []
+- ❌ WRONG: before: "function validate(x) { ... }" (summarized)
+- ✅ RIGHT: before: "function validate(x) {\\n  return x != null;\\n}" (exact match)
+
+### Rule 4: Uncertainty Acknowledgment
+When context is insufficient:
+- Set reportType: "cannot_verify"
+- Set bugExistsInCode: false
+- Set confidence: below 50
+- In evidence, state: "Insufficient context to verify. The issue may exist in files not provided."
+
+### Rule 5: No Invented Symbols
+- Do NOT reference function/class/variable names not present in context
+- If you need to suggest creating a new function, clearly mark it as NEW
+- ❌ WRONG: "The validateUserInput() function has a bug" (if not in context)
+- ✅ RIGHT: "Consider creating a new validateUserInput() function that..."
+
+### Automatic Verification
+Your response will be automatically verified against:
+1. File existence in project
+2. Code snippet matching in context
+3. Line number validity
+4. Symbol existence in provided code
+
+Failed verifications will cap your confidence at 30% and flag the analysis.`;
 
 /**
  * Get the system prompt with language-specific instructions
@@ -931,6 +979,118 @@ async function analyzeIssue(): Promise<void> {
     console.log('   ✅ All analyses passed hallucination verification');
   } else {
     console.log(`   ⚠️ ${hallucinationCount} analysis(es) contain potential hallucinations`);
+  }
+
+  // Step 5.7: Self-Correction (Re-analyze if critical hallucinations detected)
+  const hasCriticalHallucinations = hallucinationReports.some(
+    r => r && r.checks.some(c => !c.verified && c.severity === 'critical')
+  );
+
+  if (hasCriticalHallucinations && analysis.isValidReport && analysis.reportType === 'bug') {
+    console.log('\n🔄 Step 5.7: Self-Correction triggered (critical hallucinations detected)...');
+
+    // Build correction prompt with specific failures
+    const failedClaims = hallucinationReports
+      .flatMap(r => r?.checks.filter(c => !c.verified && c.severity === 'critical') ?? [])
+      .slice(0, 5)
+      .map(c => `- ${c.type}: "${c.claim}" - ${c.details}`)
+      .join('\n');
+
+    const correctionPrompt = `${userPrompt}
+
+---
+
+⚠️ SELF-CORRECTION REQUIRED ⚠️
+
+Your previous analysis contained hallucinations - references to code/files that don't exist in the provided context:
+
+${failedClaims}
+
+CORRECTION INSTRUCTIONS:
+1. Re-analyze using ONLY the code shown in "## Code Context" above
+2. Do NOT reference any files or code not explicitly provided
+3. If you cannot find evidence in the provided code, set:
+   - reportType: "cannot_verify"
+   - bugExistsInCode: false
+   - confidence: below 50
+4. Only suggest code fixes for code that ACTUALLY EXISTS in the context
+5. If unsure, acknowledge uncertainty rather than fabricating details
+
+Provide a corrected analysis that only references verifiable information.`;
+
+    try {
+      const correctedResult = await withRetry(
+        async () => {
+          const { object } = await generateObject({
+            model,
+            schema: AnalysisResultSchema,
+            system: getSystemPrompt(config.language),
+            prompt: correctionPrompt,
+            maxTokens: config.maxTokens,
+          });
+          return object;
+        },
+        config.retryAttempts,
+        config.retryDelay
+      );
+
+      // Re-verify the corrected analysis
+      const { result: recalibratedAnalysis, hallucinationReports: newHallucinationReports } = calibrateAllAnalyses(
+        correctedResult,
+        errorLocations,
+        codeContext,
+        relevantFiles.map(f => f.path)
+      );
+
+      const stillHasCritical = newHallucinationReports.some(
+        r => r && r.checks.some(c => !c.verified && c.severity === 'critical')
+      );
+
+      if (!stillHasCritical) {
+        console.log('   ✅ Self-correction successful - hallucinations resolved');
+        analysis = recalibratedAnalysis;
+
+        // Add note about self-correction
+        analysis = {
+          ...analysis,
+          analyses: analysis.analyses.map(a => ({
+            ...a,
+            additionalContext: (a.additionalContext || '') +
+              '\n\n🔄 **Self-Correction Applied**: This analysis was refined after initial verification detected references to non-existent code.',
+          })),
+        };
+      } else {
+        console.log('   ⚠️ Self-correction still contains hallucinations - using conservative fallback');
+        // Downgrade to cannot_verify with low confidence
+        analysis = {
+          ...analysis,
+          reportType: 'cannot_verify',
+          analyses: analysis.analyses.map(a => ({
+            ...a,
+            confidence: Math.min(a.confidence, 30),
+            codeVerification: {
+              ...a.codeVerification,
+              bugExistsInCode: false,
+              evidence: a.codeVerification.evidence +
+                '\n\n⚠️ **Verification Failed**: Could not verify all claims against provided code context.',
+            },
+            additionalContext: (a.additionalContext || '') +
+              '\n\n⚠️ **Low Confidence Warning**: Multiple verification attempts failed. Manual review strongly recommended.',
+          })),
+        };
+      }
+    } catch (correctionError) {
+      console.log('   ❌ Self-correction failed, proceeding with original analysis');
+      // Add warning to original analysis
+      analysis = {
+        ...analysis,
+        analyses: analysis.analyses.map(a => ({
+          ...a,
+          additionalContext: (a.additionalContext || '') +
+            '\n\n⚠️ **Verification Warning**: Some references could not be verified. Please review carefully.',
+        })),
+      };
+    }
   }
 
   // Step 6: Post comments (one per root cause analysis)

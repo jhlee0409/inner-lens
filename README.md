@@ -15,7 +15,7 @@ inner-lens captures console logs, network requests, and session replays when use
 - **AI-Powered Analysis** — Anthropic Claude, OpenAI GPT-4, or Google Gemini
 - **Automatic Data Capture** — Console logs, network errors, DOM state
 - **Security-First** — PII, API keys, and tokens are masked automatically
-- **Multi-Language** — Analysis in 5 languages (EN, KO, JA, ZH, ES)
+- **Multi-Language** — Analysis in 8 languages (EN, KO, JA, ZH, ES, DE, FR, PT)
 - **Zero External CSS** — Inline styles prevent conflicts with your design
 
 ---
@@ -86,10 +86,20 @@ To enable AI-powered analysis on bug reports, add a GitHub Actions workflow.
 npx inner-lens init
 ```
 
-The CLI will:
-- Ask which AI provider you prefer
-- Generate the workflow file
-- Provide instructions for setting up secrets
+The interactive CLI will:
+1. Choose **Hosted** (recommended) or **Self-Hosted** mode
+2. Auto-detect your framework (Next.js, Vite, Vue, SvelteKit, etc.)
+3. Select AI provider and model
+4. Choose analysis output language
+5. Generate workflow file and widget code
+
+```bash
+# Quick setup with defaults (non-interactive)
+npx inner-lens init -y
+
+# Generate standalone workflow (for customization)
+npx inner-lens init --eject
+```
 
 ### Verify Configuration
 
@@ -219,26 +229,183 @@ import { createExpressHandler } from 'inner-lens/server';
 
 const app = express();
 app.use(express.json());
+
 app.post('/api/inner-lens/report', createExpressHandler({
   githubToken: process.env.GITHUB_TOKEN!,
   repository: 'owner/repo',
 }));
+
+app.listen(3000);
 ```
 
-### Other Frameworks
+### Next.js Pages Router
 
-| Framework | Handler |
-|-----------|---------|
-| Fastify | `createFastifyHandler()` |
-| Koa | `createKoaHandler()` |
-| Hono / Bun / Deno | `createFetchHandler()` |
-| Node.js HTTP | `createNodeHandler()` |
+```ts
+// pages/api/inner-lens/report.ts
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { handleBugReport } from 'inner-lens/server';
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const result = await handleBugReport(req.body, {
+    githubToken: process.env.GITHUB_TOKEN!,
+    repository: 'owner/repo',
+  });
+
+  return res.status(result.status).json(result.body);
+}
+```
+
+### SvelteKit
+
+```ts
+// src/routes/api/inner-lens/report/+server.ts
+import { json } from '@sveltejs/kit';
+import { GITHUB_TOKEN } from '$env/static/private';
+import type { RequestHandler } from './$types';
+import { handleBugReport } from 'inner-lens/server';
+
+export const POST: RequestHandler = async ({ request }) => {
+  const body = await request.json();
+
+  const result = await handleBugReport(body, {
+    githubToken: GITHUB_TOKEN,
+    repository: 'owner/repo',
+  });
+
+  return json(result.body, { status: result.status });
+};
+```
+
+> **Note:** Add `GITHUB_TOKEN` to your `.env` file. SvelteKit uses `$env/static/private` for secure server-side environment variables.
+
+### Fastify
+
+```ts
+import Fastify from 'fastify';
+import { createFastifyHandler } from 'inner-lens/server';
+
+const fastify = Fastify();
+
+fastify.post('/api/inner-lens/report', createFastifyHandler({
+  githubToken: process.env.GITHUB_TOKEN!,
+  repository: 'owner/repo',
+}));
+
+fastify.listen({ port: 3000 });
+```
+
+### Koa
+
+```ts
+import Koa from 'koa';
+import Router from '@koa/router';
+import bodyParser from 'koa-bodyparser';
+import { createKoaHandler } from 'inner-lens/server';
+
+const app = new Koa();
+const router = new Router();
+
+app.use(bodyParser());
+
+const handler = createKoaHandler({
+  githubToken: process.env.GITHUB_TOKEN!,
+  repository: 'owner/repo',
+});
+
+router.post('/api/inner-lens/report', async (ctx) => {
+  await handler(ctx);
+});
+
+app.use(router.routes());
+app.listen(3000);
+```
+
+### Node.js HTTP
+
+```ts
+import http from 'http';
+import { createNodeHandler } from 'inner-lens/server';
+
+const handler = createNodeHandler({
+  githubToken: process.env.GITHUB_TOKEN!,
+  repository: 'owner/repo',
+});
+
+const server = http.createServer(async (req, res) => {
+  if (req.url === '/api/inner-lens/report' && req.method === 'POST') {
+    await handler(req, res);
+  } else {
+    res.statusCode = 404;
+    res.end('Not Found');
+  }
+});
+
+server.listen(3000);
+```
+
+### Hono / Bun / Deno
+
+```ts
+import { Hono } from 'hono';
+import { createFetchHandler } from 'inner-lens/server';
+
+const app = new Hono();
+
+const handler = createFetchHandler({
+  githubToken: process.env.GITHUB_TOKEN!,
+  repository: 'owner/repo',
+});
+
+app.post('/api/inner-lens/report', (c) => handler(c.req.raw));
+
+export default app;
+```
 
 ### Widget Configuration (Self-Hosted)
 
 ```tsx
 <InnerLensWidget
   endpoint="/api/inner-lens/report"  // Your endpoint
+  repository="owner/repo"
+/>
+```
+
+### Cross-Origin Setup (Separate Frontend/Backend)
+
+If your frontend and backend are on different domains (e.g., Vite dev server + Express backend):
+
+**Option 1: Proxy (Development)**
+
+```js
+// vite.config.js
+export default {
+  server: {
+    proxy: {
+      '/api': 'http://localhost:3000'
+    }
+  }
+}
+```
+
+**Option 2: CORS (Production)**
+
+```ts
+// Express with CORS
+import cors from 'cors';
+
+app.use(cors({ origin: 'https://your-frontend.com' }));
+app.post('/api/inner-lens/report', createExpressHandler({...}));
+```
+
+Then use the full URL in the widget:
+
+```tsx
+<InnerLensWidget
+  endpoint="https://your-api.com/api/inner-lens/report"
   repository="owner/repo"
 />
 ```
@@ -301,6 +468,17 @@ wrangler secret put GITHUB_TOKEN
 wrangler deploy
 ```
 
+### Widget Configuration (Cloudflare Workers)
+
+Since Workers are deployed to a different domain, use the full URL:
+
+```tsx
+<InnerLensWidget
+  endpoint="https://your-worker.your-subdomain.workers.dev"
+  repository="owner/repo"
+/>
+```
+
 </details>
 
 ---
@@ -311,7 +489,7 @@ wrangler deploy
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `endpoint` | `string` | `/api/inner-lens/report` | API endpoint URL |
+| `endpoint` | `string` | (auto) | API endpoint. Uses hosted API by default, or your endpoint in self-hosted mode |
 | `repository` | `string` | - | GitHub repository in `owner/repo` format |
 | `language` | `string` | `en` | Widget UI language (`en`, `ko`, `ja`, `zh`, `es`) |
 | `devOnly` | `boolean` | `true` | Hide in production |

@@ -156,6 +156,34 @@ export interface InnerLensConfig {
    */
   maskSensitiveData?: boolean;
 
+  // ============================================
+  // Extended Capture Options
+  // ============================================
+
+  /**
+   * Enable/disable user action tracking (clicks, inputs, etc.)
+   * @default true
+   */
+  captureUserActions?: boolean;
+
+  /**
+   * Enable/disable navigation tracking
+   * @default true
+   */
+  captureNavigation?: boolean;
+
+  /**
+   * Enable/disable performance metrics (Core Web Vitals)
+   * @default true
+   */
+  capturePerformance?: boolean;
+
+  /**
+   * Enable/disable session replay recording
+   * @default false (opt-in due to size)
+   */
+  captureSessionReplay?: boolean;
+
   /**
    * Custom CSS styles for the widget
    */
@@ -278,6 +306,146 @@ export interface LogEntry {
   stack?: string;
 }
 
+// ============================================
+// User Action Types
+// ============================================
+
+/**
+ * Types of user actions that can be captured
+ */
+export type UserActionType =
+  | 'click'
+  | 'dblclick'
+  | 'input'
+  | 'change'
+  | 'focus'
+  | 'blur'
+  | 'scroll'
+  | 'keydown'
+  | 'submit'
+  | 'copy'
+  | 'paste'
+  | 'select';
+
+/**
+ * Captured user action entry
+ */
+export interface UserAction {
+  type: UserActionType;
+  target: string;
+  timestamp: number;
+  value?: string;
+  position?: { x: number; y: number };
+  key?: string;
+  metadata?: Record<string, unknown>;
+}
+
+// ============================================
+// Navigation Types
+// ============================================
+
+/**
+ * Types of navigation events
+ */
+export type NavigationType =
+  | 'pageload'
+  | 'pushstate'
+  | 'replacestate'
+  | 'popstate'
+  | 'hashchange'
+  | 'beforeunload';
+
+/**
+ * Navigation entry
+ */
+export interface NavigationEntry {
+  type: NavigationType;
+  timestamp: number;
+  from: string;
+  to: string;
+  duration?: number;
+  metadata?: Record<string, unknown>;
+}
+
+// ============================================
+// Performance Types
+// ============================================
+
+/**
+ * Core Web Vitals metrics
+ */
+export interface CoreWebVitals {
+  /** Largest Contentful Paint (ms) */
+  LCP?: number;
+  /** First Input Delay (ms) */
+  FID?: number;
+  /** Cumulative Layout Shift */
+  CLS?: number;
+  /** Interaction to Next Paint (ms) */
+  INP?: number;
+  /** Time to First Byte (ms) */
+  TTFB?: number;
+  /** First Contentful Paint (ms) */
+  FCP?: number;
+}
+
+/**
+ * Performance data summary
+ */
+export interface PerformanceSummary {
+  coreWebVitals: CoreWebVitals;
+  timing: {
+    domContentLoaded: number;
+    loadComplete: number;
+    timeToInteractive?: number;
+  };
+  resourceCount: number;
+  memoryUsage?: number;
+  score?: number;
+}
+
+// ============================================
+// Captured Context (Combined)
+// ============================================
+
+/**
+ * Page context for better bug location identification
+ */
+export interface PageContext {
+  /** Current URL/route when bug occurred */
+  route: string;
+  /** URL path without query params */
+  pathname: string;
+  /** URL hash */
+  hash: string;
+  /** React component stack (from Error Boundary) */
+  componentStack?: string;
+  /** Document title */
+  title: string;
+  /** Time spent on current page (ms) */
+  timeOnPage: number;
+  /** Referrer URL */
+  referrer?: string;
+}
+
+/**
+ * Complete captured context for bug reports
+ */
+export interface CapturedContext {
+  /** Console logs and network requests */
+  logs: LogEntry[];
+  /** User interaction trail */
+  userActions: UserAction[];
+  /** Page navigation history */
+  navigations: NavigationEntry[];
+  /** Performance metrics */
+  performance?: PerformanceSummary;
+  /** Session replay data (base64 encoded) */
+  sessionReplay?: string;
+  /** Current page context */
+  pageContext?: PageContext;
+}
+
 /**
  * Bug report payload sent to the server
  */
@@ -291,6 +459,12 @@ export interface BugReportPayload {
   // Centralized mode fields (for inner-lens API)
   owner?: string;
   repo?: string;
+  // Extended context
+  userActions?: UserAction[];
+  navigations?: NavigationEntry[];
+  performance?: PerformanceSummary;
+  sessionReplay?: string;
+  pageContext?: PageContext;
 }
 
 /**
@@ -352,5 +526,11 @@ export interface HostedBugReportPayload {
   userAgent?: string;
   timestamp?: number;
   metadata?: Record<string, unknown>;
+
+  // Extended context (user actions, navigation, performance)
+  userActions?: UserAction[];
+  navigations?: NavigationEntry[];
+  performance?: PerformanceSummary;
   sessionReplay?: string; // Base64 encoded rrweb data
+  pageContext?: PageContext;
 }
