@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jhlee0409/inner-lens/main/.github/assets/logo.svg" alt="inner-lens" width="120" />
+  <img width="120" height="120" alt="inner-lens-logo" src="https://github.com/user-attachments/assets/c535635b-daf8-4db5-bb50-82c32014f8c2" />
 </p>
 
 <h1 align="center">inner-lens</h1>
