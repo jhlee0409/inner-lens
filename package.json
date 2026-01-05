@@ -107,6 +107,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
+    "sync:check": "npx tsx scripts/sync-check.ts",
     "prepublishOnly": "npm run build",
     "example": "node examples/vanilla/server.js",
     "example:dev": "npm run build && node examples/vanilla/server.js"

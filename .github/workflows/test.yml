@@ -39,6 +39,9 @@ jobs:
       - name: Run type check
         run: npm run typecheck
 
+      - name: Verify Vercel constraint sync
+        run: npm run sync:check
+
       - name: Run tests with coverage
         run: npm run test:coverage
 
