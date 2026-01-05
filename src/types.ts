@@ -190,6 +190,7 @@ export interface InnerLensConfig {
   styles?: {
     buttonColor?: string;
     buttonPosition?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+    buttonSize?: 'sm' | 'md' | 'lg';
   };
 
   /**
@@ -213,6 +214,12 @@ export interface InnerLensConfig {
    * @default '#6366f1'
    */
   buttonColor?: string;
+
+  /**
+   * Button size (convenience option, maps to styles.buttonSize)
+   * @default 'lg'
+   */
+  buttonSize?: 'sm' | 'md' | 'lg';
 
   // ============================================
   // UI Text Customization

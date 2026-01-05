@@ -138,6 +138,12 @@ export interface InnerLensCoreConfig {
    */
   buttonColor?: string;
 
+  /**
+   * Button size (convenience option, maps to styles.buttonSize)
+   * @default 'lg'
+   */
+  buttonSize?: 'sm' | 'md' | 'lg';
+
   // ============================================
   // UI Text Customization
   // ============================================
@@ -280,11 +286,11 @@ export class InnerLensCore {
   private mounted = false;
 
   constructor(config: InnerLensCoreConfig = {}) {
-    // Map convenience options to styles
     const mergedStyles: StyleConfig = {
       ...config.styles,
       buttonPosition: config.position ?? config.styles?.buttonPosition ?? 'bottom-right',
       buttonColor: config.buttonColor ?? config.styles?.buttonColor ?? '#6366f1',
+      buttonSize: config.buttonSize ?? config.styles?.buttonSize ?? 'lg',
     };
 
     // Get i18n texts based on language
@@ -610,6 +616,7 @@ export class InnerLensCore {
     if (!this.widgetRoot) return;
 
     const styles = createStyles(this.config.styles);
+    const iconSize = styles.iconSize as number;
 
     this.widgetRoot.innerHTML = `
       <button
@@ -619,7 +626,7 @@ export class InnerLensCore {
         title="${this.escapeHtml(this.config.buttonText)}"
         style="${this.styleToString(styles.triggerButton)}"
       >
-        ${this.getBugIcon()}
+        ${this.getBugIcon(iconSize)}
       </button>
     `;
 
@@ -641,6 +648,7 @@ export class InnerLensCore {
     if (!this.widgetRoot) return;
 
     const styles = createStyles(this.config.styles);
+    const iconSize = styles.iconSize as number;
 
     if (!this.isOpen) {
       this.renderTrigger();
@@ -658,7 +666,7 @@ export class InnerLensCore {
         title="${this.escapeHtml(this.config.buttonText)}"
         style="${this.styleToString(styles.triggerButton)}"
       >
-        ${this.getBugIcon()}
+        ${this.getBugIcon(iconSize)}
       </button>
       <div
         id="inner-lens-overlay"
@@ -987,9 +995,9 @@ export class InnerLensCore {
     return div.innerHTML;
   }
 
-  private getBugIcon(): string {
+  private getBugIcon(size: number = 24): string {
     return `
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M8 2l1.88 1.88M14.12 3.88L16 2M9 7.13v-1a3 3 0 1 1 6 0v1" />
         <path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6Z" />
         <path d="M12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4" />

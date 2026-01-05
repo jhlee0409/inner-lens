@@ -6,9 +6,12 @@
 // Framework-agnostic CSS properties type
 type CSSStyleDeclaration = Record<string, string | number | undefined>;
 
+export type ButtonSize = 'sm' | 'md' | 'lg';
+
 export interface StyleConfig {
   buttonColor?: string;
   buttonPosition?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  buttonSize?: ButtonSize;
 }
 
 const getPositionStyles = (
@@ -29,15 +32,21 @@ const getPositionStyles = (
   }
 };
 
+const BUTTON_SIZES: Record<ButtonSize, { button: string; icon: number }> = {
+  sm: { button: '40px', icon: 18 },
+  md: { button: '48px', icon: 20 },
+  lg: { button: '56px', icon: 24 },
+};
+
 export const createStyles = (config?: StyleConfig) => {
   const buttonColor = config?.buttonColor ?? '#6366f1';
+  const sizeConfig = BUTTON_SIZES[config?.buttonSize ?? 'lg'];
 
   return {
-    // Floating trigger button
     triggerButton: {
       ...getPositionStyles(config?.buttonPosition),
-      width: '56px',
-      height: '56px',
+      width: sizeConfig.button,
+      height: sizeConfig.button,
       borderRadius: '50%',
       backgroundColor: buttonColor,
       color: '#ffffff',
@@ -50,6 +59,8 @@ export const createStyles = (config?: StyleConfig) => {
       transition: 'transform 0.2s ease, box-shadow 0.2s ease',
       outline: 'none',
     } as CSSStyleDeclaration,
+
+    iconSize: sizeConfig.icon,
 
     triggerButtonHover: {
       transform: 'scale(1.05)',

@@ -55,11 +55,10 @@ import { maskSensitiveData } from '../utils/masking';
 
 interface InnerLensWidgetProps extends InnerLensConfig {}
 
-// Icons as inline SVG components
-const BugIcon = () => (
+const BugIcon = ({ size = 24 }: { size?: number }) => (
   <svg
-    width="24"
-    height="24"
+    width={size}
+    height={size}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -123,6 +122,7 @@ export function InnerLensWidget({
   // Convenience options (map to styles)
   position,
   buttonColor,
+  buttonSize,
   // UI text customization (override i18n defaults)
   buttonText,
   dialogTitle,
@@ -181,8 +181,10 @@ export function InnerLensWidget({
     ...styleConfig,
     buttonPosition: position ?? styleConfig?.buttonPosition ?? 'bottom-right',
     buttonColor: buttonColor ?? styleConfig?.buttonColor ?? '#6366f1',
+    buttonSize: buttonSize ?? styleConfig?.buttonSize ?? 'lg',
   };
   const styles = createStyles(mergedStyleConfig);
+  const iconSize = styles.iconSize as number;
 
   // Inject keyframe animation CSS
   useEffect(() => {
@@ -486,7 +488,7 @@ export function InnerLensWidget({
         aria-label={t.buttonText}
         title={t.buttonText}
       >
-        <BugIcon />
+        <BugIcon size={iconSize} />
       </button>
     );
   };
