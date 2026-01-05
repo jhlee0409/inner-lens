@@ -47,7 +47,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     capturedLogs: 'Captured Logs',
     entry: 'entry',
     entries: 'entries',
-    privacyNotice: 'Sensitive info like emails and API keys is automatically hidden.',
+    privacyNotice: 'We collect clicks, navigation, and performance data. Sensitive info is automatically hidden.',
     submitting: 'Sending...',
   },
   ko: {
@@ -63,7 +63,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     capturedLogs: '수집된 로그',
     entry: '건',
     entries: '건',
-    privacyNotice: '이메일, API 키 등 민감한 정보는 자동으로 가려져요.',
+    privacyNotice: '클릭, 페이지 이동, 성능 데이터를 수집해요. 민감한 정보는 자동으로 가려져요.',
     submitting: '제보 중...',
   },
   ja: {
@@ -79,7 +79,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     capturedLogs: '取得したログ',
     entry: '件',
     entries: '件',
-    privacyNotice: 'メールやAPIキーなどの機密情報は自動的に隠されます。',
+    privacyNotice: 'クリック、ページ遷移、パフォーマンスデータを収集します。機密情報は自動的に隠されます。',
     submitting: '送信中...',
   },
   zh: {
@@ -95,7 +95,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     capturedLogs: '已收集的日志',
     entry: '条',
     entries: '条',
-    privacyNotice: '邮箱、API密钥等敏感信息会自动隐藏。',
+    privacyNotice: '我们会收集点击、页面跳转和性能数据。敏感信息会自动隐藏。',
     submitting: '提交中...',
   },
   es: {
@@ -111,7 +111,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     capturedLogs: 'Logs capturados',
     entry: 'entrada',
     entries: 'entradas',
-    privacyNotice: 'Los datos sensibles como emails y claves API se ocultan automáticamente.',
+    privacyNotice: 'Recopilamos clics, navegación y datos de rendimiento. Los datos sensibles se ocultan automáticamente.',
     submitting: 'Enviando...',
   },
 };

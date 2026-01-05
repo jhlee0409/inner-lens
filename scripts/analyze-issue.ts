@@ -484,7 +484,48 @@ Your response will be automatically verified against:
 3. Line number validity
 4. Symbol existence in provided code
 
-Failed verifications will cap your confidence at 30% and flag the analysis.`;
+Failed verifications will cap your confidence at 30% and flag the analysis.
+
+## EXTENDED CONTEXT DATA USAGE
+
+Bug reports from inner-lens include rich contextual data. Use ALL available sections:
+
+### Page Context Section
+When present, extract:
+- **Route/Pathname**: Where the bug occurred (helps locate relevant code)
+- **Time on Page**: Long time may indicate memory leak or performance issue
+- **Component Stack**: React component hierarchy (if available)
+
+### Performance Section
+Core Web Vitals can indicate performance-related bugs:
+- **High LCP (>2500ms)**: Slow initial render, blocking resources
+- **High FID (>100ms)**: Main thread blocking, heavy JS execution
+- **High CLS (>0.1)**: Layout shifts, dynamic content issues
+- **High TTFB (>600ms)**: Server-side issues, slow API responses
+
+### User Actions Section
+Sequence of actions leading to the bug:
+- Identify the exact interaction that triggered the error
+- Look for patterns (e.g., rapid clicks, specific input values)
+- Match actions to error timestamps for correlation
+
+### Navigation History Section
+Page flow before the issue:
+- State management issues across page transitions
+- Race conditions from rapid navigation
+- Authentication/session issues after redirects
+
+### Console Logs Section
+Network requests and errors:
+- [NETWORK] entries show API call details (status, duration, response)
+- Failed requests (4xx, 5xx) may indicate API issues
+- Error logs with stack traces are highest priority
+
+### Integration Tips
+1. Cross-reference error timestamps with user actions
+2. Check if performance metrics correlate with reported symptoms
+3. Use navigation history to understand the user's journey
+4. Network logs reveal backend vs frontend issues`;
 
 /**
  * Get the system prompt with language-specific instructions
