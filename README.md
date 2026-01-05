@@ -1,46 +1,96 @@
-# inner-lens
+<p align="center">
+  <img src="https://raw.githubusercontent.com/jhlee0409/inner-lens/main/.github/assets/logo.svg" alt="inner-lens" width="120" />
+</p>
 
-[![Universal Framework Support](https://img.shields.io/badge/Works%20with-React%20%7C%20Vue%20%7C%20Vanilla%20JS-blue)](https://github.com/jhlee0409/inner-lens)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue?logo=typescript)](https://www.typescriptlang.org)
-[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Node.js 18+](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js)](https://nodejs.org)
+<h1 align="center">inner-lens</h1>
 
-**Self-Debugging QA Agent** — Universal bug reporting widget with AI-powered analysis.
+<p align="center">
+  <strong>Self-Debugging QA Agent</strong> — Universal bug reporting widget with AI-powered analysis
+</p>
 
-inner-lens captures console logs, network requests, and session replays when users report bugs. Issues are created on GitHub and automatically analyzed by AI to suggest fixes.
+<p align="center">
+  <a href="https://www.npmjs.com/package/inner-lens"><img src="https://img.shields.io/npm/v/inner-lens.svg?style=flat-square&color=6366f1" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/inner-lens"><img src="https://img.shields.io/npm/dm/inner-lens.svg?style=flat-square&color=6366f1" alt="npm downloads" /></a>
+  <a href="https://github.com/jhlee0409/inner-lens/actions/workflows/test.yml"><img src="https://img.shields.io/github/actions/workflow/status/jhlee0409/inner-lens/test.yml?branch=main&style=flat-square&label=tests" alt="CI Status" /></a>
+  <a href="https://github.com/jhlee0409/inner-lens/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/inner-lens.svg?style=flat-square&color=22c55e" alt="License" /></a>
+  <a href="https://github.com/jhlee0409/inner-lens"><img src="https://img.shields.io/github/stars/jhlee0409/inner-lens?style=flat-square&color=fbbf24" alt="GitHub Stars" /></a>
+</p>
 
-## Features
-
-- **Universal Framework Support** — React, Vue, Svelte, vanilla JS, and more
-- **AI-Powered Analysis** — Anthropic Claude, OpenAI GPT-4, or Google Gemini
-- **Automatic Data Capture** — Console logs, network errors, DOM state
-- **Security-First** — PII, API keys, and tokens are masked automatically
-- **Multi-Language** — Analysis in 8 languages (EN, KO, JA, ZH, ES, DE, FR, PT)
-- **Zero External CSS** — Inline styles prevent conflicts with your design
+<p align="center">
+  <a href="https://github.com/jhlee0409/inner-lens#quick-start">Quick Start</a> &#8226;
+  <a href="https://github.com/jhlee0409/inner-lens#why-inner-lens">Why inner-lens?</a> &#8226;
+  <a href="https://github.com/jhlee0409/inner-lens#documentation">Docs</a> &#8226;
+  <a href="https://github.com/jhlee0409/inner-lens/blob/main/CONTRIBUTING.md">Contributing</a>
+</p>
 
 ---
 
-## Quick Start (2 minutes)
+<!-- 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/jhlee0409/inner-lens/main/.github/assets/demo.gif" alt="inner-lens demo" width="600" />
+</p>
+-->
 
-The fastest way to get started is with our **Hosted API** — no backend setup required.
+## Why inner-lens?
 
-### Step 1: Install
+Bug reports like *"it doesn't work"* waste hours of debugging time. **inner-lens** captures everything developers need to reproduce and fix bugs instantly.
+
+| Without inner-lens | With inner-lens |
+|-------------------|-----------------|
+| "The button doesn't work" | Console logs, network errors, DOM state, session replay |
+| Hours of back-and-forth | One-click bug reports with full context |
+| Manual log collection | Automatic capture with PII masking |
+| Guessing what happened | AI-powered root cause analysis |
+
+### How It Works
+
+```
+User clicks "Report Bug" → Widget captures context → GitHub Issue created → AI analyzes and suggests fixes
+```
+
+1. **Capture** — Console logs, network errors, user actions, DOM state
+2. **Protect** — Sensitive data (emails, tokens, API keys) masked automatically
+3. **Report** — GitHub issue created with structured data
+4. **Analyze** — AI finds root cause and suggests code fixes
+
+---
+
+## Features
+
+- **Universal Framework Support** — React, Vue, Svelte, vanilla JS, and any frontend
+- **AI-Powered Analysis** — Claude, GPT, or Gemini analyzes bugs and suggests fixes
+- **Automatic Data Capture** — Console logs, network errors, user actions, DOM state
+- **Security-First** — PII, API keys, and tokens masked before leaving the browser
+- **Session Replay** — Optional DOM recording for visual bug reproduction
+- **Multi-Language** — Analysis in 8 languages (EN, KO, JA, ZH, ES, DE, FR, PT)
+- **Zero Config** — Works out of the box with hosted API
+- **Self-Hostable** — Full control with your own backend
+
+---
+
+## Quick Start
+
+Get started in under 2 minutes with the hosted API.
+
+### 1. Install
 
 ```bash
 npm install inner-lens
 ```
 
-### Step 2: Install GitHub App
+### 2. Install GitHub App
 
-Visit [github.com/apps/inner-lens-app](https://github.com/apps/inner-lens-app) and install it on your repository.
+Visit [github.com/apps/inner-lens-app](https://github.com/apps/inner-lens-app) and install on your repository.
 
-### Step 3: Add Widget
+### 3. Add Widget
 
-**React / Next.js:**
+<details open>
+<summary><b>React / Next.js</b></summary>
+
 ```tsx
 import { InnerLensWidget } from 'inner-lens/react';
 
-function App() {
+export default function App() {
   return (
     <>
       <YourApp />
@@ -49,8 +99,11 @@ function App() {
   );
 }
 ```
+</details>
 
-**Vue 3:**
+<details>
+<summary><b>Vue 3</b></summary>
+
 ```vue
 <script setup>
 import { InnerLensWidget } from 'inner-lens/vue';
@@ -61,8 +114,11 @@ import { InnerLensWidget } from 'inner-lens/vue';
   <InnerLensWidget repository="your-org/your-repo" />
 </template>
 ```
+</details>
 
-**Vanilla JS:**
+<details>
+<summary><b>Vanilla JS</b></summary>
+
 ```js
 import { InnerLens } from 'inner-lens/vanilla';
 
@@ -71,51 +127,31 @@ const widget = new InnerLens({
 });
 widget.mount();
 ```
+</details>
 
 That's it! Bug reports will be created by `inner-lens-app[bot]` on your repository.
 
 ---
 
-## Setup AI Analysis
+## Documentation
 
-To enable AI-powered analysis on bug reports, add a GitHub Actions workflow.
+### AI Analysis Setup
 
-### Option A: CLI (Recommended)
+Enable AI-powered analysis with a GitHub Actions workflow.
+
+#### Option A: CLI (Recommended)
 
 ```bash
 npx inner-lens init
 ```
 
-The interactive CLI will:
-1. Choose **Hosted** (recommended) or **Self-Hosted** mode
-2. Auto-detect your framework (Next.js, Vite, Vue, SvelteKit, etc.)
-3. Select AI provider and model
-4. Choose analysis output language
-5. Generate workflow file and widget code
+The CLI will:
+- Choose Hosted or Self-Hosted mode
+- Auto-detect your framework
+- Select AI provider and model
+- Generate workflow file and widget code
 
-```bash
-# Quick setup with defaults (non-interactive)
-npx inner-lens init -y
-
-# Generate standalone workflow (for customization)
-npx inner-lens init --eject
-```
-
-### Verify Configuration
-
-After setup, verify your configuration:
-
-```bash
-npx inner-lens check
-```
-
-This command checks:
-- ✓ GitHub workflow file (`.github/workflows/inner-lens.yml`)
-- ✓ Detected framework
-- ✓ inner-lens package installed
-- ✓ GITHUB_TOKEN in `.env.local` (self-hosted mode)
-
-### Option B: Manual Setup
+#### Option B: Manual Setup
 
 Create `.github/workflows/inner-lens.yml`:
 
@@ -124,14 +160,7 @@ name: inner-lens Analysis
 
 on:
   issues:
-    types: [opened]  # Triggers once on issue creation
-
-  workflow_dispatch:  # Manual trigger for existing issues
-    inputs:
-      issue_number:
-        description: 'Issue number to analyze'
-        required: true
-        type: number
+    types: [opened]
 
 jobs:
   analyze:
@@ -139,23 +168,23 @@ jobs:
     uses: jhlee0409/inner-lens/.github/workflows/analysis-engine.yml@v1
     with:
       provider: 'anthropic'  # or 'openai', 'google'
-      language: 'en'         # en, ko, ja, zh, es, de, fr, pt
+      language: 'en'
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
 Add your API key to **Settings → Secrets and variables → Actions**.
 
-### AI Provider Options
+### AI Providers
 
-| Provider | Default Model | API Key Secret |
-|----------|---------------|----------------|
+| Provider | Default Model | Secret Name |
+|----------|---------------|-------------|
 | Anthropic | `claude-sonnet-4-5-20250929` | `ANTHROPIC_API_KEY` |
 | OpenAI | `gpt-5.2` | `OPENAI_API_KEY` |
 | Google | `gemini-2.0-flash` | `GOOGLE_GENERATIVE_AI_API_KEY` |
 
 <details>
-<summary>All Supported Models (January 2026)</summary>
+<summary><b>All Supported Models</b></summary>
 
 **Anthropic Claude:**
 - Claude 4.5: `claude-opus-4-5-20251124`, `claude-sonnet-4-5-20250929`
@@ -170,46 +199,81 @@ Add your API key to **Settings → Secrets and variables → Actions**.
 - Reasoning: `o4-mini`, `o3`, `o3-mini`
 
 **Google Gemini:**
-- Gemini 3 (Preview): `gemini-3-pro`, `gemini-3-flash`
+- Gemini 3: `gemini-3-pro`, `gemini-3-flash`
 - Gemini 2.5: `gemini-2.5-flash`, `gemini-2.5-flash-lite`
 - Gemini 2.0: `gemini-2.0-flash`, `gemini-2.0-flash-lite`
 - Gemini 1.5: `gemini-1.5-pro`, `gemini-1.5-flash`
 
 </details>
 
-### Workflow Options
+---
 
-| Input | Default | Description |
-|-------|---------|-------------|
-| `provider` | `anthropic` | AI provider |
-| `model` | (auto) | Custom model name |
-| `language` | `en` | Output language (en, ko, ja, zh, es, de, fr, pt) |
-| `max_files` | `25` | Maximum files to analyze |
+### Configuration
+
+#### Widget Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `repository` | `string` | **required** | GitHub repository (`owner/repo`) |
+| `endpoint` | `string` | hosted API | Custom API endpoint |
+| `language` | `string` | `en` | UI language |
+| `devOnly` | `boolean` | `true` | Hide in production |
+| `disabled` | `boolean` | `false` | Disable widget |
+| `position` | `string` | `bottom-right` | Button position |
+| `buttonColor` | `string` | `#6366f1` | Button color |
+
+#### Callbacks
+
+```tsx
+<InnerLensWidget
+  repository="owner/repo"
+  onOpen={() => console.log('Dialog opened')}
+  onClose={() => console.log('Dialog closed')}
+  onSuccess={(url) => console.log('Issue created:', url)}
+  onError={(error) => console.error('Error:', error)}
+/>
+```
+
+#### Production Usage
+
+```tsx
+// Enable in production
+<InnerLensWidget repository="owner/repo" devOnly={false} />
+```
 
 ---
 
-## Self-Hosted Backend (Advanced)
+### Session Replay
 
-If you prefer to run your own backend instead of using the hosted API:
+Optional DOM-level recording for visual bug reproduction.
+
+```bash
+npm install rrweb
+```
+
+```ts
+import { startSessionReplay, getSessionReplaySnapshot } from 'inner-lens/replay';
+
+// Start recording
+await startSessionReplay({
+  maxBufferDuration: 60000,  // Last 60 seconds
+  maskInputs: true,
+  blockSelectors: ['.credit-card-form'],
+  maskSelectors: ['.pii', '.user-email'],
+});
+
+// Get snapshot for bug report
+const replayData = getSessionReplaySnapshot();
+```
+
+---
+
+### Self-Hosted Backend
+
+Run your own backend for full control.
 
 <details>
-<summary><b>Self-Hosted Setup Instructions</b></summary>
-
-### Why Self-Host?
-
-- Full control over data flow
-- Custom domain
-- No rate limits
-- Private repository support without installing the GitHub App
-
-### Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `GITHUB_TOKEN` | [Personal Access Token](https://github.com/settings/tokens/new) with `repo` scope |
-| `GITHUB_REPOSITORY` | `owner/repo` format |
-
-### Next.js / Vercel
+<summary><b>Next.js / Vercel</b></summary>
 
 ```ts
 // app/api/inner-lens/report/route.ts
@@ -220,8 +284,10 @@ export const POST = createFetchHandler({
   repository: 'owner/repo',
 });
 ```
+</details>
 
-### Express
+<details>
+<summary><b>Express</b></summary>
 
 ```ts
 import express from 'express';
@@ -237,69 +303,60 @@ app.post('/api/inner-lens/report', createExpressHandler({
 
 app.listen(3000);
 ```
+</details>
 
-### Next.js Pages Router
+<details>
+<summary><b>Hono / Bun / Deno</b></summary>
 
 ```ts
-// pages/api/inner-lens/report.ts
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { handleBugReport } from 'inner-lens/server';
+import { Hono } from 'hono';
+import { createFetchHandler } from 'inner-lens/server';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+const app = new Hono();
 
-  const result = await handleBugReport(req.body, {
+app.post('/api/inner-lens/report', (c) => 
+  createFetchHandler({
     githubToken: process.env.GITHUB_TOKEN!,
     repository: 'owner/repo',
-  });
+  })(c.req.raw)
+);
 
-  return res.status(result.status).json(result.body);
-}
+export default app;
 ```
+</details>
 
-### SvelteKit
+<details>
+<summary><b>More frameworks...</b></summary>
 
+**SvelteKit:**
 ```ts
 // src/routes/api/inner-lens/report/+server.ts
 import { json } from '@sveltejs/kit';
-import { GITHUB_TOKEN } from '$env/static/private';
-import type { RequestHandler } from './$types';
 import { handleBugReport } from 'inner-lens/server';
 
-export const POST: RequestHandler = async ({ request }) => {
-  const body = await request.json();
-
-  const result = await handleBugReport(body, {
-    githubToken: GITHUB_TOKEN,
+export const POST = async ({ request }) => {
+  const result = await handleBugReport(await request.json(), {
+    githubToken: process.env.GITHUB_TOKEN!,
     repository: 'owner/repo',
   });
-
   return json(result.body, { status: result.status });
 };
 ```
 
-> **Note:** Add `GITHUB_TOKEN` to your `.env` file. SvelteKit uses `$env/static/private` for secure server-side environment variables.
-
-### Fastify
-
+**Fastify:**
 ```ts
 import Fastify from 'fastify';
 import { createFastifyHandler } from 'inner-lens/server';
 
 const fastify = Fastify();
-
 fastify.post('/api/inner-lens/report', createFastifyHandler({
   githubToken: process.env.GITHUB_TOKEN!,
   repository: 'owner/repo',
 }));
-
 fastify.listen({ port: 3000 });
 ```
 
-### Koa
-
+**Koa:**
 ```ts
 import Koa from 'koa';
 import Router from '@koa/router';
@@ -308,24 +365,18 @@ import { createKoaHandler } from 'inner-lens/server';
 
 const app = new Koa();
 const router = new Router();
-
 app.use(bodyParser());
 
-const handler = createKoaHandler({
+router.post('/api/inner-lens/report', createKoaHandler({
   githubToken: process.env.GITHUB_TOKEN!,
   repository: 'owner/repo',
-});
-
-router.post('/api/inner-lens/report', async (ctx) => {
-  await handler(ctx);
-});
+}));
 
 app.use(router.routes());
 app.listen(3000);
 ```
 
-### Node.js HTTP
-
+**Node.js HTTP:**
 ```ts
 import http from 'http';
 import { createNodeHandler } from 'inner-lens/server';
@@ -335,252 +386,52 @@ const handler = createNodeHandler({
   repository: 'owner/repo',
 });
 
-const server = http.createServer(async (req, res) => {
+http.createServer(async (req, res) => {
   if (req.url === '/api/inner-lens/report' && req.method === 'POST') {
     await handler(req, res);
-  } else {
-    res.statusCode = 404;
-    res.end('Not Found');
   }
-});
-
-server.listen(3000);
+}).listen(3000);
 ```
 
-### Hono / Bun / Deno
-
-```ts
-import { Hono } from 'hono';
-import { createFetchHandler } from 'inner-lens/server';
-
-const app = new Hono();
-
-const handler = createFetchHandler({
-  githubToken: process.env.GITHUB_TOKEN!,
-  repository: 'owner/repo',
-});
-
-app.post('/api/inner-lens/report', (c) => handler(c.req.raw));
-
-export default app;
-```
-
-### Widget Configuration (Self-Hosted)
-
-```tsx
-<InnerLensWidget
-  endpoint="/api/inner-lens/report"  // Your endpoint
-  repository="owner/repo"
-/>
-```
-
-### Cross-Origin Setup (Separate Frontend/Backend)
-
-If your frontend and backend are on different domains (e.g., Vite dev server + Express backend):
-
-**Option 1: Proxy (Development)**
-
-```js
-// vite.config.js
-export default {
-  server: {
-    proxy: {
-      '/api': 'http://localhost:3000'
-    }
-  }
-}
-```
-
-**Option 2: CORS (Production)**
-
-```ts
-// Express with CORS
-import cors from 'cors';
-
-app.use(cors({ origin: 'https://your-frontend.com' }));
-app.post('/api/inner-lens/report', createExpressHandler({...}));
-```
-
-Then use the full URL in the widget:
-
-```tsx
-<InnerLensWidget
-  endpoint="https://your-api.com/api/inner-lens/report"
-  repository="owner/repo"
-/>
-```
-
-</details>
-
-<details>
-<summary><b>Cloudflare Workers</b></summary>
-
-### Prerequisites
-
-Enable `nodejs_compat` compatibility flag in `wrangler.toml`:
-
-```toml
-name = "inner-lens-worker"
-main = "src/index.ts"
-compatibility_date = "2025-01-01"
-compatibility_flags = ["nodejs_compat"]
-```
-
-### Worker Code
-
+**Cloudflare Workers:**
 ```ts
 import { createFetchHandler } from 'inner-lens/server';
 
-interface Env {
-  GITHUB_TOKEN: string;
-}
-
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        },
-      });
-    }
-
+  async fetch(request: Request, env: { GITHUB_TOKEN: string }) {
     const handler = createFetchHandler({
       githubToken: env.GITHUB_TOKEN,
-      repository: 'your-org/your-repo',
+      repository: 'owner/repo',
     });
-
-    const response = await handler(request);
-    const headers = new Headers(response.headers);
-    headers.set('Access-Control-Allow-Origin', '*');
-
-    return new Response(response.body, { status: response.status, headers });
+    return handler(request);
   },
 };
 ```
 
-### Deploy
+</details>
 
-```bash
-wrangler secret put GITHUB_TOKEN
-wrangler deploy
-```
-
-### Widget Configuration (Cloudflare Workers)
-
-Since Workers are deployed to a different domain, use the full URL:
+**Widget configuration for self-hosted:**
 
 ```tsx
 <InnerLensWidget
-  endpoint="https://your-worker.your-subdomain.workers.dev"
+  endpoint="/api/inner-lens/report"
   repository="owner/repo"
 />
 ```
 
-</details>
-
 ---
 
-## Configuration
+### Security
 
-### Widget Options
+Sensitive data is automatically masked before transmission:
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `endpoint` | `string` | (auto) | API endpoint. Uses hosted API by default, or your endpoint in self-hosted mode |
-| `repository` | `string` | - | GitHub repository in `owner/repo` format |
-| `language` | `string` | `en` | Widget UI language (`en`, `ko`, `ja`, `zh`, `es`) |
-| `devOnly` | `boolean` | `true` | Hide in production |
-| `disabled` | `boolean` | `false` | Disable widget |
-
-### Styling
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `position` | `string` | `bottom-right` | `bottom-right`, `bottom-left`, `top-right`, `top-left` |
-| `buttonColor` | `string` | `#6366f1` | Button background color |
-
-### UI Text
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `buttonText` | `Report a bug` | Button tooltip |
-| `dialogTitle` | `Let us know what happened` | Dialog title |
-| `submitText` | `Send Report` | Submit button text |
-| `cancelText` | `Close` | Cancel button text |
-| `successMessage` | `Got it!` | Success message title |
-
-### Callbacks
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `onOpen` | `() => void` | Dialog opened |
-| `onClose` | `() => void` | Dialog closed |
-| `onSuccess` | `(url?: string) => void` | Report submitted |
-| `onError` | `(error: Error) => void` | Submission failed |
-
-### Production Usage
-
-By default, the widget is hidden in production (`devOnly: true`). To enable:
-
-```tsx
-<InnerLensWidget devOnly={false} />
-```
-
----
-
-## Session Replay (Optional)
-
-Capture DOM-level recordings for visual bug reproduction.
-
-### Setup
-
-```bash
-npm install rrweb
-```
-
-### Usage
-
-```ts
-import { startSessionReplay, getSessionReplaySnapshot } from 'inner-lens/replay';
-
-// Start recording early in app lifecycle
-await startSessionReplay({
-  maxBufferDuration: 60000,  // Keep last 60 seconds
-  maskInputs: true,
-});
-
-// Get data when submitting bug report
-const replayData = getSessionReplaySnapshot();
-```
-
-### Privacy Controls
-
-```ts
-await startSessionReplay({
-  blockSelectors: ['.credit-card-form'],  // Hide completely
-  maskSelectors: ['.pii', '.user-email'], // Mask content
-  maskInputs: true,                       // Mask all inputs
-});
-```
-
----
-
-## Security
-
-### Automatic Data Masking
-
-Sensitive data is masked before submission and AI analysis:
-
-| Pattern | Replaced With |
-|---------|---------------|
+| Pattern | Replacement |
+|---------|-------------|
 | Email addresses | `[EMAIL_REDACTED]` |
-| API keys | `[OPENAI_KEY_REDACTED]`, etc. |
+| API keys (OpenAI, Stripe, etc.) | `[OPENAI_KEY_REDACTED]` |
 | Bearer tokens | `Bearer [TOKEN_REDACTED]` |
 | JWTs | `[JWT_REDACTED]` |
-| Credit cards | `[CARD_REDACTED]` |
+| Credit card numbers | `[CARD_REDACTED]` |
 | SSN | `[SSN_REDACTED]` |
 | Phone numbers | `[PHONE_REDACTED]` |
 
@@ -588,49 +439,67 @@ Sensitive data is masked before submission and AI analysis:
 
 ## API Reference
 
-### Client
+### Client Packages
 
-| Package | Export | Description |
-|---------|--------|-------------|
-| `inner-lens/react` | `InnerLensWidget` | React component |
-| `inner-lens/react` | `useInnerLens` | React hook |
-| `inner-lens/vue` | `InnerLensWidget` | Vue component |
-| `inner-lens/vue` | `useInnerLens` | Vue composable |
+| Package | Exports | Description |
+|---------|---------|-------------|
+| `inner-lens/react` | `InnerLensWidget`, `useInnerLens` | React component and hook |
+| `inner-lens/vue` | `InnerLensWidget`, `useInnerLens` | Vue component and composable |
 | `inner-lens/vanilla` | `InnerLens` | Vanilla JS class |
-| `inner-lens/replay` | `startSessionReplay` | Start recording |
-| `inner-lens/replay` | `stopSessionReplay` | Stop and get data |
+| `inner-lens/replay` | `startSessionReplay`, `stopSessionReplay`, `getSessionReplaySnapshot` | Session recording |
 
-### Server
+### Server Handlers
 
-| Export | Description |
-|--------|-------------|
-| `createFetchHandler` | Next.js, Hono, Bun, Deno |
-| `createExpressHandler` | Express middleware |
-| `createFastifyHandler` | Fastify handler |
-| `createKoaHandler` | Koa middleware |
+| Export | Frameworks |
+|--------|------------|
+| `createFetchHandler` | Next.js, Hono, Bun, Deno, Cloudflare Workers |
+| `createExpressHandler` | Express |
+| `createFastifyHandler` | Fastify |
+| `createKoaHandler` | Koa |
 | `createNodeHandler` | Node.js HTTP |
+| `handleBugReport` | Any (raw handler) |
+
+---
+
+## Comparison
+
+| Feature | inner-lens | Sentry | LogRocket |
+|---------|------------|--------|-----------|
+| Bug reporting widget | ✅ | ❌ | ❌ |
+| AI analysis | ✅ | ❌ | ❌ |
+| GitHub integration | ✅ Native | ✅ Integration | ✅ Integration |
+| Session replay | ✅ Optional | ✅ Paid | ✅ Core |
+| Self-hostable | ✅ | ✅ | ❌ |
+| Open source | ✅ MIT | ✅ BSL | ❌ |
+| Pricing | Free | Freemium | Paid |
 
 ---
 
 ## Troubleshooting
 
-### Widget doesn't appear
+<details>
+<summary><b>Widget doesn't appear</b></summary>
 
 1. Check `disabled` and `devOnly` props
 2. Verify import path matches your framework
 3. Check browser console for errors
+</details>
 
-### Bug report fails
+<details>
+<summary><b>Bug report fails</b></summary>
 
 1. Verify endpoint URL is correct
 2. For hosted mode: ensure GitHub App is installed
 3. For self-hosted: check `GITHUB_TOKEN` has `repo` scope
+</details>
 
-### AI analysis not running
+<details>
+<summary><b>AI analysis not running</b></summary>
 
 1. Verify workflow file exists at `.github/workflows/`
 2. Check API key is set in repository secrets
 3. Ensure issue has `inner-lens` label
+</details>
 
 ---
 
@@ -640,24 +509,20 @@ Sensitive data is masked before submission and AI analysis:
 <summary><b>Hosted vs Self-Hosted?</b></summary>
 
 **Hosted (Recommended):**
-- No backend setup
-- No token management
+- No backend setup required
 - Issues created by `inner-lens-app[bot]`
 - Rate limited (10 req/min/IP)
 
 **Self-Hosted:**
-- Full control
+- Full control over data
 - No rate limits
 - Requires your own backend
-- Issues created by your GitHub token owner
-
 </details>
 
 <details>
 <summary><b>Does it work with SSR?</b></summary>
 
 Yes. The widget renders client-side only. For Next.js, use `'use client'` or dynamic import.
-
 </details>
 
 <details>
@@ -665,15 +530,24 @@ Yes. The widget renders client-side only. For Next.js, use `'use client'` or dyn
 
 | Provider | Best For |
 |----------|----------|
-| Anthropic | Code understanding |
-| OpenAI | Speed |
-| Google | Cost |
+| Anthropic | Code understanding, accuracy |
+| OpenAI | Speed, general purpose |
+| Google | Cost efficiency |
+</details>
 
+<details>
+<summary><b>Is my data safe?</b></summary>
+
+- Sensitive data is masked **before** leaving the browser
+- No data is stored on our servers (hosted mode uses GitHub API directly)
+- Self-hosted mode gives you full control
 </details>
 
 ---
 
 ## Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ```bash
 git clone https://github.com/jhlee0409/inner-lens.git
@@ -683,10 +557,44 @@ npm run test
 npm run build
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+### Good First Issues
+
+Look for issues labeled [`good first issue`](https://github.com/jhlee0409/inner-lens/labels/good%20first%20issue) to get started.
+
+---
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for planned features.
+
+---
+
+## Support
+
+- **Bug reports**: [GitHub Issues](https://github.com/jhlee0409/inner-lens/issues)
+- **Feature requests**: [GitHub Discussions](https://github.com/jhlee0409/inner-lens/discussions)
+- **Security issues**: See [SECURITY.md](SECURITY.md)
+
+---
+
+## Star History
+
+<a href="https://star-history.com/#jhlee0409/inner-lens&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=jhlee0409/inner-lens&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=jhlee0409/inner-lens&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=jhlee0409/inner-lens&type=Date" />
+ </picture>
+</a>
 
 ---
 
 ## License
 
-[MIT License](LICENSE) © 2025 jack
+[MIT License](LICENSE) © 2025 [jack](https://github.com/jhlee0409)
+
+---
+
+<p align="center">
+  Made with &#10084;&#65039; by <a href="https://github.com/jhlee0409">jack</a>
+</p>
