@@ -700,4 +700,4 @@ declare const InnerLensWidget: vue.DefineComponent<vue.ExtractPropTypes<{
     devOnly: boolean;
 }, {}, {}, {}, string, vue.ComponentProvideOptions, true, {}, any>;
 
-export { type AIProvider, type BugReportPayload, type BugReportResponse, type GitHubIssuePayload, type InnerLensConfig, InnerLensWidget, type LogEntry, type WidgetLanguage, addCustomLog, clearCapturedLogs, InnerLensWidget as default, getCapturedLogs, initLogCapture, maskSensitiveData, maskSensitiveObject, restoreConsole, useInnerLens, validateMasking };
+export { type AIProvider, type BugReportPayload, type BugReportResponse, type GitHubIssuePayload, type InnerLensConfig, InnerLensWidget, type LogEntry, type WidgetLanguage, addCustomLog, clearCapturedLogs, getCapturedLogs, initLogCapture, maskSensitiveData, maskSensitiveObject, restoreConsole, useInnerLens, validateMasking };

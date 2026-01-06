@@ -225,5 +225,3 @@ export const InnerLensWidget = defineComponent({
       });
   },
 });
-
-export default InnerLensWidget;

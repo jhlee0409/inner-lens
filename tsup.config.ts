@@ -15,7 +15,7 @@ export default defineConfig([
     minify: false,
     target: 'es2022',
   },
-  // React library build (with "use client" directive)
+  // React library build (with "use client" directive for Next.js RSC compatibility)
   {
     entry: {
       react: 'src/react.ts',
@@ -29,8 +29,25 @@ export default defineConfig([
     treeshake: true,
     minify: false,
     target: 'es2022',
-    banner: {
-      js: '"use client";',
+    esbuildOptions(options) {
+      options.banner = {
+        js: '"use client";\n',
+      };
+    },
+    async onSuccess() {
+      // Prepend "use client" if esbuild banner didn't apply (tsup multi-config issue)
+      const fs = await import('fs');
+      const path = await import('path');
+      const files = ['dist/react.js', 'dist/react.cjs'];
+      for (const file of files) {
+        const filePath = path.resolve(file);
+        if (fs.existsSync(filePath)) {
+          const content = fs.readFileSync(filePath, 'utf-8');
+          if (!content.startsWith('"use client"')) {
+            fs.writeFileSync(filePath, `"use client";\n${content}`);
+          }
+        }
+      }
     },
   },
   // Vue library build

@@ -1,7 +1,5 @@
 'use strict';
 
-Object.defineProperty(exports, '__esModule', { value: true });
-
 var vue = require('vue');
 
 var _documentCurrentScript = typeof document !== 'undefined' ? document.currentScript : null;
@@ -2423,12 +2421,10 @@ var InnerLensWidget = vue.defineComponent({
     });
   }
 });
-var vue_default = InnerLensWidget;
 
 exports.InnerLensWidget = InnerLensWidget;
 exports.addCustomLog = addCustomLog;
 exports.clearCapturedLogs = clearCapturedLogs;
-exports.default = vue_default;
 exports.getCapturedLogs = getCapturedLogs;
 exports.initLogCapture = initLogCapture;
 exports.maskSensitiveData = maskSensitiveData;

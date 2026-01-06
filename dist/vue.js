@@ -2418,8 +2418,7 @@ var InnerLensWidget = defineComponent({
     });
   }
 });
-var vue_default = InnerLensWidget;
 
-export { InnerLensWidget, addCustomLog, clearCapturedLogs, vue_default as default, getCapturedLogs, initLogCapture, maskSensitiveData, maskSensitiveObject, restoreConsole, useInnerLens, validateMasking };
+export { InnerLensWidget, addCustomLog, clearCapturedLogs, getCapturedLogs, initLogCapture, maskSensitiveData, maskSensitiveObject, restoreConsole, useInnerLens, validateMasking };
 //# sourceMappingURL=vue.js.map
 //# sourceMappingURL=vue.js.map
