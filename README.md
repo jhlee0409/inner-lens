@@ -656,19 +656,9 @@ Your existing issues will remain unchanged.
 
 ## Contributing
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) before submitting a Pull Request.
 
-```bash
-git clone https://github.com/jhlee0409/inner-lens.git
-cd inner-lens
-npm install
-npm run test
-npm run build
-```
-
-### Good First Issues
-
-Look for issues labeled [`good first issue`](https://github.com/jhlee0409/inner-lens/labels/good%20first%20issue) to get started.
+Looking for a place to start? Check out issues labeled [`good first issue`](https://github.com/jhlee0409/inner-lens/labels/good%20first%20issue).
 
 ---
 

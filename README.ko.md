@@ -650,19 +650,9 @@ export default {
 
 ## 기여하기
 
-기여를 환영합니다! 가이드라인은 [CONTRIBUTING.md](CONTRIBUTING.md)를 참조하세요.
+기여를 환영합니다! PR을 제출하기 전에 [기여 가이드](CONTRIBUTING.md)를 읽어주세요.
 
-```bash
-git clone https://github.com/jhlee0409/inner-lens.git
-cd inner-lens
-npm install
-npm run test
-npm run build
-```
-
-### Good First Issues
-
-시작하려면 [`good first issue`](https://github.com/jhlee0409/inner-lens/labels/good%20first%20issue) 라벨이 붙은 이슈를 찾아보세요.
+어디서 시작할지 모르겠다면 [`good first issue`](https://github.com/jhlee0409/inner-lens/labels/good%20first%20issue) 라벨이 붙은 이슈를 확인해보세요.
 
 ---
 
