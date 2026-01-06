@@ -98,6 +98,7 @@ jobs:
           path: .inner-lens
           sparse-checkout: |
             scripts
+            src/utils
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
