@@ -313,23 +313,37 @@ Replace the default floating button with your own element:
 
 Optional DOM-level recording for visual bug reproduction.
 
-```bash
-npm install rrweb
+#### Enable via Widget
+
+```tsx
+<InnerLensWidget 
+  repository="owner/repo"
+  captureSessionReplay={true}
+/>
 ```
 
-```ts
-import { startSessionReplay, getSessionReplaySnapshot } from 'inner-lens/replay';
+That's it! The widget automatically captures the last 60 seconds of DOM activity.
 
-// Start recording
+#### Advanced: Manual Control
+
+For more control over recording, use the replay API directly:
+
+```ts
+import { startSessionReplay, stopSessionReplay, getSessionReplaySnapshot } from 'inner-lens/replay';
+
+// Start recording with custom options
 await startSessionReplay({
   maxBufferDuration: 60000,  // Last 60 seconds
-  maskInputs: true,
-  blockSelectors: ['.credit-card-form'],
-  maskSelectors: ['.pii', '.user-email'],
+  maskInputs: true,          // Mask all input values
+  blockSelectors: ['.credit-card-form'],  // Block sensitive elements
+  maskSelectors: ['.pii', '.user-email'], // Mask specific elements
 });
 
 // Get snapshot for bug report
 const replayData = getSessionReplaySnapshot();
+
+// Stop recording when done
+stopSessionReplay();
 ```
 
 ---

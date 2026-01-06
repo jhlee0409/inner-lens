@@ -307,23 +307,37 @@ jobs:
 
 시각적 버그 재현을 위한 선택적 DOM 레벨 녹화.
 
-```bash
-npm install rrweb
+#### 위젯에서 활성화
+
+```tsx
+<InnerLensWidget 
+  repository="owner/repo"
+  captureSessionReplay={true}
+/>
 ```
 
-```ts
-import { startSessionReplay, getSessionReplaySnapshot } from 'inner-lens/replay';
+끝! 위젯이 자동으로 마지막 60초의 DOM 활동을 캡처합니다.
 
-// 녹화 시작
+#### 고급: 수동 제어
+
+녹화를 세밀하게 제어하려면 replay API를 직접 사용하세요:
+
+```ts
+import { startSessionReplay, stopSessionReplay, getSessionReplaySnapshot } from 'inner-lens/replay';
+
+// 커스텀 옵션으로 녹화 시작
 await startSessionReplay({
   maxBufferDuration: 60000,  // 마지막 60초
-  maskInputs: true,
-  blockSelectors: ['.credit-card-form'],
-  maskSelectors: ['.pii', '.user-email'],
+  maskInputs: true,          // 모든 입력값 마스킹
+  blockSelectors: ['.credit-card-form'],  // 민감한 요소 차단
+  maskSelectors: ['.pii', '.user-email'], // 특정 요소 마스킹
 });
 
 // 버그 리포트용 스냅샷 가져오기
 const replayData = getSessionReplaySnapshot();
+
+// 녹화 종료
+stopSessionReplay();
 ```
 
 ---
