@@ -66,7 +66,7 @@ User clicks "Report Bug" → Widget captures context → GitHub Issue created �
 - **Automatic Data Capture** — Console logs, network errors, user actions, DOM state
 - **Security-First** — PII, API keys, and tokens masked before leaving the browser
 - **Session Replay** — Optional DOM recording for visual bug reproduction
-- **Multi-Language** — Analysis in 8 languages (EN, KO, JA, ZH, ES, DE, FR, PT)
+- **Multi-Language** — Widget UI in 5 languages (EN, KO, JA, ZH, ES)
 - **Zero Config** — Works out of the box with hosted API
 - **Self-Hostable** — Full control with your own backend
 
@@ -117,6 +117,16 @@ import { InnerLensWidget } from 'inner-lens/vue';
   <YourApp />
   <InnerLensWidget repository="your-org/your-repo" />
 </template>
+```
+
+With custom styling:
+
+```vue
+<InnerLensWidget 
+  repository="your-org/your-repo"
+  :styles="{ buttonColor: '#10b981', buttonPosition: 'bottom-left' }"
+  @success="(url) => console.log('Created:', url)"
+/>
 ```
 </details>
 
@@ -217,13 +227,38 @@ Add your API key to **Settings → Secrets and variables → Actions**.
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `repository` | `string` | **required** | GitHub repository (`owner/repo`) |
-| `endpoint` | `string` | hosted API | Custom API endpoint |
-| `language` | `string` | `en` | UI language |
+| `repository` | `string` | - | GitHub repository (`owner/repo`) for hosted mode |
+| `endpoint` | `string` | hosted API | Custom API endpoint for self-hosted |
+| `language` | `string` | `en` | UI language (`en`, `ko`, `ja`, `zh`, `es`) |
 | `devOnly` | `boolean` | `true` | Hide in production |
 | `disabled` | `boolean` | `false` | Disable widget |
 | `position` | `string` | `bottom-right` | Button position |
 | `buttonColor` | `string` | `#6366f1` | Button color |
+| `buttonSize` | `string` | `lg` | Button size (`sm`, `md`, `lg`) |
+
+#### Advanced Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `labels` | `string[]` | `['inner-lens']` | GitHub issue labels |
+| `captureConsoleLogs` | `boolean` | `true` | Capture console logs |
+| `maxLogEntries` | `number` | `50` | Max log entries to capture |
+| `maskSensitiveData` | `boolean` | `true` | Auto-mask PII and secrets |
+| `captureUserActions` | `boolean` | `true` | Capture clicks/inputs |
+| `captureNavigation` | `boolean` | `true` | Capture route changes |
+| `capturePerformance` | `boolean` | `true` | Capture Core Web Vitals |
+| `captureSessionReplay` | `boolean` | `false` | Enable DOM recording |
+
+#### Text Customization
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `buttonText` | `string` | Trigger button text |
+| `dialogTitle` | `string` | Dialog header text |
+| `dialogDescription` | `string` | Description label text |
+| `submitText` | `string` | Submit button text |
+| `cancelText` | `string` | Cancel button text |
+| `successMessage` | `string` | Success notification text |
 
 #### Callbacks
 
@@ -242,6 +277,17 @@ Add your API key to **Settings → Secrets and variables → Actions**.
 ```tsx
 // Enable in production
 <InnerLensWidget repository="owner/repo" devOnly={false} />
+```
+
+#### Custom Trigger (React)
+
+Replace the default floating button with your own element:
+
+```tsx
+<InnerLensWidget
+  repository="owner/repo"
+  trigger={<button className="my-button">Report Bug</button>}
+/>
 ```
 
 ---

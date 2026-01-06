@@ -60,7 +60,7 @@
 - **자동 데이터 캡처** — 콘솔 로그, 네트워크 에러, 사용자 액션, DOM 상태
 - **보안 우선** — PII, API 키, 토큰이 브라우저를 떠나기 전에 마스킹됨
 - **세션 리플레이** — 시각적 버그 재현을 위한 선택적 DOM 녹화
-- **다국어 지원** — 8개 언어로 분석 (EN, KO, JA, ZH, ES, DE, FR, PT)
+- **다국어 지원** — 5개 언어 UI 지원 (EN, KO, JA, ZH, ES)
 - **제로 설정** — 호스팅 API로 즉시 사용 가능
 - **셀프 호스팅 가능** — 자체 백엔드로 완전한 제어
 
@@ -111,6 +111,16 @@ import { InnerLensWidget } from 'inner-lens/vue';
   <YourApp />
   <InnerLensWidget repository="your-org/your-repo" />
 </template>
+```
+
+커스텀 스타일링:
+
+```vue
+<InnerLensWidget 
+  repository="your-org/your-repo"
+  :styles="{ buttonColor: '#10b981', buttonPosition: 'bottom-left' }"
+  @success="(url) => console.log('Created:', url)"
+/>
 ```
 </details>
 
@@ -211,13 +221,38 @@ jobs:
 
 | 옵션 | 타입 | 기본값 | 설명 |
 |------|------|--------|------|
-| `repository` | `string` | **필수** | GitHub 리포지토리 (`owner/repo`) |
-| `endpoint` | `string` | hosted API | 커스텀 API 엔드포인트 |
-| `language` | `string` | `en` | UI 언어 |
+| `repository` | `string` | - | GitHub 리포지토리 (`owner/repo`) 호스팅 모드용 |
+| `endpoint` | `string` | hosted API | 셀프 호스팅용 커스텀 API 엔드포인트 |
+| `language` | `string` | `en` | UI 언어 (`en`, `ko`, `ja`, `zh`, `es`) |
 | `devOnly` | `boolean` | `true` | 프로덕션에서 숨기기 |
 | `disabled` | `boolean` | `false` | 위젯 비활성화 |
 | `position` | `string` | `bottom-right` | 버튼 위치 |
 | `buttonColor` | `string` | `#6366f1` | 버튼 색상 |
+| `buttonSize` | `string` | `lg` | 버튼 크기 (`sm`, `md`, `lg`) |
+
+#### 고급 옵션
+
+| 옵션 | 타입 | 기본값 | 설명 |
+|------|------|--------|------|
+| `labels` | `string[]` | `['inner-lens']` | GitHub 이슈 라벨 |
+| `captureConsoleLogs` | `boolean` | `true` | 콘솔 로그 캡처 |
+| `maxLogEntries` | `number` | `50` | 최대 로그 항목 수 |
+| `maskSensitiveData` | `boolean` | `true` | PII 및 시크릿 자동 마스킹 |
+| `captureUserActions` | `boolean` | `true` | 클릭/입력 캡처 |
+| `captureNavigation` | `boolean` | `true` | 라우트 변경 캡처 |
+| `capturePerformance` | `boolean` | `true` | Core Web Vitals 캡처 |
+| `captureSessionReplay` | `boolean` | `false` | DOM 녹화 활성화 |
+
+#### 텍스트 커스터마이징
+
+| 옵션 | 타입 | 설명 |
+|------|------|------|
+| `buttonText` | `string` | 트리거 버튼 텍스트 |
+| `dialogTitle` | `string` | 다이얼로그 헤더 텍스트 |
+| `dialogDescription` | `string` | 설명 라벨 텍스트 |
+| `submitText` | `string` | 제출 버튼 텍스트 |
+| `cancelText` | `string` | 취소 버튼 텍스트 |
+| `successMessage` | `string` | 성공 알림 텍스트 |
 
 #### 콜백
 
@@ -236,6 +271,17 @@ jobs:
 ```tsx
 // 프로덕션에서 활성화
 <InnerLensWidget repository="owner/repo" devOnly={false} />
+```
+
+#### 커스텀 트리거 (React)
+
+기본 플로팅 버튼을 커스텀 엘리먼트로 교체:
+
+```tsx
+<InnerLensWidget
+  repository="owner/repo"
+  trigger={<button className="my-button">버그 제보</button>}
+/>
 ```
 
 ---
