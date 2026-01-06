@@ -143,10 +143,6 @@ Order by score descending. Only include files that are potentially relevant (sco
 IMPORTANT: Output ONLY the JSON array, no markdown code blocks or explanation.`;
 
   try {
-    // Use the cheapest/fastest model for re-ranking (2025 pricing)
-    // OpenAI gpt-4.1-nano: $0.10/$0.40 per 1M tokens
-    // Google gemini-2.5-flash-lite: $0.10/$0.40 per 1M tokens
-    // Anthropic claude-3-haiku: $0.25/$1.25 per 1M tokens (cheapest available)
     let rerankModel;
     switch (provider) {
       case 'openai':
@@ -157,7 +153,7 @@ IMPORTANT: Output ONLY the JSON array, no markdown code blocks or explanation.`;
         break;
       case 'anthropic':
       default:
-        rerankModel = anthropic('claude-3-haiku-20240307');
+        rerankModel = anthropic('claude-3-5-haiku-20241022');
         break;
     }
 

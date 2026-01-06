@@ -57,7 +57,7 @@ User clicks "Report Bug" → Widget captures context → GitHub Issue created �
 
 ## Features
 
-- **Universal Framework Support** — React, Vue, Svelte, vanilla JS, and any frontend
+- **Universal Framework Support** — React, Vue, vanilla JS (works with any framework)
 - **AI-Powered Analysis** — Claude, GPT, or Gemini analyzes bugs and suggests fixes
 - **Automatic Data Capture** — Console logs, network errors, user actions, DOM state
 - **Security-First** — PII, API keys, and tokens masked before leaving the browser
@@ -181,28 +181,27 @@ Add your API key to **Settings → Secrets and variables → Actions**.
 |----------|---------------|-------------|
 | Anthropic | `claude-sonnet-4-5-20250929` | `ANTHROPIC_API_KEY` |
 | OpenAI | `gpt-5.2` | `OPENAI_API_KEY` |
-| Google | `gemini-2.0-flash` | `GOOGLE_GENERATIVE_AI_API_KEY` |
+| Google | `gemini-2.5-flash` | `GOOGLE_GENERATIVE_AI_API_KEY` |
 
 <details>
 <summary><b>All Supported Models</b></summary>
 
 **Anthropic Claude:**
-- Claude 4.5: `claude-opus-4-5-20251124`, `claude-sonnet-4-5-20250929`
-- Claude 4: `claude-opus-4-20250514`, `claude-sonnet-4-20250514`
-- Claude 3.7: `claude-3-7-sonnet-20250219`
-- Claude 3.5: `claude-3-5-sonnet-20241022`, `claude-3-5-haiku-20241022`
+- `claude-sonnet-4-5-20250929` (recommended)
+- `claude-opus-4-5-20251124`
+- `claude-3-5-sonnet-20241022`
+- `claude-3-5-haiku-20241022`
 
 **OpenAI GPT:**
-- GPT-5.2: `gpt-5.2`, `gpt-5.2-pro`, `gpt-5.2-chat-latest`
-- GPT-5: `gpt-5.1`, `gpt-5`, `gpt-5-mini`, `gpt-5-nano`
-- GPT-4: `gpt-4.1`, `gpt-4o`, `gpt-4o-mini`
-- Reasoning: `o4-mini`, `o3`, `o3-mini`
+- GPT-5 series: `gpt-5.2`, `gpt-5.2-pro`, `gpt-5`, `gpt-5-mini`, `gpt-5-nano`
+- GPT-4.1 series: `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`
+- GPT-4o series: `gpt-4o`, `gpt-4o-mini`
+- Reasoning: `o3`, `o3-mini`, `o4-mini`
 
 **Google Gemini:**
-- Gemini 3: `gemini-3-pro`, `gemini-3-flash`
-- Gemini 2.5: `gemini-2.5-flash`, `gemini-2.5-flash-lite`
+- Gemini 3 (preview): `gemini-3-pro`, `gemini-3-flash`
+- Gemini 2.5: `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.5-flash-lite`
 - Gemini 2.0: `gemini-2.0-flash`, `gemini-2.0-flash-lite`
-- Gemini 1.5: `gemini-1.5-pro`, `gemini-1.5-flash`
 
 </details>
 
@@ -567,7 +566,6 @@ Look for issues labeled [`good first issue`](https://github.com/jhlee0409/inner-
 
 - **Bug reports**: [GitHub Issues](https://github.com/jhlee0409/inner-lens/issues)
 - **Feature requests**: [GitHub Discussions](https://github.com/jhlee0409/inner-lens/discussions)
-- **Security issues**: See [SECURITY.md](SECURITY.md)
 
 ---
 

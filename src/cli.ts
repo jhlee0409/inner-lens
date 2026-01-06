@@ -5,7 +5,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { execSync } from 'child_process';
 
-const PACKAGE_VERSION = '1.0.0';
+const PACKAGE_VERSION = '0.1.0';
 
 // GitHub OAuth App Client ID for inner-lens
 const GITHUB_CLIENT_ID = 'Ov23li3zMscAsVeYVXt5';
@@ -200,15 +200,8 @@ const PROVIDER_CONFIGS: Record<AIProvider, ProviderConfig> = {
     name: 'Anthropic (Claude)',
     defaultModel: 'claude-sonnet-4-5-20250929',
     modelSuggestions: [
-      // Claude 4.5 series (Latest - 2026)
-      'claude-opus-4-5-20251124',
       'claude-sonnet-4-5-20250929',
-      // Claude 4 series
-      'claude-opus-4-20250514',
-      'claude-sonnet-4-20250514',
-      // Claude 3.7 series
-      'claude-3-7-sonnet-20250219',
-      // Claude 3.5 series
+      'claude-opus-4-5-20251124',
       'claude-3-5-sonnet-20241022',
       'claude-3-5-haiku-20241022',
     ],
@@ -219,43 +212,34 @@ const PROVIDER_CONFIGS: Record<AIProvider, ProviderConfig> = {
     name: 'OpenAI (GPT)',
     defaultModel: 'gpt-5.2',
     modelSuggestions: [
-      // GPT-5.2 series (Latest - 2026)
       'gpt-5.2',
       'gpt-5.2-pro',
-      'gpt-5.2-chat-latest',
-      // GPT-5 series
-      'gpt-5.1',
       'gpt-5',
       'gpt-5-mini',
       'gpt-5-nano',
-      // GPT-4 series
       'gpt-4.1',
+      'gpt-4.1-mini',
+      'gpt-4.1-nano',
       'gpt-4o',
       'gpt-4o-mini',
-      // Reasoning models
-      'o4-mini',
       'o3',
       'o3-mini',
+      'o4-mini',
     ],
     secretName: 'OPENAI_API_KEY',
     envVar: 'OPENAI_API_KEY',
   },
   google: {
     name: 'Google (Gemini)',
-    defaultModel: 'gemini-2.0-flash',
+    defaultModel: 'gemini-2.5-flash',
     modelSuggestions: [
-      // Gemini 3 series (Latest - 2026, Preview)
       'gemini-3-pro',
       'gemini-3-flash',
-      // Gemini 2.5 series
+      'gemini-2.5-pro',
       'gemini-2.5-flash',
       'gemini-2.5-flash-lite',
-      // Gemini 2.0 series
       'gemini-2.0-flash',
       'gemini-2.0-flash-lite',
-      // Gemini 1.5 series
-      'gemini-1.5-pro',
-      'gemini-1.5-flash',
     ],
     secretName: 'GOOGLE_GENERATIVE_AI_API_KEY',
     envVar: 'GOOGLE_GENERATIVE_AI_API_KEY',
@@ -1899,7 +1883,7 @@ jobs:
               case 'openai':
                 return openai('gpt-5.2');
               case 'google':
-                return google('gemini-2.0-flash');
+                return google('gemini-2.5-flash');
               default:
                 return anthropic('claude-sonnet-4-5-20250929');
             }

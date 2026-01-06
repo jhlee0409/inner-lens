@@ -67,8 +67,8 @@ export type ReportType =
 
 export const DEFAULT_MODELS: Record<AIProvider, string> = {
   anthropic: 'claude-sonnet-4-5-20250929',
-  openai: 'gpt-4.1',
-  google: 'gemini-2.0-flash',
+  openai: 'gpt-5.2',
+  google: 'gemini-2.5-flash',
 };
 
 // ============================================
