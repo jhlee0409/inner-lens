@@ -82,9 +82,22 @@
 
 ---
 
-## 빠른 시작 (Hosted 모드)
+## 빠른 시작
 
-호스팅 API로 2분 안에 시작하세요.
+```bash
+npx inner-lens init
+```
+
+CLI가 모든 설정을 처리합니다:
+- Hosted / Self-Hosted 모드 선택
+- GitHub App 설치 (브라우저 자동 열기)
+- 프레임워크 감지 (React, Vue, Next.js 등)
+- 위젯 및 워크플로우 파일 생성
+
+설정 후 `npm run dev` 실행하고 버그 버튼을 클릭하세요.
+
+<details>
+<summary><b>수동 설정 (CLI 없이)</b></summary>
 
 ### 1. 설치
 
@@ -92,15 +105,13 @@
 npm install inner-lens
 ```
 
-### 2. GitHub App 설치
+### 2. GitHub App 설치 (Hosted 모드)
 
 [github.com/apps/inner-lens-app](https://github.com/apps/inner-lens-app)에서 리포지토리에 설치하세요.
 
 ### 3. 위젯 추가
 
-<details open>
-<summary><b>React / Next.js</b></summary>
-
+**React / Next.js:**
 ```tsx
 import { InnerLensWidget } from 'inner-lens/react';
 
@@ -113,11 +124,8 @@ export default function App() {
   );
 }
 ```
-</details>
 
-<details>
-<summary><b>Vue 3</b></summary>
-
+**Vue 3:**
 ```vue
 <script setup>
 import { InnerLensWidget } from 'inner-lens/vue';
@@ -129,20 +137,7 @@ import { InnerLensWidget } from 'inner-lens/vue';
 </template>
 ```
 
-커스텀 스타일링:
-
-```vue
-<InnerLensWidget 
-  repository="your-org/your-repo"
-  :styles="{ buttonColor: '#10b981', buttonPosition: 'bottom-left' }"
-  @success="(url) => console.log('Created:', url)"
-/>
-```
-</details>
-
-<details>
-<summary><b>Vanilla JS</b></summary>
-
+**Vanilla JS:**
 ```js
 import { InnerLens } from 'inner-lens/vanilla';
 
@@ -151,9 +146,8 @@ const widget = new InnerLens({
 });
 widget.mount();
 ```
-</details>
 
-끝! 버그 리포트가 `inner-lens-app[bot]`에 의해 리포지토리에 생성됩니다.
+</details>
 
 ---
 

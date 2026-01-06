@@ -88,9 +88,22 @@ User clicks "Report Bug" → Widget captures context → GitHub Issue created �
 
 ---
 
-## Quick Start (Hosted Mode)
+## Quick Start
 
-Get started in under 2 minutes with the hosted API.
+```bash
+npx inner-lens init
+```
+
+The CLI handles everything:
+- Hosted / Self-Hosted mode selection
+- GitHub App installation (opens browser automatically)
+- Framework detection (React, Vue, Next.js, etc.)
+- Widget and workflow file generation
+
+After setup, run `npm run dev` and click the bug button.
+
+<details>
+<summary><b>Manual Setup (without CLI)</b></summary>
 
 ### 1. Install
 
@@ -98,15 +111,13 @@ Get started in under 2 minutes with the hosted API.
 npm install inner-lens
 ```
 
-### 2. Install GitHub App
+### 2. Install GitHub App (Hosted Mode)
 
 Visit [github.com/apps/inner-lens-app](https://github.com/apps/inner-lens-app) and install on your repository.
 
 ### 3. Add Widget
 
-<details open>
-<summary><b>React / Next.js</b></summary>
-
+**React / Next.js:**
 ```tsx
 import { InnerLensWidget } from 'inner-lens/react';
 
@@ -119,11 +130,8 @@ export default function App() {
   );
 }
 ```
-</details>
 
-<details>
-<summary><b>Vue 3</b></summary>
-
+**Vue 3:**
 ```vue
 <script setup>
 import { InnerLensWidget } from 'inner-lens/vue';
@@ -135,20 +143,7 @@ import { InnerLensWidget } from 'inner-lens/vue';
 </template>
 ```
 
-With custom styling:
-
-```vue
-<InnerLensWidget 
-  repository="your-org/your-repo"
-  :styles="{ buttonColor: '#10b981', buttonPosition: 'bottom-left' }"
-  @success="(url) => console.log('Created:', url)"
-/>
-```
-</details>
-
-<details>
-<summary><b>Vanilla JS</b></summary>
-
+**Vanilla JS:**
 ```js
 import { InnerLens } from 'inner-lens/vanilla';
 
@@ -157,9 +152,8 @@ const widget = new InnerLens({
 });
 widget.mount();
 ```
-</details>
 
-That's it! Bug reports will be created by `inner-lens-app[bot]` on your repository.
+</details>
 
 ---
 
