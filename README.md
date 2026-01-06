@@ -352,6 +352,22 @@ stopSessionReplay();
 
 Full control with your own backend. Issues are created under your GitHub account.
 
+#### Why Backend is Required
+
+In self-hosted mode, **a backend server is mandatory** because:
+
+1. **Token Security** — Your GitHub Personal Access Token must never be exposed to the browser. If embedded in client-side code, anyone could extract it and access your repositories.
+
+2. **Server-Side Authentication** — GitHub API calls must be made from a secure server environment where tokens remain private.
+
+```mermaid
+flowchart LR
+    A[Browser<br/>Widget] -->|"POST /api/report<br/>(no token)"| B[Your Backend<br/>Token stored]
+    B -->|"GitHub API<br/>(authenticated)"| C[GitHub<br/>Issue Created]
+```
+
+The widget only sends bug report data to your backend. Your backend then securely calls GitHub API with the token.
+
 #### Step 1: Get GitHub Token
 
 Create a [Personal Access Token](https://github.com/settings/tokens/new?scopes=repo) with `repo` scope.

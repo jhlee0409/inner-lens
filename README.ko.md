@@ -346,6 +346,22 @@ stopSessionReplay();
 
 자체 백엔드로 완전한 제어. 이슈는 본인 GitHub 계정으로 생성됩니다.
 
+#### 왜 백엔드가 필요한가요?
+
+셀프 호스팅 모드에서 **백엔드 서버는 필수**입니다:
+
+1. **토큰 보안** — GitHub Personal Access Token은 절대로 브라우저에 노출되면 안 됩니다. 클라이언트 코드에 포함되면 누구나 토큰을 추출해 리포지토리에 접근할 수 있습니다.
+
+2. **서버 사이드 인증** — GitHub API 호출은 토큰이 안전하게 보관된 서버 환경에서 이루어져야 합니다.
+
+```mermaid
+flowchart LR
+    A[브라우저<br/>위젯] -->|"POST /api/report<br/>(토큰 없음)"| B[백엔드 서버<br/>토큰 저장됨]
+    B -->|"GitHub API<br/>(인증된 요청)"| C[GitHub<br/>이슈 생성됨]
+```
+
+위젯은 버그 리포트 데이터만 백엔드로 전송합니다. 백엔드가 토큰을 사용해 안전하게 GitHub API를 호출합니다.
+
 #### Step 1: GitHub 토큰 발급
 
 `repo` 스코프가 있는 [Personal Access Token](https://github.com/settings/tokens/new?scopes=repo)을 생성하세요.
