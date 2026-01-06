@@ -23,6 +23,10 @@
   <a href="https://github.com/jhlee0409/inner-lens/blob/main/CONTRIBUTING.md">Contributing</a>
 </p>
 
+<p align="center">
+  <b>English</b> | <a href="./README.ko.md">한국어</a>
+</p>
+
 ---
 
 <!-- 
