@@ -8,6 +8,9 @@
     "type": "git",
     "url": "git+https://github.com/jhlee0409/inner-lens.git"
   },
+  "bugs": {
+    "url": "https://github.com/jhlee0409/inner-lens/issues"
+  },
   "keywords": [
     "debugging",
     "qa",
