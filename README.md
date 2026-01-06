@@ -72,7 +72,23 @@ User clicks "Report Bug" → Widget captures context → GitHub Issue created �
 
 ---
 
-## Quick Start
+## Choose Your Setup
+
+| | Hosted (Recommended) | Self-Hosted |
+|---|:---:|:---:|
+| **Setup Time** | 2 minutes | 10 minutes |
+| **Backend Required** | No | Yes |
+| **Issue Author** | `inner-lens-app[bot]` | Your GitHub account |
+| **Rate Limit** | 10 req/min/IP | None |
+| **Data Control** | Via GitHub API | Full control |
+
+**Choose Hosted if:** You want the fastest setup with zero backend code.
+
+**Choose Self-Hosted if:** You need custom rate limits, want issues created under your account, or require full data control.
+
+---
+
+## Quick Start (Hosted Mode)
 
 Get started in under 2 minutes with the hosted API.
 
@@ -225,10 +241,17 @@ Add your API key to **Settings → Secrets and variables → Actions**.
 
 #### Widget Options
 
+**Mode-specific options:**
+
+| Option | Hosted Mode | Self-Hosted Mode |
+|--------|-------------|------------------|
+| `repository` | **Required** (`owner/repo`) | Optional (can be set in backend) |
+| `endpoint` | Not needed (uses hosted API) | **Required** (your backend URL) |
+
+**Common options:**
+
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `repository` | `string` | - | GitHub repository (`owner/repo`) for hosted mode |
-| `endpoint` | `string` | hosted API | Custom API endpoint for self-hosted |
 | `language` | `string` | `en` | UI language (`en`, `ko`, `ja`, `zh`, `es`) |
 | `devOnly` | `boolean` | `true` | Hide in production |
 | `disabled` | `boolean` | `false` | Disable widget |
@@ -317,12 +340,18 @@ const replayData = getSessionReplaySnapshot();
 
 ---
 
-### Self-Hosted Backend
+### Self-Hosted Mode
 
-Run your own backend for full control.
+Full control with your own backend. Issues are created under your GitHub account.
 
-<details>
-<summary><b>Next.js / Vercel</b></summary>
+#### Step 1: Get GitHub Token
+
+Create a [Personal Access Token](https://github.com/settings/tokens/new?scopes=repo) with `repo` scope.
+
+#### Step 2: Set Up Backend
+
+<details open>
+<summary><b>Next.js (App Router)</b></summary>
 
 ```ts
 // app/api/inner-lens/report/route.ts
@@ -332,6 +361,11 @@ export const POST = createFetchHandler({
   githubToken: process.env.GITHUB_TOKEN!,
   repository: 'owner/repo',
 });
+```
+
+```bash
+# .env.local
+GITHUB_TOKEN=ghp_xxxxxxxxxxxx
 ```
 </details>
 
@@ -459,14 +493,18 @@ export default {
 
 </details>
 
-**Widget configuration for self-hosted:**
+#### Step 3: Configure Widget
+
+Point the widget to your backend endpoint:
 
 ```tsx
 <InnerLensWidget
-  endpoint="/api/inner-lens/report"
+  endpoint="/api/inner-lens/report"  // Your backend URL
   repository="owner/repo"
 />
 ```
+
+> **Note:** In self-hosted mode, `repository` in the widget is optional if you hardcode it in your backend config.
 
 ---
 
@@ -555,17 +593,34 @@ Sensitive data is automatically masked before transmission:
 ## FAQ
 
 <details>
-<summary><b>Hosted vs Self-Hosted?</b></summary>
+<summary><b>Hosted vs Self-Hosted: Which should I choose?</b></summary>
 
-**Hosted (Recommended):**
-- No backend setup required
-- Issues created by `inner-lens-app[bot]`
-- Rate limited (10 req/min/IP)
+| Aspect | Hosted | Self-Hosted |
+|--------|--------|-------------|
+| Setup time | 2 minutes | 10 minutes |
+| Backend code | None | Required |
+| Issue author | `inner-lens-app[bot]` | Your GitHub account |
+| Rate limit | 10 req/min/IP | None |
+| GitHub token | Not needed | Required (PAT) |
 
-**Self-Hosted:**
-- Full control over data
-- No rate limits
-- Requires your own backend
+**Choose Hosted if:**
+- You want the fastest setup
+- You're okay with issues from a bot account
+- You don't need custom rate limits
+
+**Choose Self-Hosted if:**
+- You want issues created under your account
+- You need unlimited submissions
+- You want full control over the backend
+</details>
+
+<details>
+<summary><b>Who creates the GitHub issues?</b></summary>
+
+- **Hosted mode:** Issues are created by `inner-lens-app[bot]`
+- **Self-hosted mode:** Issues are created by the GitHub account that owns the Personal Access Token
+
+This is an important consideration for team workflows and issue tracking.
 </details>
 
 <details>
@@ -590,6 +645,17 @@ Yes. The widget renders client-side only. For Next.js, use `'use client'` or dyn
 - Sensitive data is masked **before** leaving the browser
 - No data is stored on our servers (hosted mode uses GitHub API directly)
 - Self-hosted mode gives you full control
+</details>
+
+<details>
+<summary><b>Can I switch from Hosted to Self-Hosted later?</b></summary>
+
+Yes! Simply:
+1. Set up your backend (see [Self-Hosted Mode](#self-hosted-mode))
+2. Add `endpoint` prop to your widget
+3. Remove the GitHub App from your repository (optional)
+
+Your existing issues will remain unchanged.
 </details>
 
 ---

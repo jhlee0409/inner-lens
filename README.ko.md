@@ -66,7 +66,23 @@
 
 ---
 
-## 빠른 시작
+## 설정 방식 선택
+
+| | Hosted (권장) | Self-Hosted |
+|---|:---:|:---:|
+| **설정 시간** | 2분 | 10분 |
+| **백엔드 필요** | 아니오 | 예 |
+| **이슈 작성자** | `inner-lens-app[bot]` | 본인 GitHub 계정 |
+| **Rate Limit** | 10 req/min/IP | 없음 |
+| **데이터 제어** | GitHub API 경유 | 완전 제어 |
+
+**Hosted 선택:** 백엔드 코드 없이 가장 빠르게 시작하고 싶을 때.
+
+**Self-Hosted 선택:** 커스텀 Rate Limit이 필요하거나, 본인 계정으로 이슈를 생성하거나, 완전한 데이터 제어가 필요할 때.
+
+---
+
+## 빠른 시작 (Hosted 모드)
 
 호스팅 API로 2분 안에 시작하세요.
 
@@ -219,10 +235,17 @@ jobs:
 
 #### 위젯 옵션
 
+**모드별 옵션:**
+
+| 옵션 | Hosted 모드 | Self-Hosted 모드 |
+|------|-------------|------------------|
+| `repository` | **필수** (`owner/repo`) | 선택 (백엔드에서 설정 가능) |
+| `endpoint` | 불필요 (호스팅 API 사용) | **필수** (백엔드 URL) |
+
+**공통 옵션:**
+
 | 옵션 | 타입 | 기본값 | 설명 |
 |------|------|--------|------|
-| `repository` | `string` | - | GitHub 리포지토리 (`owner/repo`) 호스팅 모드용 |
-| `endpoint` | `string` | hosted API | 셀프 호스팅용 커스텀 API 엔드포인트 |
 | `language` | `string` | `en` | UI 언어 (`en`, `ko`, `ja`, `zh`, `es`) |
 | `devOnly` | `boolean` | `true` | 프로덕션에서 숨기기 |
 | `disabled` | `boolean` | `false` | 위젯 비활성화 |
@@ -311,12 +334,18 @@ const replayData = getSessionReplaySnapshot();
 
 ---
 
-### 셀프 호스팅 백엔드
+### 셀프 호스팅 모드
 
-완전한 제어를 위해 자체 백엔드를 운영하세요.
+자체 백엔드로 완전한 제어. 이슈는 본인 GitHub 계정으로 생성됩니다.
 
-<details>
-<summary><b>Next.js / Vercel</b></summary>
+#### Step 1: GitHub 토큰 발급
+
+`repo` 스코프가 있는 [Personal Access Token](https://github.com/settings/tokens/new?scopes=repo)을 생성하세요.
+
+#### Step 2: 백엔드 설정
+
+<details open>
+<summary><b>Next.js (App Router)</b></summary>
 
 ```ts
 // app/api/inner-lens/report/route.ts
@@ -326,6 +355,11 @@ export const POST = createFetchHandler({
   githubToken: process.env.GITHUB_TOKEN!,
   repository: 'owner/repo',
 });
+```
+
+```bash
+# .env.local
+GITHUB_TOKEN=ghp_xxxxxxxxxxxx
 ```
 </details>
 
@@ -453,14 +487,18 @@ export default {
 
 </details>
 
-**셀프 호스팅용 위젯 설정:**
+#### Step 3: 위젯 설정
+
+위젯이 백엔드 엔드포인트를 가리키도록 설정:
 
 ```tsx
 <InnerLensWidget
-  endpoint="/api/inner-lens/report"
+  endpoint="/api/inner-lens/report"  // 백엔드 URL
   repository="owner/repo"
 />
 ```
+
+> **참고:** 셀프 호스팅 모드에서는 백엔드에 repository를 하드코딩했다면 위젯의 `repository`는 선택사항입니다.
 
 ---
 
@@ -549,17 +587,34 @@ export default {
 ## FAQ
 
 <details>
-<summary><b>Hosted vs Self-Hosted?</b></summary>
+<summary><b>Hosted vs Self-Hosted: 어떤 걸 선택해야 하나요?</b></summary>
 
-**Hosted (권장):**
-- 백엔드 설정 불필요
-- `inner-lens-app[bot]`이 이슈 생성
-- Rate limit 있음 (10 req/min/IP)
+| 항목 | Hosted | Self-Hosted |
+|------|--------|-------------|
+| 설정 시간 | 2분 | 10분 |
+| 백엔드 코드 | 없음 | 필요 |
+| 이슈 작성자 | `inner-lens-app[bot]` | 본인 GitHub 계정 |
+| Rate limit | 10 req/min/IP | 없음 |
+| GitHub 토큰 | 불필요 | 필요 (PAT) |
 
-**Self-Hosted:**
-- 데이터에 대한 완전한 제어
-- Rate limit 없음
-- 자체 백엔드 필요
+**Hosted 선택 시:**
+- 가장 빠른 설정을 원할 때
+- 봇 계정으로 이슈가 생성되어도 괜찮을 때
+- 커스텀 Rate limit이 필요 없을 때
+
+**Self-Hosted 선택 시:**
+- 본인 계정으로 이슈를 생성하고 싶을 때
+- 무제한 제출이 필요할 때
+- 백엔드에 대한 완전한 제어가 필요할 때
+</details>
+
+<details>
+<summary><b>GitHub 이슈는 누가 만드나요?</b></summary>
+
+- **Hosted 모드:** `inner-lens-app[bot]`이 이슈를 생성합니다
+- **Self-hosted 모드:** Personal Access Token을 소유한 GitHub 계정으로 이슈가 생성됩니다
+
+팀 워크플로우와 이슈 트래킹에서 중요한 고려사항입니다.
 </details>
 
 <details>
@@ -584,6 +639,17 @@ export default {
 - 민감한 데이터는 브라우저를 떠나기 **전에** 마스킹됩니다
 - 우리 서버에 데이터가 저장되지 않습니다 (hosted 모드는 GitHub API를 직접 사용)
 - Self-hosted 모드는 완전한 제어를 제공합니다
+</details>
+
+<details>
+<summary><b>나중에 Hosted에서 Self-Hosted로 전환할 수 있나요?</b></summary>
+
+네! 간단히:
+1. 백엔드를 설정합니다 ([셀프 호스팅 모드](#셀프-호스팅-모드) 참조)
+2. 위젯에 `endpoint` prop을 추가합니다
+3. 리포지토리에서 GitHub App을 제거합니다 (선택사항)
+
+기존 이슈는 변경되지 않습니다.
 </details>
 
 ---
