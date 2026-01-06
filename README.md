@@ -542,20 +542,6 @@ Sensitive data is automatically masked before transmission:
 
 ---
 
-## Comparison
-
-| Feature | inner-lens | Sentry | LogRocket |
-|---------|------------|--------|-----------|
-| Bug reporting widget | ✅ | ❌ | ❌ |
-| AI analysis | ✅ | ❌ | ❌ |
-| GitHub integration | ✅ Native | ✅ Integration | ✅ Integration |
-| Session replay | ✅ Optional | ✅ Paid | ✅ Core |
-| Self-hostable | ✅ | ✅ | ❌ |
-| Open source | ✅ MIT | ✅ BSL | ❌ |
-| Pricing | Free | Freemium | Paid |
-
----
-
 ## Troubleshooting
 
 <details>
@@ -676,18 +662,6 @@ Look for issues labeled [`good first issue`](https://github.com/jhlee0409/inner-
 
 - **Bug reports**: [GitHub Issues](https://github.com/jhlee0409/inner-lens/issues)
 - **Feature requests**: [GitHub Discussions](https://github.com/jhlee0409/inner-lens/discussions)
-
----
-
-## Star History
-
-<a href="https://star-history.com/#jhlee0409/inner-lens&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=jhlee0409/inner-lens&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=jhlee0409/inner-lens&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=jhlee0409/inner-lens&type=Date" />
- </picture>
-</a>
 
 ---
 

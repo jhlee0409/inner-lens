@@ -536,20 +536,6 @@ export default {
 
 ---
 
-## 비교
-
-| 기능 | inner-lens | Sentry | LogRocket |
-|------|------------|--------|-----------|
-| 버그 리포팅 위젯 | ✅ | ❌ | ❌ |
-| AI 분석 | ✅ | ❌ | ❌ |
-| GitHub 통합 | ✅ 네이티브 | ✅ 연동 | ✅ 연동 |
-| 세션 리플레이 | ✅ 선택적 | ✅ 유료 | ✅ 핵심 |
-| 셀프 호스팅 | ✅ | ✅ | ❌ |
-| 오픈 소스 | ✅ MIT | ✅ BSL | ❌ |
-| 가격 | 무료 | 프리미엄 | 유료 |
-
----
-
 ## 문제 해결
 
 <details>
@@ -670,18 +656,6 @@ npm run build
 
 - **버그 리포트**: [GitHub Issues](https://github.com/jhlee0409/inner-lens/issues)
 - **기능 요청**: [GitHub Discussions](https://github.com/jhlee0409/inner-lens/discussions)
-
----
-
-## Star History
-
-<a href="https://star-history.com/#jhlee0409/inner-lens&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=jhlee0409/inner-lens&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=jhlee0409/inner-lens&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=jhlee0409/inner-lens&type=Date" />
- </picture>
-</a>
 
 ---
 
