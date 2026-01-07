@@ -343,6 +343,18 @@ Sensitive data (emails, API keys, tokens, etc.) is automatically masked **before
 3. Check browser console (F12) for error messages
 </details>
 
+<details>
+<summary><b>Browser compatibility?</b></summary>
+
+inner-lens targets ES2022 and works with modern browsers:
+- Chrome 94+
+- Firefox 93+
+- Safari 15.4+
+- Edge 94+
+
+Node.js 18+ is required for server-side features.
+</details>
+
 ---
 
 ## Contributing
