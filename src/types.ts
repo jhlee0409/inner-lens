@@ -34,6 +34,7 @@ export interface WidgetTexts {
   descriptionRequired: string;
   submitError: string;
   timeoutError: string;
+  repositoryNotConfigured: string;
 }
 
 /**
@@ -61,6 +62,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     descriptionRequired: 'Please provide a description of the issue.',
     submitError: 'Failed to submit report. Please try again.',
     timeoutError: 'Request timed out. Please try again.',
+    repositoryNotConfigured: 'Repository not configured. Please contact the site administrator.',
   },
   ko: {
     buttonText: '버그 제보',
@@ -83,6 +85,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     descriptionRequired: '문제 설명을 입력해주세요.',
     submitError: '제보에 실패했어요. 다시 시도해주세요.',
     timeoutError: '요청 시간이 초과됐어요. 다시 시도해주세요.',
+    repositoryNotConfigured: '저장소가 설정되지 않았어요. 사이트 관리자에게 문의해주세요.',
   },
   ja: {
     buttonText: 'バグを報告',
@@ -105,6 +108,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     descriptionRequired: '問題の説明を入力してください。',
     submitError: '送信に失敗しました。もう一度お試しください。',
     timeoutError: 'リクエストがタイムアウトしました。もう一度お試しください。',
+    repositoryNotConfigured: 'リポジトリが設定されていません。サイト管理者にお問い合わせください。',
   },
   zh: {
     buttonText: '反馈问题',
@@ -127,6 +131,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     descriptionRequired: '请输入问题描述。',
     submitError: '提交失败，请重试。',
     timeoutError: '请求超时，请重试。',
+    repositoryNotConfigured: '仓库未配置，请联系网站管理员。',
   },
   es: {
     buttonText: 'Reportar problema',
@@ -149,6 +154,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     descriptionRequired: 'Por favor, proporciona una descripción del problema.',
     submitError: 'Error al enviar el reporte. Por favor, inténtalo de nuevo.',
     timeoutError: 'La solicitud ha expirado. Por favor, inténtalo de nuevo.',
+    repositoryNotConfigured: 'Repositorio no configurado. Por favor, contacta al administrador del sitio.',
   },
 };
 

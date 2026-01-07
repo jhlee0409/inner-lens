@@ -866,11 +866,9 @@ export class InnerLensCore {
       const owner = parsedOwner ?? '';
       const repo = parsedRepo ?? '';
 
-      // Validate repository for hosted mode
       if (this.config.endpoint === HOSTED_API_ENDPOINT && (!owner || !repo)) {
         this.submissionState = 'error';
-        this.errorMessage =
-          'Repository not configured. Please set the repository option (e.g., "owner/repo").';
+        this.errorMessage = this.getTexts().repositoryNotConfigured;
         this.render();
         return;
       }
