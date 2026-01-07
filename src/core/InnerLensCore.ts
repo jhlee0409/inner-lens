@@ -949,7 +949,9 @@ export class InnerLensCore {
       }
       if (this.config.captureSessionReplay && this.sessionReplayModule) {
         this.sessionReplayModule.stopSessionReplay();
-        this.sessionReplayModule.startSessionReplay({ maskInputs: true }).catch(() => {});
+        this.sessionReplayModule.startSessionReplay({ maskInputs: true }).catch((err: Error) => {
+          console.warn('[inner-lens] Session replay restart failed:', err.message);
+        });
       }
 
       this.config.onSuccess?.(data.issueUrl);

@@ -7,6 +7,8 @@
  * - src/utils/masking.ts (maskSensitiveData, MASKING_PATTERNS)
  */
 
+import { z } from 'zod';
+
 // ============================================
 // Types
 // ============================================
@@ -274,4 +276,207 @@ export function maskSensitiveData(text: string): string {
   }
 
   return maskedText;
+}
+
+// ============================================
+// Zod Schemas for Validation
+// ============================================
+
+const UserActionSchema = z.object({
+  type: z.enum([
+    'click', 'dblclick', 'input', 'change', 'focus',
+    'blur', 'scroll', 'keydown', 'submit', 'copy', 'paste', 'select',
+  ]),
+  target: z.string(),
+  timestamp: z.number(),
+  value: z.string().optional(),
+  position: z.object({ x: z.number(), y: z.number() }).optional(),
+  key: z.string().optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+const NavigationEntrySchema = z.object({
+  type: z.enum(['pageload', 'pushstate', 'replacestate', 'popstate', 'hashchange', 'beforeunload']),
+  timestamp: z.number(),
+  from: z.string(),
+  to: z.string(),
+  duration: z.number().optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+const PerformanceSummarySchema = z.object({
+  coreWebVitals: z.object({
+    LCP: z.number().optional(),
+    FID: z.number().optional(),
+    CLS: z.number().optional(),
+    INP: z.number().optional(),
+    TTFB: z.number().optional(),
+    FCP: z.number().optional(),
+  }),
+  timing: z.object({
+    domContentLoaded: z.number(),
+    loadComplete: z.number(),
+    timeToInteractive: z.number().optional(),
+  }),
+  resourceCount: z.number(),
+  memoryUsage: z.number().optional(),
+  score: z.number().optional(),
+});
+
+const PageContextSchema = z.object({
+  route: z.string(),
+  pathname: z.string(),
+  hash: z.string(),
+  componentStack: z.string().optional(),
+  title: z.string(),
+  timeOnPage: z.number(),
+  referrer: z.string().optional(),
+});
+
+const LogEntrySchema = z.object({
+  level: z.enum(['error', 'warn', 'info', 'log']),
+  message: z.string(),
+  timestamp: z.number(),
+  stack: z.string().optional(),
+});
+
+const ReporterSchema = z.object({
+  name: z.string(),
+  email: z.string().optional(),
+  id: z.string().optional(),
+});
+
+export const HostedBugReportPayloadSchema = z.object({
+  owner: z.string().min(1, 'Owner is required'),
+  repo: z.string().min(1, 'Repo is required'),
+  description: z.string().min(1, 'Description is required').max(10000, 'Description too long'),
+  logs: z.array(LogEntrySchema).optional(),
+  url: z.string().optional(),
+  userAgent: z.string().optional(),
+  timestamp: z.number().optional(),
+  metadata: z.record(z.unknown()).optional(),
+  userActions: z.array(UserActionSchema).optional(),
+  navigations: z.array(NavigationEntrySchema).optional(),
+  performance: PerformanceSummarySchema.optional(),
+  sessionReplay: z.string().optional(),
+  pageContext: PageContextSchema.optional(),
+  reporter: ReporterSchema.optional(),
+});
+
+export type ValidatedHostedBugReport = z.infer<typeof HostedBugReportPayloadSchema>;
+
+export function validateHostedBugReport(
+  payload: unknown
+): { success: true; data: ValidatedHostedBugReport } | { success: false; error: string } {
+  const result = HostedBugReportPayloadSchema.safeParse(payload);
+
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+
+  const errorMessages = result.error.errors
+    .map((e) => `${e.path.join('.')}: ${e.message}`)
+    .join(', ');
+
+  return { success: false, error: errorMessages };
+}
+
+// ============================================
+// Issue Formatting
+// ============================================
+
+export function formatIssueBody(payload: HostedBugReportPayload): string {
+  const maskedDescription = maskSensitiveData(payload.description);
+  const maskedLogs = payload.logs
+    ?.map((log) => ({
+      ...log,
+      message: maskSensitiveData(log.message),
+      stack: log.stack ? maskSensitiveData(log.stack) : undefined,
+    }))
+    .slice(-MAX_LOG_ENTRIES) || [];
+
+  const formattedUserActions = payload.userActions?.length
+    ? payload.userActions.slice(-20).map((action) => {
+        const time = new Date(action.timestamp).toISOString();
+        const value = action.value ? ` → "${maskSensitiveData(action.value.slice(0, 50))}"` : '';
+        return `[${time}] ${action.type.toUpperCase()} on ${action.target}${value}`;
+      }).join('\n')
+    : null;
+
+  const formattedNavigations = payload.navigations?.length
+    ? payload.navigations.slice(-10).map((nav) => {
+        const time = new Date(nav.timestamp).toISOString();
+        const duration = nav.duration ? ` (${nav.duration}ms)` : '';
+        return `[${time}] ${nav.type}: ${maskSensitiveData(nav.from)} → ${maskSensitiveData(nav.to)}${duration}`;
+      }).join('\n')
+    : null;
+
+  const formattedPerformance = payload.performance
+    ? [
+        `LCP: ${payload.performance.coreWebVitals.LCP?.toFixed(0) ?? 'N/A'}ms`,
+        `FID: ${payload.performance.coreWebVitals.FID?.toFixed(0) ?? 'N/A'}ms`,
+        `CLS: ${payload.performance.coreWebVitals.CLS?.toFixed(3) ?? 'N/A'}`,
+        `TTFB: ${payload.performance.coreWebVitals.TTFB?.toFixed(0) ?? 'N/A'}ms`,
+        `DOM Loaded: ${payload.performance.timing.domContentLoaded}ms`,
+        `Load Complete: ${payload.performance.timing.loadComplete}ms`,
+        `Resources: ${payload.performance.resourceCount}`,
+      ].join(' | ')
+    : null;
+
+  const formattedPageContext = payload.pageContext
+    ? [
+        `**Route:** ${maskSensitiveData(payload.pageContext.pathname)}`,
+        `**Title:** ${payload.pageContext.title}`,
+        `**Time on Page:** ${(payload.pageContext.timeOnPage / 1000).toFixed(1)}s`,
+        payload.pageContext.componentStack ? `**Component:** ${payload.pageContext.componentStack}` : null,
+      ].filter(Boolean).join('\n')
+    : null;
+
+  const formattedReporter = payload.reporter
+    ? [
+        `**Name:** ${payload.reporter.name}`,
+        payload.reporter.email ? `**Email:** ${maskSensitiveData(payload.reporter.email)}` : null,
+        payload.reporter.id ? `**ID:** ${payload.reporter.id}` : null,
+      ].filter(Boolean).join(' | ')
+    : null;
+
+  let body = `## Bug Report\n\n${maskedDescription}\n`;
+
+  if (formattedReporter) {
+    body += `\n---\n\n### Reporter\n\n${formattedReporter}\n`;
+  }
+
+  body += `\n---\n\n### Environment\n\n| Field | Value |\n|-------|-------|\n| URL | ${maskSensitiveData(payload.url || 'N/A')} |\n| User Agent | ${payload.userAgent || 'N/A'} |\n| Timestamp | ${payload.timestamp ? new Date(payload.timestamp).toISOString() : new Date().toISOString()} |\n`;
+
+  if (formattedPageContext) {
+    body += `\n---\n\n### Page Context\n\n${formattedPageContext}\n`;
+  }
+
+  if (formattedPerformance) {
+    body += `\n---\n\n### Performance\n\n${formattedPerformance}\n`;
+  }
+
+  if (maskedLogs.length > 0) {
+    body += `\n---\n\n<details>\n<summary><b>Console Logs (${maskedLogs.length} entries)</b></summary>\n\n\`\`\`\n${maskedLogs.map((log) => `[${log.level.toUpperCase()}] ${log.message}${log.stack ? '\n' + log.stack : ''}`).join('\n')}\n\`\`\`\n\n</details>\n`;
+  }
+
+  if (formattedUserActions) {
+    body += `\n---\n\n<details>\n<summary><b>User Actions (${payload.userActions?.length ?? 0} events)</b></summary>\n\n\`\`\`\n${formattedUserActions}\n\`\`\`\n\n</details>\n`;
+  }
+
+  if (formattedNavigations) {
+    body += `\n---\n\n<details>\n<summary><b>Navigation History (${payload.navigations?.length ?? 0} entries)</b></summary>\n\n\`\`\`\n${formattedNavigations}\n\`\`\`\n\n</details>\n`;
+  }
+
+  if (payload.sessionReplay) {
+    body += `\n---\n\n### Session Replay\n\n📹 Session replay data attached (${(payload.sessionReplay.length / 1024).toFixed(1)}KB compressed)\n`;
+  }
+
+  if (payload.metadata && Object.keys(payload.metadata).length > 0) {
+    body += `\n---\n\n### Metadata\n\n\`\`\`json\n${maskSensitiveData(JSON.stringify(payload.metadata, null, 2))}\n\`\`\`\n`;
+  }
+
+  body += `\n---\n\n<sub>Reported via [inner-lens](https://github.com/jhlee0409/inner-lens)</sub>\n`;
+
+  return body;
 }
