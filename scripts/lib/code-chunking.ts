@@ -16,7 +16,7 @@ import type { ErrorLocation, FileInfo } from './file-discovery';
 // ============================================
 
 export interface CodeChunk {
-  type: 'function' | 'class' | 'interface' | 'type' | 'const' | 'export';
+  type: 'function' | 'class' | 'interface' | 'type' | 'const';
   name: string;
   startLine: number;
   endLine: number;
@@ -73,6 +73,12 @@ export function extractCodeChunks(content: string): CodeChunk[] {
     {
       regex: /^(?:export\s+)?const\s+(\w+)\s*=\s*(async\s+)?\([^)]*\)\s*(:\s*[^=]+)?\s*=>/m,
       type: 'function' as const,
+      nameGroup: 1,
+    },
+    // Const arrays/objects: const NAME = [ or const NAME = {
+    {
+      regex: /^(?:export\s+)?const\s+(\w+)\s*(?::\s*[^=]+)?\s*=\s*[\[{]/m,
+      type: 'const' as const,
       nameGroup: 1,
     },
     // Classes: class Name or export class Name

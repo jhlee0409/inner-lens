@@ -1,12 +1,97 @@
 /**
  * Sensitive Data Masking Engine
  * Security-first approach to prevent PII leakage in bug reports
+ *
+ * Design principle: When in doubt, mask it out.
+ * False positives are acceptable; false negatives are not.
  */
 
 interface MaskingPattern {
   name: string;
   pattern: RegExp;
   replacement: string;
+}
+
+/**
+ * Patterns to detect sensitive KEY NAMES in objects
+ * Based on: watson/is-secret, Sentry defaults, Lumigo, Elastic APM
+ */
+const SENSITIVE_KEY_PATTERNS: RegExp[] = [
+  // Authentication & Passwords
+  /passw(or)?d/i,
+  /^pw$/i,
+  /^pass$/i,
+  /passwd/i,
+  /credential/i,
+  /auth/i,
+
+  // Tokens & Keys
+  /secret/i,
+  /token/i,
+  /api[-._]?key/i,
+  /[-._]key$/i, // ends with key: secret_key, apiKey
+  /^key[-._]/i, // starts with key: key_secret
+  /bearer/i,
+  /private[-._]?key/i,
+  /public[-._]?key/i,
+
+  // Session & Access
+  /session[-._]?id/i,
+  /access[-._]?token/i,
+  /refresh[-._]?token/i,
+  /auth[-._]?token/i,
+  /id[-._]?token/i,
+
+  // Certificates & Crypto
+  /cert(ificate)?/i,
+  /ssl/i,
+  /encryption/i,
+  /signing/i,
+  /nonce/i,
+  /salt/i,
+  /hash/i,
+
+  // Database & Connection
+  /mysql[-._]?pwd/i,
+  /connection[-._]?string/i,
+  /database[-._]?url/i,
+  /db[-._]?pass/i,
+
+  // Cloud & Services
+  /aws[-._]?(secret|key|token)/i,
+  /azure[-._]?(key|secret|token)/i,
+  /gcp[-._]?(key|secret|token)/i,
+  /firebase[-._]?/i,
+
+  // Webhook & Integration
+  /webhook/i,
+  /callback[-._]?url/i,
+  /client[-._]?secret/i,
+  /client[-._]?id/i,
+  /app[-._]?secret/i,
+
+  // Personal & Sensitive
+  /ssn/i,
+  /social[-._]?security/i,
+  /tax[-._]?id/i,
+  /license[-._]?number/i,
+  /passport/i,
+  /credit[-._]?card/i,
+  /cvv/i,
+  /pin/i,
+
+  // Generic catch-all for safety
+  /[-._]secret[-._]?/i,
+  /[-._]private[-._]?/i,
+  /[-._]secure[-._]?/i,
+];
+
+/**
+ * Check if a key name indicates sensitive data
+ */
+export function isSensitiveKey(key: string): boolean {
+  if (!key || typeof key !== 'string') return false;
+  return SENSITIVE_KEY_PATTERNS.some((regex) => regex.test(key));
 }
 
 /**
