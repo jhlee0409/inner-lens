@@ -20,7 +20,6 @@
     "developer-tools",
     "react",
     "vue",
-    "svelte",
     "vanilla-js",
     "nextjs",
     "vite",
@@ -83,16 +82,6 @@
       "require": {
         "types": "./dist/server.d.cts",
         "default": "./dist/server.cjs"
-      }
-    },
-    "./replay": {
-      "import": {
-        "types": "./dist/replay.d.ts",
-        "default": "./dist/replay.js"
-      },
-      "require": {
-        "types": "./dist/replay.d.cts",
-        "default": "./dist/replay.cjs"
       }
     }
   },

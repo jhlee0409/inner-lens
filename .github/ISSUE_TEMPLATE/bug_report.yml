@@ -60,7 +60,6 @@ body:
         - inner-lens/vue
         - inner-lens/vanilla
         - inner-lens/server
-        - inner-lens/replay
         - CLI (npx inner-lens)
     validations:
       required: true

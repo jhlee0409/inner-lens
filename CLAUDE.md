@@ -368,7 +368,6 @@ describe('maskSensitiveData', () => {
 import { InnerLensWidget, useInnerLens } from 'inner-lens/react';
 import { InnerLensWidget } from 'inner-lens/vue';
 import { InnerLens } from 'inner-lens/vanilla';
-import { startSessionReplay, getSessionReplaySnapshot } from 'inner-lens/replay';
 
 // 서버
 import { 
