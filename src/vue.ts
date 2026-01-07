@@ -41,6 +41,7 @@ export type {
   BugReportResponse,
   GitHubIssuePayload,
   WidgetLanguage,
+  Reporter,
 } from './types';
 
 // Re-export utilities
