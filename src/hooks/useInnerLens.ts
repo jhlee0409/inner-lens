@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useMemo } from 'react';
 import { InnerLensCore, type InnerLensCoreConfig } from '../core/InnerLensCore';
 
 /**
@@ -19,6 +19,10 @@ import { InnerLensCore, type InnerLensCoreConfig } from '../core/InnerLensCore';
  *   //   endpoint: '/api/bug-report',
  *   // });
  *
+ *   // For stable callbacks, wrap with useCallback:
+ *   // const handleSuccess = useCallback((url) => { ... }, []);
+ *   // useInnerLens({ onSuccess: handleSuccess });
+ *
  *   return (
  *     <button onClick={open}>Report Bug</button>
  *   );
@@ -28,22 +32,41 @@ import { InnerLensCore, type InnerLensCoreConfig } from '../core/InnerLensCore';
 export function useInnerLens(config: InnerLensCoreConfig = {}) {
   const instanceRef = useRef<InnerLensCore | null>(null);
 
+  const callbacksRef = useRef({
+    onOpen: config.onOpen,
+    onClose: config.onClose,
+    onSuccess: config.onSuccess,
+    onError: config.onError,
+  });
+
+  callbacksRef.current = {
+    onOpen: config.onOpen,
+    onClose: config.onClose,
+    onSuccess: config.onSuccess,
+    onError: config.onError,
+  };
+
+  const labelsJson = useMemo(
+    () => (config.labels ? JSON.stringify(config.labels) : ''),
+    [config.labels]
+  );
+
   useEffect(() => {
-    instanceRef.current = new InnerLensCore(config);
+    const stableConfig: InnerLensCoreConfig = {
+      ...config,
+      onOpen: () => callbacksRef.current.onOpen?.(),
+      onClose: () => callbacksRef.current.onClose?.(),
+      onSuccess: (url) => callbacksRef.current.onSuccess?.(url),
+      onError: (err) => callbacksRef.current.onError?.(err),
+    };
+
+    instanceRef.current = new InnerLensCore(stableConfig);
     instanceRef.current.mount();
 
     return () => {
       instanceRef.current?.unmount();
       instanceRef.current = null;
     };
-  }, []);
-
-  useEffect(() => {
-    if (instanceRef.current) {
-      instanceRef.current.unmount();
-      instanceRef.current = new InnerLensCore(config);
-      instanceRef.current.mount();
-    }
   }, [
     config.endpoint,
     config.repository,
@@ -72,6 +95,7 @@ export function useInnerLens(config: InnerLensCoreConfig = {}) {
     config.reporter?.name,
     config.reporter?.email,
     config.reporter?.id,
+    labelsJson,
   ]);
 
   const open = useCallback(() => {

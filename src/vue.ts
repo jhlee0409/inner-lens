@@ -133,6 +133,7 @@ export function useInnerLens(config: InnerLensCoreConfig = {}) {
       config.reporter?.name,
       config.reporter?.email,
       config.reporter?.id,
+      JSON.stringify(config.labels),
     ],
     () => {
       createInstance();
@@ -347,6 +348,7 @@ export const InnerLensWidget = defineComponent({
         props.reporter?.name,
         props.reporter?.email,
         props.reporter?.id,
+        JSON.stringify(props.labels),
       ],
       () => {
         createInstance();
