@@ -1,6 +1,6 @@
 {
   "name": "inner-lens",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Self-Debugging QA Agent - Universal bug reporting widget with AI-powered analysis for any frontend framework",
   "author": "jack",
   "license": "MIT",
@@ -99,7 +99,10 @@
   "module": "./dist/core.js",
   "types": "./dist/core.d.ts",
   "files": [
-    "dist",
+    "dist/*.js",
+    "dist/*.cjs",
+    "dist/*.d.ts",
+    "dist/*.d.cts",
     "README.md",
     "LICENSE"
   ],
@@ -112,6 +115,7 @@
     "typecheck": "tsc --noEmit",
     "sync:check": "npx tsx scripts/sync-check.ts",
     "sparse:check": "npx tsx scripts/sparse-checkout-check.ts",
+    "workflow:check": "npx tsx scripts/workflow-isolation-check.ts",
     "prepublishOnly": "npm run build",
     "example": "node examples/vanilla/server.js",
     "example:dev": "npm run build && node examples/vanilla/server.js"

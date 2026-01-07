@@ -45,6 +45,9 @@ jobs:
       - name: Verify sparse-checkout dependencies
         run: npm run sparse:check
 
+      - name: Verify workflow isolation
+        run: npm run workflow:check
+
       - name: Run tests with coverage
         run: npm run test:coverage
 

@@ -235,6 +235,45 @@ When adding new features, update:
 | `.github/workflows/` | GitHub Actions workflows |
 | `dist/` | Build output (git-ignored) |
 
+## Workflow Development
+
+### Reusable Workflow Isolation Pattern
+
+The `analysis-engine.yml` is a reusable workflow that runs in **caller repositories**. This creates a critical constraint: our dependencies must not conflict with the caller's dependencies.
+
+**Problem**: npm resolves peer dependencies against the caller repo's `package.json`, causing conflicts like:
+```
+npm error ERESOLVE could not resolve
+npm error peerOptional @typescript-eslint/eslint-plugin@"6 - 7" 
+npm error Found: @typescript-eslint/eslint-plugin@8.38.0
+```
+
+**Solution**: Install dependencies in an isolated environment:
+
+```yaml
+- name: Install analysis dependencies
+  working-directory: .inner-lens
+  run: |
+    echo '{"name":"inner-lens-analysis","private":true,"type":"module"}' > package.json
+    npm install --no-save --prefer-offline \
+      ai@~6.0.12 \
+      ...
+
+- name: Run analysis
+  env:
+    NODE_PATH: ${{ github.workspace }}/.inner-lens/node_modules
+  run: |
+    export PATH="${{ github.workspace }}/.inner-lens/node_modules/.bin:$PATH"
+    tsx .inner-lens/scripts/analyze-issue.ts
+```
+
+**Key Points**:
+1. `working-directory: .inner-lens` - npm ignores caller's package.json
+2. Create isolated `package.json` - prevents npm from searching parent directories  
+3. `NODE_PATH` - ensures Node.js finds modules in `.inner-lens/node_modules`
+4. `PATH` modification - ensures `tsx` binary is found in isolated node_modules
+5. Use tilde (`~`) for versions - allows patch updates but prevents breaking changes
+
 ## Need Help?
 
 - Open an issue for questions
