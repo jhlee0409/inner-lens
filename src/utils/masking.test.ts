@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { maskSensitiveData, maskSensitiveObject, validateMasking } from './masking';
+import { maskSensitiveData, maskSensitiveObject, validateMasking, isSensitiveKey } from './masking';
 
 describe('maskSensitiveData', () => {
   it('masks email addresses', () => {
@@ -12,10 +12,10 @@ describe('maskSensitiveData', () => {
     expect(maskSensitiveData('Bearer abc123xyz')).toBe('Bearer [TOKEN_REDACTED]');
   });
 
-  it('masks OpenAI API keys', () => {
-    expect(maskSensitiveData('key: sk-1234567890abcdefghij')).toBe(
-      'key: [OPENAI_KEY_REDACTED]'
-    );
+  it('masks OpenAI API keys regardless of context', () => {
+    const result = maskSensitiveData('key: sk-1234567890abcdefghij');
+    expect(result).not.toContain('sk-');
+    expect(result).toContain('[REDACTED]');
   });
 
   it('masks Anthropic API keys', () => {
@@ -211,5 +211,239 @@ describe('validateMasking', () => {
 
   it('returns false for unmasked GitHub tokens', () => {
     expect(validateMasking('ghp_abcdefghij')).toBe(false);
+  });
+});
+
+describe('isSensitiveKey', () => {
+  it('detects password variations', () => {
+    expect(isSensitiveKey('password')).toBe(true);
+    expect(isSensitiveKey('Password')).toBe(true);
+    expect(isSensitiveKey('passwd')).toBe(true);
+    expect(isSensitiveKey('user_password')).toBe(true);
+    expect(isSensitiveKey('pw')).toBe(true);
+  });
+
+  it('detects secret variations', () => {
+    expect(isSensitiveKey('secret')).toBe(true);
+    expect(isSensitiveKey('client_secret')).toBe(true);
+    expect(isSensitiveKey('app_secret')).toBe(true);
+    expect(isSensitiveKey('SECRET_KEY')).toBe(true);
+  });
+
+  it('detects token variations', () => {
+    expect(isSensitiveKey('token')).toBe(true);
+    expect(isSensitiveKey('access_token')).toBe(true);
+    expect(isSensitiveKey('refresh_token')).toBe(true);
+    expect(isSensitiveKey('auth_token')).toBe(true);
+    expect(isSensitiveKey('bearer')).toBe(true);
+  });
+
+  it('detects key variations', () => {
+    expect(isSensitiveKey('api_key')).toBe(true);
+    expect(isSensitiveKey('apiKey')).toBe(true);
+    expect(isSensitiveKey('secret_key')).toBe(true);
+    expect(isSensitiveKey('private_key')).toBe(true);
+    expect(isSensitiveKey('public_key')).toBe(true);
+  });
+
+  it('detects auth and credential', () => {
+    expect(isSensitiveKey('auth')).toBe(true);
+    expect(isSensitiveKey('credential')).toBe(true);
+    expect(isSensitiveKey('credentials')).toBe(true);
+  });
+
+  it('detects cloud service patterns', () => {
+    expect(isSensitiveKey('aws_secret')).toBe(true);
+    expect(isSensitiveKey('aws_key')).toBe(true);
+    expect(isSensitiveKey('azure_key')).toBe(true);
+    expect(isSensitiveKey('gcp_token')).toBe(true);
+  });
+
+  it('detects certificate and crypto', () => {
+    expect(isSensitiveKey('cert')).toBe(true);
+    expect(isSensitiveKey('certificate')).toBe(true);
+    expect(isSensitiveKey('ssl')).toBe(true);
+    expect(isSensitiveKey('encryption')).toBe(true);
+    expect(isSensitiveKey('hash')).toBe(true);
+    expect(isSensitiveKey('salt')).toBe(true);
+    expect(isSensitiveKey('nonce')).toBe(true);
+  });
+
+  it('detects PII patterns', () => {
+    expect(isSensitiveKey('ssn')).toBe(true);
+    expect(isSensitiveKey('social_security')).toBe(true);
+    expect(isSensitiveKey('cvv')).toBe(true);
+    expect(isSensitiveKey('pin')).toBe(true);
+    expect(isSensitiveKey('passport')).toBe(true);
+    expect(isSensitiveKey('credit_card')).toBe(true);
+  });
+
+  it('returns false for safe keys', () => {
+    expect(isSensitiveKey('name')).toBe(false);
+    expect(isSensitiveKey('email')).toBe(false);
+    expect(isSensitiveKey('user_id')).toBe(false);
+    expect(isSensitiveKey('created_at')).toBe(false);
+    expect(isSensitiveKey('status')).toBe(false);
+  });
+
+  it('handles edge cases', () => {
+    expect(isSensitiveKey('')).toBe(false);
+    expect(isSensitiveKey(null as unknown as string)).toBe(false);
+    expect(isSensitiveKey(undefined as unknown as string)).toBe(false);
+  });
+});
+
+describe('maskSensitiveData - key-value patterns in strings', () => {
+  describe('JSON key-value patterns', () => {
+    it('masks JSON with sensitive key names', () => {
+      const json = '{"secret_key": "mysupersecretvalue123"}';
+      expect(maskSensitiveData(json)).toBe('{"secret_key": "[REDACTED]"}');
+    });
+
+    it('masks JSON password field', () => {
+      const json = '{"password": "secretpass123"}';
+      expect(maskSensitiveData(json)).toBe('{"password": "[REDACTED]"}');
+    });
+
+    it('masks JSON token field', () => {
+      const json = '{"access_token": "eyJabcdefghij123456"}';
+      expect(maskSensitiveData(json)).toBe('{"access_token": "[REDACTED]"}');
+    });
+
+    it('preserves short values (under 8 chars)', () => {
+      const json = '{"token": "short"}';
+      expect(maskSensitiveData(json)).toBe('{"token": "short"}');
+    });
+  });
+
+  describe('ENV variable patterns', () => {
+    it('masks ENV style secret', () => {
+      const result = maskSensitiveData('SECRET_KEY=mysupersecretvalue');
+      expect(result).not.toContain('mysupersecretvalue');
+      expect(result).toContain('[REDACTED]');
+    });
+
+    it('masks ENV style password', () => {
+      const result = maskSensitiveData('DB_PASSWORD=databasepassword123');
+      expect(result).not.toContain('databasepassword123');
+      expect(result).toContain('REDACTED');
+    });
+
+    it('masks ENV style token', () => {
+      const result = maskSensitiveData('AUTH_TOKEN=verylongtokenvalue');
+      expect(result).not.toContain('verylongtokenvalue');
+      expect(result).toContain('REDACTED');
+    });
+  });
+
+  describe('Query parameter patterns', () => {
+    it('masks query param with secret', () => {
+      const result = maskSensitiveData('?api_key=longsecretapikey123');
+      expect(result).not.toContain('longsecretapikey123');
+      expect(result).toContain('[REDACTED]');
+    });
+
+    it('masks query param with token', () => {
+      const result = maskSensitiveData('&access_token=longtokenvalue123');
+      expect(result).not.toContain('longtokenvalue123');
+      expect(result).toContain('REDACTED');
+    });
+
+    it('masks multiple sensitive params while preserving safe ones', () => {
+      const url = '?api_key=secretkey123456&normal=value&token=secrettoken12';
+      const result = maskSensitiveData(url);
+      expect(result).not.toContain('secretkey123456');
+      expect(result).not.toContain('secrettoken12');
+      expect(result).toContain('normal=value');
+      expect(result).toContain('[REDACTED]');
+    });
+  });
+
+  describe('Header patterns', () => {
+    it('masks header with sensitive name', () => {
+      const result = maskSensitiveData('X-Api-Key: longsecretapikey123');
+      expect(result).not.toContain('longsecretapikey123');
+      expect(result).toContain('[REDACTED]');
+    });
+
+    it('masks authorization header', () => {
+      const result = maskSensitiveData('X-Auth-Token: verylongtokenval');
+      expect(result).not.toContain('verylongtokenval');
+      expect(result).toContain('[REDACTED]');
+    });
+  });
+});
+
+describe('maskSensitiveObject - extended key patterns', () => {
+  it('redacts keys ending with _key', () => {
+    const obj = {
+      secret_key: 'value123',
+      api_key: 'value456',
+      encryption_key: 'value789',
+    };
+    const masked = maskSensitiveObject(obj);
+    expect(masked.secret_key).toBe('[REDACTED]');
+    expect(masked.api_key).toBe('[REDACTED]');
+    expect(masked.encryption_key).toBe('[REDACTED]');
+  });
+
+  it('redacts cloud service keys', () => {
+    const obj = {
+      aws_secret: 'awsvalue',
+      azure_key: 'azurevalue',
+      gcp_token: 'gcpvalue',
+    };
+    const masked = maskSensitiveObject(obj);
+    expect(masked.aws_secret).toBe('[REDACTED]');
+    expect(masked.azure_key).toBe('[REDACTED]');
+    expect(masked.gcp_token).toBe('[REDACTED]');
+  });
+
+  it('redacts certificate and crypto fields', () => {
+    const obj = {
+      cert: 'certdata',
+      certificate: 'certdata',
+      ssl: 'ssldata',
+      hash: 'hashdata',
+      salt: 'saltdata',
+      nonce: 'noncedata',
+    };
+    const masked = maskSensitiveObject(obj);
+    expect(masked.cert).toBe('[REDACTED]');
+    expect(masked.certificate).toBe('[REDACTED]');
+    expect(masked.ssl).toBe('[REDACTED]');
+    expect(masked.hash).toBe('[REDACTED]');
+    expect(masked.salt).toBe('[REDACTED]');
+    expect(masked.nonce).toBe('[REDACTED]');
+  });
+
+  it('redacts PII fields', () => {
+    const obj = {
+      ssn: '123-45-6789',
+      cvv: '123',
+      pin: '1234',
+    };
+    const masked = maskSensitiveObject(obj);
+    expect(masked.ssn).toBe('[REDACTED]');
+    expect(masked.cvv).toBe('[REDACTED]');
+    expect(masked.pin).toBe('[REDACTED]');
+  });
+
+  it('handles deeply nested sensitive keys', () => {
+    const obj = {
+      config: {
+        database: {
+          connection_string: 'mysql://user:pass@host/db',
+          password: 'dbpass123',
+        },
+        api: {
+          secret_key: 'apisecret',
+        },
+      },
+    };
+    const masked = maskSensitiveObject(obj);
+    expect(masked.config.database.connection_string).toBe('[REDACTED]');
+    expect(masked.config.database.password).toBe('[REDACTED]');
+    expect(masked.config.api.secret_key).toBe('[REDACTED]');
   });
 });

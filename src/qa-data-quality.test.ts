@@ -308,11 +308,13 @@ describe('QA Data Quality: Consistency Across Users', () => {
     const masked1 = maskSensitiveData(user1Data);
     const masked2 = maskSensitiveData(user2Data);
 
-    // Both users get same level of data protection
-    expect(masked1).toContain('[OPENAI_KEY_REDACTED]');
+    // Both users get same level of data protection - sensitive data is masked
+    expect(masked1).not.toContain('sk-1234567890abcdefghij');
     expect(masked1).toContain('[EMAIL_REDACTED]');
-    expect(masked2).toContain('[OPENAI_KEY_REDACTED]');
+    expect(masked1).toContain('REDACTED');
+    expect(masked2).not.toContain('sk-abcdefghij1234567890');
     expect(masked2).toContain('[EMAIL_REDACTED]');
+    expect(masked2).toContain('REDACTED');
   });
 
   it('should limit logs to same maximum for all users', () => {

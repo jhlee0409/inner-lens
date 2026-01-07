@@ -168,7 +168,8 @@ describe('log-capture', () => {
       addCustomLog('warn', 'Key: sk-1234567890abcdefghij');
 
       const logs = getCapturedLogs();
-      expect(logs[0]!.message).toContain('[OPENAI_KEY_REDACTED]');
+      expect(logs[0]!.message).not.toContain('sk-1234567890abcdefghij');
+      expect(logs[0]!.message).toContain('REDACTED');
     });
   });
 
@@ -283,8 +284,9 @@ describe('log-capture', () => {
 
       const logs = getCapturedLogs();
       expect(logs[0]!.message).toContain('[EMAIL_REDACTED]');
-      expect(logs[0]!.message).toContain('[OPENAI_KEY_REDACTED]');
       expect(logs[0]!.message).not.toContain('secret@example.com');
+      expect(logs[0]!.message).not.toContain('sk-12345678901234567890');
+      expect(logs[0]!.message).toContain('REDACTED');
     });
 
     it('masks sensitive data in response bodies', async () => {

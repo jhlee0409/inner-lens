@@ -258,10 +258,58 @@ const MASKING_PATTERNS: MaskingPattern[] = [
 ];
 
 /**
- * Masks sensitive data in the provided text
- * @param text - The text to mask
- * @returns The masked text with sensitive data redacted
+ * Sensitive key patterns for string-based key-value detection
+ * Used in JSON strings, ENV vars, query params
  */
+const SENSITIVE_KEY_WORDS =
+  'password|passwd|pwd|secret|token|key|auth|credential|bearer|private|certificate|cert|' +
+  'api[-_]?key|access[-_]?token|refresh[-_]?token|session[-_]?id|client[-_]?secret|' +
+  'encryption|signing|hash|salt|nonce|ssn|cvv|pin';
+
+/**
+ * Patterns for key-value pairs in strings where key contains sensitive words
+ * Masks the VALUE, preserves the KEY for debugging context
+ */
+const KEY_VALUE_STRING_PATTERNS: MaskingPattern[] = [
+  // JSON: "secret_key": "value" or "secret_key":"value" or 'secret_key': 'value'
+  // Captures: key in quotes, then colon, then value in quotes (8+ chars for safety)
+  {
+    name: 'json_sensitive_key',
+    pattern: new RegExp(
+      `(["']\\w*(?:${SENSITIVE_KEY_WORDS})\\w*["'])\\s*:\\s*["']([^"']{8,})["']`,
+      'gi'
+    ),
+    replacement: '$1: "[REDACTED]"',
+  },
+  // ENV/Shell: SECRET_KEY=value or SECRET_KEY="value" (SCREAMING_CASE)
+  {
+    name: 'env_sensitive_key',
+    pattern: new RegExp(
+      `\\b([A-Z_]*(?:${SENSITIVE_KEY_WORDS.toUpperCase().replace(/-/g, '_')})\\w*)\\s*=\\s*["']?([^\\s"'&]{8,})["']?`,
+      'gi'
+    ),
+    replacement: '$1=[REDACTED]',
+  },
+  // Query params: ?secret_key=value or &secret_key=value
+  {
+    name: 'query_sensitive_key',
+    pattern: new RegExp(
+      `([?&])([\\w]*(?:${SENSITIVE_KEY_WORDS})[\\w]*)=([^&\\s]{8,})`,
+      'gi'
+    ),
+    replacement: '$1$2=[REDACTED]',
+  },
+  // Header-like: X-Secret-Key: value or Secret-Token: value
+  {
+    name: 'header_sensitive_key',
+    pattern: new RegExp(
+      `\\b([\\w-]*(?:${SENSITIVE_KEY_WORDS})[\\w-]*)\\s*:\\s*["']?([^\\s"'\\n]{8,})["']?`,
+      'gi'
+    ),
+    replacement: '$1: [REDACTED]',
+  },
+];
+
 export function maskSensitiveData(text: string): string {
   if (!text || typeof text !== 'string') {
     return text;
@@ -269,7 +317,13 @@ export function maskSensitiveData(text: string): string {
 
   let maskedText = text;
 
+  // 1. Apply value-based patterns first (specific formats like JWT, AWS keys, etc.)
   for (const { pattern, replacement } of MASKING_PATTERNS) {
+    maskedText = maskedText.replace(pattern, replacement);
+  }
+
+  // 2. Apply key-name-based patterns (catches anything with sensitive key names)
+  for (const { pattern, replacement } of KEY_VALUE_STRING_PATTERNS) {
     maskedText = maskedText.replace(pattern, replacement);
   }
 
@@ -297,16 +351,7 @@ export function maskSensitiveObject<T>(obj: T): T {
   if (typeof obj === 'object') {
     const masked: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
-      // Also mask sensitive key names
-      const lowerKey = key.toLowerCase();
-      if (
-        lowerKey.includes('password') ||
-        lowerKey.includes('secret') ||
-        lowerKey.includes('token') ||
-        lowerKey.includes('apikey') ||
-        lowerKey.includes('api_key') ||
-        lowerKey.includes('private')
-      ) {
+      if (isSensitiveKey(key)) {
         masked[key] = '[REDACTED]';
       } else {
         masked[key] = maskSensitiveObject(value);
