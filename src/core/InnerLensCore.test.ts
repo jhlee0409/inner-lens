@@ -55,6 +55,21 @@ describe('InnerLensCore', () => {
       expect(widgets.length).toBe(1);
     });
 
+    it('should prevent multiple instances from mounting', () => {
+      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance.mount();
+
+      const instance2 = new InnerLensCore({ repository: 'owner/repo' });
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      instance2.mount();
+
+      const widgets = document.querySelectorAll('#inner-lens-widget');
+      expect(widgets.length).toBe(1);
+      expect(consoleSpy).toHaveBeenCalledWith('[inner-lens] Widget already mounted. Multiple instances are not supported.');
+
+      consoleSpy.mockRestore();
+    });
+
     it('should inject styles on mount', () => {
       instance = new InnerLensCore({ repository: 'owner/repo' });
       instance.mount();

@@ -358,6 +358,12 @@ export class InnerLensCore {
       }
     }
 
+    const existingWidget = document.querySelector('#inner-lens-widget');
+    if (existingWidget) {
+      console.warn('[inner-lens] Widget already mounted. Multiple instances are not supported.');
+      return;
+    }
+
     this.container = container ?? this.config.container ?? document.body;
 
     // Initialize log capture
