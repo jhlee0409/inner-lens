@@ -142,7 +142,16 @@ interface InnerLensConfig {
      * Custom trigger element (replaces default button)
      */
     trigger?: ReactNode;
+    /**
+     * Hide the widget completely (not rendered)
+     * @default false
+     */
     hidden?: boolean;
+    /**
+     * Disable the widget (button visible but inactive)
+     * @default false
+     */
+    disabled?: boolean;
 }
 /**
  * Captured log entry
@@ -411,6 +420,7 @@ interface InnerLensCoreConfig {
      */
     onClose?: () => void;
     hidden?: boolean;
+    disabled?: boolean;
     /**
      * Custom container element (defaults to document.body)
      */
@@ -455,6 +465,7 @@ declare class InnerLensCore {
      */
     private getTexts;
     private isHidden;
+    private isDisabled;
     /**
      * Mount the widget to the DOM
      */
@@ -618,6 +629,10 @@ declare const InnerLensWidget: vue.DefineComponent<vue.ExtractPropTypes<{
         type: BooleanConstructor;
         default: boolean;
     };
+    disabled: {
+        type: BooleanConstructor;
+        default: boolean;
+    };
 }>, () => vue.VNode<vue.RendererNode, vue.RendererElement, {
     [key: string]: any;
 }>, {}, {}, {}, vue.ComponentOptionsMixin, vue.ComponentOptionsMixin, ("open" | "close" | "success" | "error")[], "open" | "close" | "success" | "error", vue.PublicProps, Readonly<vue.ExtractPropTypes<{
@@ -657,6 +672,10 @@ declare const InnerLensWidget: vue.DefineComponent<vue.ExtractPropTypes<{
         type: BooleanConstructor;
         default: boolean;
     };
+    disabled: {
+        type: BooleanConstructor;
+        default: boolean;
+    };
 }>> & Readonly<{
     onOpen?: ((...args: any[]) => any) | undefined;
     onClose?: ((...args: any[]) => any) | undefined;
@@ -672,6 +691,7 @@ declare const InnerLensWidget: vue.DefineComponent<vue.ExtractPropTypes<{
     styles: StyleConfig;
     language: "en" | "ko" | "ja" | "zh" | "es";
     hidden: boolean;
+    disabled: boolean;
 }, {}, {}, {}, string, vue.ComponentProvideOptions, true, {}, any>;
 
 export { type AIProvider, type BugReportPayload, type BugReportResponse, type GitHubIssuePayload, type InnerLensConfig, InnerLensWidget, type LogEntry, type WidgetLanguage, addCustomLog, clearCapturedLogs, getCapturedLogs, initLogCapture, maskSensitiveData, maskSensitiveObject, restoreConsole, useInnerLens, validateMasking };

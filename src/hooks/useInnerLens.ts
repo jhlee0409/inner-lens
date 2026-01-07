@@ -49,6 +49,7 @@ export function useInnerLens(config: InnerLensCoreConfig = {}) {
     config.endpoint,
     config.repository,
     config.hidden,
+    config.disabled,
     config.styles?.buttonColor,
     config.styles?.buttonPosition,
   ]);

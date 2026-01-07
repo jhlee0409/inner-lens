@@ -165,7 +165,16 @@ interface InnerLensConfig {
      * Custom trigger element (replaces default button)
      */
     trigger?: ReactNode;
+    /**
+     * Hide the widget completely (not rendered)
+     * @default false
+     */
     hidden?: boolean;
+    /**
+     * Disable the widget (button visible but inactive)
+     * @default false
+     */
+    disabled?: boolean;
 }
 /**
  * Captured log entry
@@ -533,6 +542,7 @@ interface InnerLensCoreConfig {
      */
     onClose?: () => void;
     hidden?: boolean;
+    disabled?: boolean;
     /**
      * Custom container element (defaults to document.body)
      */
@@ -577,6 +587,7 @@ declare class InnerLensCore {
      */
     private getTexts;
     private isHidden;
+    private isDisabled;
     /**
      * Mount the widget to the DOM
      */

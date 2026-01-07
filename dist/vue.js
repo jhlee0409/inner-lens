@@ -1712,6 +1712,7 @@ var InnerLensCore = class {
       capturePerformance: true,
       captureSessionReplay: false,
       hidden: false,
+      disabled: false,
       language: lang,
       // UI Text defaults from i18n (can be overridden by config)
       buttonText: texts.buttonText,
@@ -1733,6 +1734,9 @@ var InnerLensCore = class {
   }
   isHidden() {
     return this.config.hidden === true;
+  }
+  isDisabled() {
+    return this.config.disabled === true;
   }
   /**
    * Mount the widget to the DOM
@@ -1933,29 +1937,34 @@ var InnerLensCore = class {
     if (!this.widgetRoot) return;
     const styles = createStyles(this.config.styles);
     const iconSize = styles.iconSize;
+    const isDisabled = this.isDisabled();
+    const disabledStyles = isDisabled ? "opacity: 0.5; cursor: not-allowed;" : "";
     this.widgetRoot.innerHTML = `
       <button
         type="button"
         id="inner-lens-trigger"
         aria-label="${this.escapeHtml(this.config.buttonText)}"
         title="${this.escapeHtml(this.config.buttonText)}"
-        style="${this.styleToString(styles.triggerButton)}"
+        ${isDisabled ? "disabled" : ""}
+        style="${this.styleToString(styles.triggerButton)}${disabledStyles}"
       >
         ${this.getBugIcon(iconSize)}
       </button>
     `;
     const trigger = this.widgetRoot.querySelector("#inner-lens-trigger");
-    trigger?.addEventListener("click", () => this.open());
-    trigger?.addEventListener("mouseenter", (e) => {
-      const btn = e.target;
-      btn.style.transform = "scale(1.05)";
-      btn.style.boxShadow = "0 6px 16px rgba(0, 0, 0, 0.2)";
-    });
-    trigger?.addEventListener("mouseleave", (e) => {
-      const btn = e.target;
-      btn.style.transform = "scale(1)";
-      btn.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
-    });
+    if (!isDisabled) {
+      trigger?.addEventListener("click", () => this.open());
+      trigger?.addEventListener("mouseenter", (e) => {
+        const btn = e.target;
+        btn.style.transform = "scale(1.05)";
+        btn.style.boxShadow = "0 6px 16px rgba(0, 0, 0, 0.2)";
+      });
+      trigger?.addEventListener("mouseleave", (e) => {
+        const btn = e.target;
+        btn.style.transform = "scale(1)";
+        btn.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+      });
+    }
   }
   render() {
     if (!this.widgetRoot) return;
@@ -2349,6 +2358,10 @@ var InnerLensWidget = defineComponent({
     hidden: {
       type: Boolean,
       default: false
+    },
+    disabled: {
+      type: Boolean,
+      default: false
     }
   },
   emits: ["success", "error", "open", "close"],
@@ -2369,6 +2382,7 @@ var InnerLensWidget = defineComponent({
         styles: props.styles,
         language: props.language,
         hidden: props.hidden,
+        disabled: props.disabled,
         onSuccess: (url) => emit("success", url),
         onError: (error) => emit("error", error),
         onOpen: () => emit("open"),
@@ -2392,6 +2406,7 @@ var InnerLensWidget = defineComponent({
         props.repository,
         props.language,
         props.hidden,
+        props.disabled,
         props.styles?.buttonColor,
         props.styles?.buttonPosition
       ],

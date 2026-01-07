@@ -135,6 +135,7 @@ export function InnerLensWidget({
   onClose,
   trigger,
   hidden = false,
+  disabled = false,
 }: InnerLensWidgetProps) {
   // Get i18n texts with custom overrides
   const texts = WIDGET_TEXTS[language] ?? WIDGET_TEXTS.en;
@@ -334,9 +335,10 @@ export function InnerLensWidget({
   }, [onClose]);
 
   const handleOpen = useCallback(() => {
+    if (disabled) return;
     setIsOpen(true);
     onOpen?.();
-  }, [onOpen]);
+  }, [onOpen, disabled]);
 
   const handleSubmit = useCallback(async () => {
     if (!description.trim()) {
@@ -459,15 +461,17 @@ export function InnerLensWidget({
 
     const buttonStyle: CSSProperties = {
       ...styles.triggerButton,
-      ...(isHovered ? styles.triggerButtonHover : {}),
+      ...(isHovered && !disabled ? styles.triggerButtonHover : {}),
+      ...(disabled ? { opacity: 0.5, cursor: 'not-allowed' } : {}),
     };
 
     return (
       <button
         type="button"
         onClick={handleOpen}
+        disabled={disabled}
         style={buttonStyle}
-        onMouseEnter={() => setIsHovered(true)}
+        onMouseEnter={() => !disabled && setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         aria-label={t.buttonText}
         title={t.buttonText}

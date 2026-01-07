@@ -141,7 +141,16 @@ interface InnerLensConfig {
      * Custom trigger element (replaces default button)
      */
     trigger?: ReactNode;
+    /**
+     * Hide the widget completely (not rendered)
+     * @default false
+     */
     hidden?: boolean;
+    /**
+     * Disable the widget (button visible but inactive)
+     * @default false
+     */
+    disabled?: boolean;
 }
 /**
  * Captured log entry
@@ -279,7 +288,7 @@ interface GitHubIssuePayload {
 
 interface InnerLensWidgetProps extends InnerLensConfig {
 }
-declare function InnerLensWidget({ endpoint, repository, labels, captureConsoleLogs, maxLogEntries, maskSensitiveData: enableMasking, captureUserActions, captureNavigation, capturePerformance, captureSessionReplay, styles: styleConfig, language, position, buttonColor, buttonSize, buttonText, dialogTitle, dialogDescription, submitText, cancelText, successMessage, onSuccess, onError, onOpen, onClose, trigger, hidden, }: InnerLensWidgetProps): react_jsx_runtime.JSX.Element | null;
+declare function InnerLensWidget({ endpoint, repository, labels, captureConsoleLogs, maxLogEntries, maskSensitiveData: enableMasking, captureUserActions, captureNavigation, capturePerformance, captureSessionReplay, styles: styleConfig, language, position, buttonColor, buttonSize, buttonText, dialogTitle, dialogDescription, submitText, cancelText, successMessage, onSuccess, onError, onOpen, onClose, trigger, hidden, disabled, }: InnerLensWidgetProps): react_jsx_runtime.JSX.Element | null;
 
 type ButtonSize = 'sm' | 'md' | 'lg';
 interface StyleConfig {
@@ -414,6 +423,7 @@ interface InnerLensCoreConfig {
      */
     onClose?: () => void;
     hidden?: boolean;
+    disabled?: boolean;
     /**
      * Custom container element (defaults to document.body)
      */
@@ -458,6 +468,7 @@ declare class InnerLensCore {
      */
     private getTexts;
     private isHidden;
+    private isDisabled;
     /**
      * Mount the widget to the DOM
      */

@@ -1751,7 +1751,8 @@ function InnerLensWidget({
   onOpen,
   onClose,
   trigger,
-  hidden = false
+  hidden = false,
+  disabled = false
 }) {
   const texts = WIDGET_TEXTS[language] ?? WIDGET_TEXTS.en;
   const t = {
@@ -1923,9 +1924,10 @@ function InnerLensWidget({
     onClose?.();
   }, [onClose]);
   const handleOpen = useCallback(() => {
+    if (disabled) return;
     setIsOpen(true);
     onOpen?.();
-  }, [onOpen]);
+  }, [onOpen, disabled]);
   const handleSubmit2 = useCallback(async () => {
     if (!description.trim()) {
       setErrorMessage("Please provide a description of the issue.");
@@ -2029,15 +2031,17 @@ function InnerLensWidget({
     }
     const buttonStyle = {
       ...styles.triggerButton,
-      ...isHovered ? styles.triggerButtonHover : {}
+      ...isHovered && !disabled ? styles.triggerButtonHover : {},
+      ...disabled ? { opacity: 0.5, cursor: "not-allowed" } : {}
     };
     return /* @__PURE__ */ jsx(
       "button",
       {
         type: "button",
         onClick: handleOpen,
+        disabled,
         style: buttonStyle,
-        onMouseEnter: () => setIsHovered(true),
+        onMouseEnter: () => !disabled && setIsHovered(true),
         onMouseLeave: () => setIsHovered(false),
         "aria-label": t.buttonText,
         title: t.buttonText,
@@ -2249,6 +2253,7 @@ var InnerLensCore = class {
       capturePerformance: true,
       captureSessionReplay: false,
       hidden: false,
+      disabled: false,
       language: lang,
       // UI Text defaults from i18n (can be overridden by config)
       buttonText: texts.buttonText,
@@ -2270,6 +2275,9 @@ var InnerLensCore = class {
   }
   isHidden() {
     return this.config.hidden === true;
+  }
+  isDisabled() {
+    return this.config.disabled === true;
   }
   /**
    * Mount the widget to the DOM
@@ -2470,29 +2478,34 @@ var InnerLensCore = class {
     if (!this.widgetRoot) return;
     const styles = createStyles(this.config.styles);
     const iconSize = styles.iconSize;
+    const isDisabled = this.isDisabled();
+    const disabledStyles = isDisabled ? "opacity: 0.5; cursor: not-allowed;" : "";
     this.widgetRoot.innerHTML = `
       <button
         type="button"
         id="inner-lens-trigger"
         aria-label="${this.escapeHtml(this.config.buttonText)}"
         title="${this.escapeHtml(this.config.buttonText)}"
-        style="${this.styleToString(styles.triggerButton)}"
+        ${isDisabled ? "disabled" : ""}
+        style="${this.styleToString(styles.triggerButton)}${disabledStyles}"
       >
         ${this.getBugIcon(iconSize)}
       </button>
     `;
     const trigger = this.widgetRoot.querySelector("#inner-lens-trigger");
-    trigger?.addEventListener("click", () => this.open());
-    trigger?.addEventListener("mouseenter", (e) => {
-      const btn = e.target;
-      btn.style.transform = "scale(1.05)";
-      btn.style.boxShadow = "0 6px 16px rgba(0, 0, 0, 0.2)";
-    });
-    trigger?.addEventListener("mouseleave", (e) => {
-      const btn = e.target;
-      btn.style.transform = "scale(1)";
-      btn.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
-    });
+    if (!isDisabled) {
+      trigger?.addEventListener("click", () => this.open());
+      trigger?.addEventListener("mouseenter", (e) => {
+        const btn = e.target;
+        btn.style.transform = "scale(1.05)";
+        btn.style.boxShadow = "0 6px 16px rgba(0, 0, 0, 0.2)";
+      });
+      trigger?.addEventListener("mouseleave", (e) => {
+        const btn = e.target;
+        btn.style.transform = "scale(1)";
+        btn.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+      });
+    }
   }
   render() {
     if (!this.widgetRoot) return;
@@ -2834,6 +2847,7 @@ function useInnerLens(config5 = {}) {
     config5.endpoint,
     config5.repository,
     config5.hidden,
+    config5.disabled,
     config5.styles?.buttonColor,
     config5.styles?.buttonPosition
   ]);

@@ -344,6 +344,7 @@ interface InnerLensCoreConfig {
      */
     onClose?: () => void;
     hidden?: boolean;
+    disabled?: boolean;
     /**
      * Custom container element (defaults to document.body)
      */
@@ -388,6 +389,7 @@ declare class InnerLensCore {
      */
     private getTexts;
     private isHidden;
+    private isDisabled;
     /**
      * Mount the widget to the DOM
      */

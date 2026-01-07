@@ -207,12 +207,14 @@ describe('InnerLensWidget Configuration', () => {
 
         // Control
         hidden: false,
+        disabled: false,
       };
 
       expect(config.endpoint).toBe('/api/bugs');
       expect(config.position).toBe('top-left');
       expect(config.buttonText).toBe('Report');
       expect(config.hidden).toBe(false);
+      expect(config.disabled).toBe(false);
     });
   });
 });

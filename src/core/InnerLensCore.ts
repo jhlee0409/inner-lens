@@ -210,6 +210,8 @@ export interface InnerLensCoreConfig {
 
   hidden?: boolean;
 
+  disabled?: boolean;
+
   /**
    * Custom container element (defaults to document.body)
    */
@@ -247,6 +249,7 @@ export class InnerLensCore {
       | 'capturePerformance'
       | 'captureSessionReplay'
       | 'hidden'
+      | 'disabled'
       | 'buttonText'
       | 'dialogTitle'
       | 'dialogDescription'
@@ -298,6 +301,7 @@ export class InnerLensCore {
       capturePerformance: true,
       captureSessionReplay: false,
       hidden: false,
+      disabled: false,
       language: lang,
       // UI Text defaults from i18n (can be overridden by config)
       buttonText: texts.buttonText,
@@ -321,6 +325,10 @@ export class InnerLensCore {
 
   private isHidden(): boolean {
     return this.config.hidden === true;
+  }
+
+  private isDisabled(): boolean {
+    return this.config.disabled === true;
   }
 
   /**
@@ -576,6 +584,8 @@ export class InnerLensCore {
 
     const styles = createStyles(this.config.styles);
     const iconSize = styles.iconSize as number;
+    const isDisabled = this.isDisabled();
+    const disabledStyles = isDisabled ? 'opacity: 0.5; cursor: not-allowed;' : '';
 
     this.widgetRoot.innerHTML = `
       <button
@@ -583,24 +593,27 @@ export class InnerLensCore {
         id="inner-lens-trigger"
         aria-label="${this.escapeHtml(this.config.buttonText)}"
         title="${this.escapeHtml(this.config.buttonText)}"
-        style="${this.styleToString(styles.triggerButton)}"
+        ${isDisabled ? 'disabled' : ''}
+        style="${this.styleToString(styles.triggerButton)}${disabledStyles}"
       >
         ${this.getBugIcon(iconSize)}
       </button>
     `;
 
     const trigger = this.widgetRoot.querySelector('#inner-lens-trigger');
-    trigger?.addEventListener('click', () => this.open());
-    trigger?.addEventListener('mouseenter', (e) => {
-      const btn = e.target as HTMLElement;
-      btn.style.transform = 'scale(1.05)';
-      btn.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.2)';
-    });
-    trigger?.addEventListener('mouseleave', (e) => {
-      const btn = e.target as HTMLElement;
-      btn.style.transform = 'scale(1)';
-      btn.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-    });
+    if (!isDisabled) {
+      trigger?.addEventListener('click', () => this.open());
+      trigger?.addEventListener('mouseenter', (e) => {
+        const btn = e.target as HTMLElement;
+        btn.style.transform = 'scale(1.05)';
+        btn.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.2)';
+      });
+      trigger?.addEventListener('mouseleave', (e) => {
+        const btn = e.target as HTMLElement;
+        btn.style.transform = 'scale(1)';
+        btn.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+      });
+    }
   }
 
   private render(): void {

@@ -249,7 +249,8 @@ Add your API key to **Settings → Secrets and variables → Actions**.
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `language` | `string` | `en` | UI language (`en`, `ko`, `ja`, `zh`, `es`) |
-| `hidden` | `boolean` | `false` | Hide widget (use for environment-based visibility) |
+| `hidden` | `boolean` | `false` | Hide widget completely (not rendered) |
+| `disabled` | `boolean` | `false` | Disable widget (button visible but inactive) |
 | `position` | `string` | `bottom-right` | Button position |
 | `buttonColor` | `string` | `#6366f1` | Button color |
 | `buttonSize` | `string` | `lg` | Button size (`sm`, `md`, `lg`) |
@@ -591,9 +592,10 @@ Sensitive data is automatically masked before transmission (20 patterns):
 <details>
 <summary><b>Widget doesn't appear</b></summary>
 
-1. Check `hidden` prop (should be `false` or omitted)
-2. Verify import path matches your framework
-3. Check browser console for errors
+1. Check `hidden` prop (should be `false` or omitted to show widget)
+2. Check `disabled` prop (should be `false` or omitted to enable clicks)
+3. Verify import path matches your framework
+4. Check browser console for errors
 </details>
 
 <details>

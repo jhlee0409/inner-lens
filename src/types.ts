@@ -302,7 +302,17 @@ export interface InnerLensConfig {
    */
   trigger?: ReactNode;
 
+  /**
+   * Hide the widget completely (not rendered)
+   * @default false
+   */
   hidden?: boolean;
+
+  /**
+   * Disable the widget (button visible but inactive)
+   * @default false
+   */
+  disabled?: boolean;
 }
 
 /**

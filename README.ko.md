@@ -241,7 +241,8 @@ jobs:
 | 옵션 | 타입 | 기본값 | 설명 |
 |------|------|--------|------|
 | `language` | `string` | `en` | UI 언어 (`en`, `ko`, `ja`, `zh`, `es`) |
-| `hidden` | `boolean` | `false` | 위젯 숨김 (환경 기반 표시 제어용) |
+| `hidden` | `boolean` | `false` | 위젯 완전 숨김 (렌더링 안함) |
+| `disabled` | `boolean` | `false` | 위젯 비활성화 (버튼 보이지만 클릭 불가) |
 | `position` | `string` | `bottom-right` | 버튼 위치 |
 | `buttonColor` | `string` | `#6366f1` | 버튼 색상 |
 | `buttonSize` | `string` | `lg` | 버튼 크기 (`sm`, `md`, `lg`) |
@@ -583,9 +584,10 @@ export default {
 <details>
 <summary><b>위젯이 나타나지 않음</b></summary>
 
-1. `hidden` prop 확인 (`false`이거나 생략되어야 함)
-2. import 경로가 프레임워크와 맞는지 확인
-3. 브라우저 콘솔에서 에러 확인
+1. `hidden` prop 확인 (위젯 표시하려면 `false`이거나 생략)
+2. `disabled` prop 확인 (클릭 가능하려면 `false`이거나 생략)
+3. import 경로가 프레임워크와 맞는지 확인
+4. 브라우저 콘솔에서 에러 확인
 </details>
 
 <details>
