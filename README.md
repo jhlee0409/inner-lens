@@ -32,11 +32,11 @@ yarn add inner-lens
 pnpm add inner-lens
 
 # Optional: With Session Replay (see below)
-npm install inner-lens rrweb
+npm install inner-lens rrweb@2.0.0-alpha.17
 # or
-yarn add inner-lens rrweb
+yarn add inner-lens rrweb@2.0.0-alpha.17
 # or
-pnpm add inner-lens rrweb
+pnpm add inner-lens rrweb@2.0.0-alpha.17
 ```
 
 ## Quick Start
@@ -222,7 +222,7 @@ Record DOM changes to visually replay what the user experienced.
 > **Note:** Adds ~500KB to your bundle. Only enable if needed.
 
 ```bash
-npm install inner-lens rrweb
+npm install rrweb@2.0.0-alpha.17
 ```
 
 ```tsx

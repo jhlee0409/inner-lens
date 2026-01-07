@@ -32,11 +32,11 @@ yarn add inner-lens
 pnpm add inner-lens
 
 # 선택: 세션 리플레이 포함 (하단 참고)
-npm install inner-lens rrweb
+npm install inner-lens rrweb@2.0.0-alpha.17
 # or
-yarn add inner-lens rrweb
+yarn add inner-lens rrweb@2.0.0-alpha.17
 # or
-pnpm add inner-lens rrweb
+pnpm add inner-lens rrweb@2.0.0-alpha.17
 ```
 
 ## 빠른 시작
@@ -222,7 +222,7 @@ jobs:
 > **참고:** 번들 크기가 약 500KB 증가합니다. 필요한 경우에만 활성화하세요.
 
 ```bash
-npm install inner-lens rrweb
+npm install rrweb@2.0.0-alpha.17
 ```
 
 ```tsx
