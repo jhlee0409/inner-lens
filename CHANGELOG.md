@@ -5,9 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.0] - 2025-01-08
 
 ### Added
+- 5 new masking patterns: Discord webhooks, Slack tokens, NPM tokens, SendGrid keys, Twilio credentials (22 → 27 patterns)
+- Extended type exports for advanced use cases (`UserAction`, `NavigationEntry`, `PerformanceSummary`, `CoreWebVitals`, `PageContext`)
+- Early warning when repository is not configured in hosted mode
 - Export `Reporter` type from `inner-lens/react` and `inner-lens/vue`
 - Add `homepage` field to package.json
 - Browser compatibility FAQ in README
@@ -19,14 +22,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Print styles to hide widget when printing page
 
 ### Fixed
+- Prevent multiple widget instances from mounting
+- Double-mount bug in `useInnerLens` hook
+- Empty description validation in InnerLensCore
 - Memory leak in log-capture module
 - Error handling for vanilla.ts dynamic import
-- Quality improvements from feedback loop
 - Vue component props now fully synced with React API
 - Vue `useInnerLens` hook now detects config changes
 - Hardcoded English error messages replaced with i18n texts
 
 ### Changed
+- Masking pattern ordering optimized (URL patterns processed first to prevent conflicts)
 - Minimum Node.js version bumped to 20 (from 18)
 - Remove misleading 'svelte' keyword (no native Svelte component)
 - Remove `./replay` export (internal use only, use `captureSessionReplay` prop)
@@ -99,7 +105,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multi-language support (en, ko, ja, zh, es)
 - CLI tool (`npx inner-lens init`)
 
-[Unreleased]: https://github.com/jhlee0409/inner-lens/compare/v0.3.4...HEAD
+[Unreleased]: https://github.com/jhlee0409/inner-lens/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/jhlee0409/inner-lens/compare/v0.3.4...v0.4.0
 [0.3.4]: https://github.com/jhlee0409/inner-lens/compare/v0.3.2...v0.3.4
 [0.3.2]: https://github.com/jhlee0409/inner-lens/compare/v0.3.0...v0.3.2
 [0.3.0]: https://github.com/jhlee0409/inner-lens/compare/v0.2.0...v0.3.0
