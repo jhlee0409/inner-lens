@@ -404,7 +404,9 @@ export function InnerLensWidget({
       if (captureNavigation) clearCapturedNavigations();
       if (captureSessionReplay) {
         stopSessionReplay();
-        startSessionReplay({ maskInputs: true }).catch(() => {});
+        startSessionReplay({ maskInputs: true }).catch((err) => {
+          console.warn('[inner-lens] Session replay restart failed:', err);
+        });
         sessionReplayDataRef.current = null;
       }
 

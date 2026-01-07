@@ -23,6 +23,10 @@ let captureOptions: LogCaptureOptions = {
   maskSensitiveData: true,
 };
 
+// Store event handlers for cleanup
+let errorHandler: ((event: ErrorEvent) => void) | null = null;
+let rejectionHandler: ((event: PromiseRejectionEvent) => void) | null = null;
+
 // Maximum characters for response body truncation
 const MAX_RESPONSE_BODY_LENGTH = 1000;
 
@@ -295,8 +299,7 @@ export function initLogCapture(options?: Partial<LogCaptureOptions>): void {
     window.fetch = createFetchInterceptor();
   }
 
-  // Global error handler for uncaught errors
-  window.addEventListener('error', (event) => {
+  errorHandler = (event: ErrorEvent) => {
     const entry = createLogEntry('error', [
       `Uncaught Error: ${event.message} at ${event.filename}:${event.lineno}:${event.colno}`,
     ]);
@@ -306,10 +309,10 @@ export function initLogCapture(options?: Partial<LogCaptureOptions>): void {
         : event.error.stack;
     }
     addLogEntry(entry);
-  });
+  };
+  window.addEventListener('error', errorHandler);
 
-  // Global handler for unhandled promise rejections
-  window.addEventListener('unhandledrejection', (event) => {
+  rejectionHandler = (event: PromiseRejectionEvent) => {
     const reason = event.reason;
     let message = 'Unhandled Promise Rejection';
 
@@ -332,7 +335,8 @@ export function initLogCapture(options?: Partial<LogCaptureOptions>): void {
         : reason.stack;
     }
     addLogEntry(entry);
-  });
+  };
+  window.addEventListener('unhandledrejection', rejectionHandler);
 
   isInitialized = true;
 }
@@ -368,6 +372,17 @@ export function restoreConsole(): void {
   if (originalFetch && typeof window !== 'undefined') {
     window.fetch = originalFetch;
     originalFetch = null;
+  }
+
+  if (typeof window !== 'undefined') {
+    if (errorHandler) {
+      window.removeEventListener('error', errorHandler);
+      errorHandler = null;
+    }
+    if (rejectionHandler) {
+      window.removeEventListener('unhandledrejection', rejectionHandler);
+      rejectionHandler = null;
+    }
   }
 
   originalConsole = null;
