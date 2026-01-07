@@ -79,7 +79,7 @@ User clicks "Report Bug" → Widget captures context → GitHub Issue created �
 | **Setup Time** | 2 minutes | 10 minutes |
 | **Backend Required** | No | Yes |
 | **Issue Author** | `inner-lens-app[bot]` | Your GitHub account |
-| **Rate Limit** | 10 req/min/IP | None |
+| **Rate Limit** | 10 req/min/IP, 100 req/day/repo | None |
 | **Data Control** | Via GitHub API | Full control |
 
 **Choose Hosted if:** You want the fastest setup with zero backend code.
@@ -536,17 +536,18 @@ Point the widget to your backend endpoint:
 
 ### Security
 
-Sensitive data is automatically masked before transmission:
+Sensitive data is automatically masked before transmission (20 patterns):
 
-| Pattern | Replacement |
-|---------|-------------|
-| Email addresses | `[EMAIL_REDACTED]` |
-| API keys (OpenAI, Stripe, etc.) | `[OPENAI_KEY_REDACTED]` |
-| Bearer tokens | `Bearer [TOKEN_REDACTED]` |
-| JWTs | `[JWT_REDACTED]` |
-| Credit card numbers | `[CARD_REDACTED]` |
-| SSN | `[SSN_REDACTED]` |
-| Phone numbers | `[PHONE_REDACTED]` |
+| Category | Patterns | Replacement |
+|----------|----------|-------------|
+| **Personal** | Email, Phone, SSN | `[EMAIL_REDACTED]`, `[PHONE_REDACTED]`, `[SSN_REDACTED]` |
+| **Financial** | Credit cards | `[CARD_REDACTED]` |
+| **Auth** | Bearer tokens, JWTs, Authorization headers | `[TOKEN_REDACTED]`, `[JWT_REDACTED]`, `[AUTH_REDACTED]` |
+| **Cloud** | AWS keys/secrets, GitHub tokens | `[AWS_KEY_REDACTED]`, `[GITHUB_TOKEN_REDACTED]` |
+| **AI** | OpenAI, Anthropic, Google keys | `[OPENAI_KEY_REDACTED]`, `[ANTHROPIC_KEY_REDACTED]`, `[GOOGLE_KEY_REDACTED]` |
+| **Payment** | Stripe keys | `[STRIPE_KEY_REDACTED]` |
+| **Infrastructure** | IPv4/IPv6, Database URLs, Private keys (PEM) | `[IP_REDACTED]`, `[DATABASE_URL_REDACTED]`, `[PRIVATE_KEY_REDACTED]` |
+| **Generic** | Environment secrets (PASSWORD, SECRET, TOKEN) | `[SECRET_REDACTED]` |
 
 ---
 
@@ -612,7 +613,7 @@ Sensitive data is automatically masked before transmission:
 | Setup time | 2 minutes | 10 minutes |
 | Backend code | None | Required |
 | Issue author | `inner-lens-app[bot]` | Your GitHub account |
-| Rate limit | 10 req/min/IP | None |
+| Rate limit | 10 req/min/IP, 100 req/day/repo | None |
 | GitHub token | Not needed | Required (PAT) |
 
 **Choose Hosted if:**

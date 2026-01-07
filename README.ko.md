@@ -73,7 +73,7 @@
 | **설정 시간** | 2분 | 10분 |
 | **백엔드 필요** | 아니오 | 예 |
 | **이슈 작성자** | `inner-lens-app[bot]` | 본인 GitHub 계정 |
-| **Rate Limit** | 10 req/min/IP | 없음 |
+| **Rate Limit** | 10 req/min/IP, 100 req/day/repo | 없음 |
 | **데이터 제어** | GitHub API 경유 | 완전 제어 |
 
 **Hosted 선택:** 백엔드 코드 없이 가장 빠르게 시작하고 싶을 때.
@@ -528,17 +528,18 @@ export default {
 
 ### 보안
 
-민감한 데이터는 전송 전에 자동으로 마스킹됩니다:
+민감한 데이터는 전송 전에 자동으로 마스킹됩니다 (20개 패턴):
 
-| 패턴 | 대체값 |
-|------|--------|
-| 이메일 주소 | `[EMAIL_REDACTED]` |
-| API 키 (OpenAI, Stripe 등) | `[OPENAI_KEY_REDACTED]` |
-| Bearer 토큰 | `Bearer [TOKEN_REDACTED]` |
-| JWT | `[JWT_REDACTED]` |
-| 신용카드 번호 | `[CARD_REDACTED]` |
-| SSN | `[SSN_REDACTED]` |
-| 전화번호 | `[PHONE_REDACTED]` |
+| 카테고리 | 패턴 | 대체값 |
+|----------|------|--------|
+| **개인정보** | 이메일, 전화번호, SSN | `[EMAIL_REDACTED]`, `[PHONE_REDACTED]`, `[SSN_REDACTED]` |
+| **금융** | 신용카드 번호 | `[CARD_REDACTED]` |
+| **인증** | Bearer 토큰, JWT, Authorization 헤더 | `[TOKEN_REDACTED]`, `[JWT_REDACTED]`, `[AUTH_REDACTED]` |
+| **클라우드** | AWS 키/시크릿, GitHub 토큰 | `[AWS_KEY_REDACTED]`, `[GITHUB_TOKEN_REDACTED]` |
+| **AI** | OpenAI, Anthropic, Google 키 | `[OPENAI_KEY_REDACTED]`, `[ANTHROPIC_KEY_REDACTED]`, `[GOOGLE_KEY_REDACTED]` |
+| **결제** | Stripe 키 | `[STRIPE_KEY_REDACTED]` |
+| **인프라** | IPv4/IPv6, Database URL, Private Key (PEM) | `[IP_REDACTED]`, `[DATABASE_URL_REDACTED]`, `[PRIVATE_KEY_REDACTED]` |
+| **일반** | 환경변수 시크릿 (PASSWORD, SECRET, TOKEN) | `[SECRET_REDACTED]` |
 
 ---
 
@@ -604,7 +605,7 @@ export default {
 | 설정 시간 | 2분 | 10분 |
 | 백엔드 코드 | 없음 | 필요 |
 | 이슈 작성자 | `inner-lens-app[bot]` | 본인 GitHub 계정 |
-| Rate limit | 10 req/min/IP | 없음 |
+| Rate limit | 10 req/min/IP, 100 req/day/repo | 없음 |
 | GitHub 토큰 | 불필요 | 필요 (PAT) |
 
 **Hosted 선택 시:**
