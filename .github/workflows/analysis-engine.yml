@@ -110,8 +110,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-npm-inner-lens-
 
+      # Install dependencies in isolated environment to avoid peer dependency conflicts
+      # with caller repository's package.json
       - name: Install analysis dependencies
+        working-directory: .inner-lens
         run: |
+          # Create isolated package.json to prevent npm from reading caller's package.json
+          echo '{"name":"inner-lens-analysis","private":true,"type":"module"}' > package.json
           npm install --no-save --prefer-offline \
             ai@^4.0.0 \
             @ai-sdk/anthropic@^1.0.0 \
@@ -166,10 +171,10 @@ jobs:
           MAX_TOKENS: ${{ inputs.max_tokens }}
           OUTPUT_LANGUAGE: ${{ inputs.language }}
           GITHUB_TOKEN: ${{ github.token }}
-          # Provider API Keys - only the relevant one will be used
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+          NODE_PATH: ${{ github.workspace }}/.inner-lens/node_modules
         run: |
           echo "🔍 inner-lens Analysis Engine v2"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -180,7 +185,8 @@ jobs:
           echo "📝 Max Tokens: $MAX_TOKENS"
           echo "🌐 Language: $OUTPUT_LANGUAGE"
           echo ""
-          npx tsx .inner-lens/scripts/analyze-issue.ts
+          export PATH="${{ github.workspace }}/.inner-lens/node_modules/.bin:$PATH"
+          tsx .inner-lens/scripts/analyze-issue.ts
 
       - name: Cleanup
         if: always()
