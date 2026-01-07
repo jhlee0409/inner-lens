@@ -38,7 +38,7 @@ import {
   buildImportGraph,
   expandFilesWithImports,
   // Code Chunking
-  buildChunkedContext,
+  buildChunkedContextAsync,
   buildCodeContext,
   // Confidence Calibration
   type ConfidenceCalibrationResult,
@@ -960,12 +960,10 @@ async function analyzeIssue(): Promise<void> {
 
   let codeContext: string;
 
-  // Use AST-like chunking if enabled (P3-1)
   if (config.useChunking) {
-    console.log('   📦 Using AST-like code chunking (P3-1)');
-    const chunkedContext = buildChunkedContext(relevantFiles, errorLocations, keywords, 60000);
+    console.log('   📦 Using tree-sitter AST-based code chunking');
+    const chunkedContext = await buildChunkedContextAsync(relevantFiles, errorLocations, keywords, 60000);
 
-    // If chunking found relevant chunks, use it; otherwise fallback to line-based
     if (chunkedContext.length > 500) {
       codeContext = chunkedContext;
       console.log('   ✅ Code chunks extracted successfully');

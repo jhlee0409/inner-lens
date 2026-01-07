@@ -113,8 +113,8 @@
   "peerDependencies": {
     "react": ">=17.0.0",
     "react-dom": ">=17.0.0",
-    "vue": ">=3.0.0",
-    "rrweb": ">=2.0.0-alpha.17"
+    "rrweb": ">=2.0.0-alpha.17",
+    "vue": ">=3.0.0"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -130,35 +130,36 @@
       "optional": true
     }
   },
-  "dependencies": {},
   "devDependencies": {
-    "@clack/prompts": "^0.11.0",
-    "@octokit/app": "^15.0.0",
-    "@octokit/rest": "^21.0.2",
-    "@upstash/ratelimit": "^2.0.7",
-    "@upstash/redis": "^1.36.0",
-    "chalk": "^5.3.0",
-    "commander": "^12.1.0",
-    "fs-extra": "^11.2.0",
-    "rrweb": "^2.0.0-alpha.17",
-    "zod": "^3.23.8",
     "@ai-sdk/anthropic": "^1.0.0",
     "@ai-sdk/google": "^1.0.0",
     "@ai-sdk/openai": "^1.0.0",
+    "@clack/prompts": "^0.11.0",
+    "@octokit/app": "^15.0.0",
+    "@octokit/rest": "^21.0.2",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
+    "@upstash/ratelimit": "^2.0.7",
+    "@upstash/redis": "^1.36.0",
     "@vercel/node": "^2.3.0",
     "@vitest/coverage-v8": "^4.0.16",
     "ai": "^6.0.12",
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "fs-extra": "^11.2.0",
     "jsdom": "^27.4.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "rrweb": "^2.0.0-alpha.17",
+    "tree-sitter-typescript": "^0.23.2",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",
     "vitest": "^4.0.16",
-    "vue": "^3.5.26"
+    "vue": "^3.5.26",
+    "web-tree-sitter": "^0.26.3",
+    "zod": "^3.23.8"
   },
   "engines": {
     "node": ">=20.0.0"

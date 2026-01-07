@@ -36,10 +36,13 @@ export {
 export {
   type CodeChunk,
   extractCodeChunks,
+  extractCodeChunksAsync,
   getRelevantChunks,
+  getRelevantChunksAsync,
   readFileWithContext,
   readFileWithLineContext,
   buildChunkedContext,
+  buildChunkedContextAsync,
   buildCodeContext,
 } from './code-chunking';
 
