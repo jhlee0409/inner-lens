@@ -259,7 +259,7 @@ describe('QA Issue Flow Integration Tests', () => {
       expect(callArgs.body).toContain('## Bug Report');
       expect(callArgs.body).toContain('### Description');
       expect(callArgs.body).toContain('### Environment');
-      expect(callArgs.body).toContain('### Console Logs');
+      expect(callArgs.body).toContain('Console Logs');
       expect(callArgs.body).toContain('Awaiting AI analysis');
     });
 

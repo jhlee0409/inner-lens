@@ -662,7 +662,7 @@ describe('QA Data Quality: Equal Treatment Verification', () => {
     expect(issueBodyTemplate).toContain('## Bug Report');
     expect(issueBodyTemplate).toContain('### Description');
     expect(issueBodyTemplate).toContain('### Environment');
-    expect(issueBodyTemplate).toContain('### Console Logs');
+    expect(issueBodyTemplate).toContain('Console Logs');
   });
 
   it('all users get same AI analysis methodology', () => {

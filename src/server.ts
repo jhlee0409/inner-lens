@@ -298,27 +298,39 @@ ${formattedPerformance}
   }
 
   issueBody += `
-### Console Logs
+<details>
+<summary><b>Console Logs (${payload.logs?.length ?? 0} entries)</b></summary>
+
 \`\`\`
 ${formattedLogs || 'No logs captured'}
 \`\`\`
+
+</details>
 `;
 
   if (formattedUserActions) {
     issueBody += `
-### User Actions (Last 20)
+<details>
+<summary><b>User Actions (${payload.userActions?.length ?? 0} events)</b></summary>
+
 \`\`\`
 ${formattedUserActions}
 \`\`\`
+
+</details>
 `;
   }
 
   if (formattedNavigations) {
     issueBody += `
-### Navigation History
+<details>
+<summary><b>Navigation History (${payload.navigations?.length ?? 0} entries)</b></summary>
+
 \`\`\`
 ${formattedNavigations}
 \`\`\`
+
+</details>
 `;
   }
 
