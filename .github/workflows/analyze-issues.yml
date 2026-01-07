@@ -39,7 +39,7 @@ jobs:
     with:
       issue_number: ${{ github.event.issue.number || inputs.issue_number }}
       provider: 'google'
-      model: 'gemini-2.5-flash-lite'
+      model: 'gemini-2.5-flash'
       language: 'ko'
     secrets:
       GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
