@@ -143,6 +143,23 @@ export const InnerLensWidget = defineComponent({
       type: Boolean,
       default: true,
     },
+    // Extended capture options
+    captureUserActions: {
+      type: Boolean,
+      default: true,
+    },
+    captureNavigation: {
+      type: Boolean,
+      default: true,
+    },
+    capturePerformance: {
+      type: Boolean,
+      default: true,
+    },
+    captureSessionReplay: {
+      type: Boolean,
+      default: false,
+    },
     styles: {
       type: Object as PropType<StyleConfig>,
       default: undefined,
@@ -150,6 +167,44 @@ export const InnerLensWidget = defineComponent({
     language: {
       type: String as PropType<'en' | 'ko' | 'ja' | 'zh' | 'es'>,
       default: 'en',
+    },
+    // Convenience options
+    position: {
+      type: String as PropType<'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'>,
+      default: 'bottom-right',
+    },
+    buttonColor: {
+      type: String,
+      default: '#6366f1',
+    },
+    buttonSize: {
+      type: String as PropType<'sm' | 'md' | 'lg'>,
+      default: 'lg',
+    },
+    // UI text customization
+    buttonText: {
+      type: String,
+      default: undefined,
+    },
+    dialogTitle: {
+      type: String,
+      default: undefined,
+    },
+    dialogDescription: {
+      type: String,
+      default: undefined,
+    },
+    submitText: {
+      type: String,
+      default: undefined,
+    },
+    cancelText: {
+      type: String,
+      default: undefined,
+    },
+    successMessage: {
+      type: String,
+      default: undefined,
     },
     hidden: {
       type: Boolean,
@@ -181,8 +236,21 @@ export const InnerLensWidget = defineComponent({
         captureConsoleLogs: props.captureConsoleLogs,
         maxLogEntries: props.maxLogEntries,
         maskSensitiveData: props.maskSensitiveData,
+        captureUserActions: props.captureUserActions,
+        captureNavigation: props.captureNavigation,
+        capturePerformance: props.capturePerformance,
+        captureSessionReplay: props.captureSessionReplay,
         styles: props.styles,
         language: props.language,
+        position: props.position,
+        buttonColor: props.buttonColor,
+        buttonSize: props.buttonSize,
+        buttonText: props.buttonText,
+        dialogTitle: props.dialogTitle,
+        dialogDescription: props.dialogDescription,
+        submitText: props.submitText,
+        cancelText: props.cancelText,
+        successMessage: props.successMessage,
         hidden: props.hidden,
         disabled: props.disabled,
         reporter: props.reporter,
@@ -218,6 +286,19 @@ export const InnerLensWidget = defineComponent({
         props.captureConsoleLogs,
         props.maxLogEntries,
         props.maskSensitiveData,
+        props.captureUserActions,
+        props.captureNavigation,
+        props.capturePerformance,
+        props.captureSessionReplay,
+        props.position,
+        props.buttonColor,
+        props.buttonSize,
+        props.buttonText,
+        props.dialogTitle,
+        props.dialogDescription,
+        props.submitText,
+        props.cancelText,
+        props.successMessage,
         props.styles?.buttonColor,
         props.styles?.buttonPosition,
         props.styles?.buttonSize,
