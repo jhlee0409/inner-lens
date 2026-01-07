@@ -10,11 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Export `Reporter` type from `inner-lens/react` and `inner-lens/vue`
 - Add `homepage` field to package.json
+- Browser compatibility FAQ in README
+- User-friendly network error messages (i18n for all languages)
+- `.nvmrc` file for consistent development environment
 
 ### Fixed
 - Memory leak in log-capture module
 - Error handling for vanilla.ts dynamic import
 - Quality improvements from feedback loop
+- Vue component props now fully synced with React API
+- Vue `useInnerLens` hook now detects config changes
+
+### Changed
+- Minimum Node.js version bumped to 20 (from 18)
 
 ## [0.3.4] - 2025-01-07
 
