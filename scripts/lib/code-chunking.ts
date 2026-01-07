@@ -37,22 +37,30 @@ export function extractCodeChunks(content: string): CodeChunk[] {
   const lines = content.split('\n');
   const chunks: CodeChunk[] = [];
 
-  // Track brace depth for finding block ends
+  // Track brace AND bracket depth for finding block ends (supports objects and arrays)
   function findBlockEnd(startIdx: number): number {
-    let depth = 0;
+    let braceDepth = 0;    // { }
+    let bracketDepth = 0;  // [ ]
     let foundOpen = false;
 
     for (let i = startIdx; i < lines.length; i++) {
       const line = lines[i];
       for (const char of line) {
         if (char === '{') {
-          depth++;
+          braceDepth++;
           foundOpen = true;
         } else if (char === '}') {
-          depth--;
-          if (foundOpen && depth === 0) {
-            return i;
-          }
+          braceDepth--;
+        } else if (char === '[') {
+          bracketDepth++;
+          foundOpen = true;
+        } else if (char === ']') {
+          bracketDepth--;
+        }
+        
+        // Block ends when all brackets and braces are closed
+        if (foundOpen && braceDepth === 0 && bracketDepth === 0) {
+          return i;
         }
       }
     }
