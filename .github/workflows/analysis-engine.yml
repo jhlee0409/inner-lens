@@ -22,7 +22,7 @@ on:
       issue_number:
         description: 'Issue number to analyze (required for workflow_dispatch)'
         required: false
-        type: number
+        type: string
       provider:
         description: 'AI Provider (anthropic, openai, google)'
         required: false
