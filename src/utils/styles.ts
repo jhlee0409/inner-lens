@@ -373,4 +373,11 @@ export const keyframesCSS = `
   outline: 2px solid #6366f1;
   outline-offset: 2px;
 }
+
+/* Hide widget when printing */
+@media print {
+  #inner-lens-widget {
+    display: none !important;
+  }
+}
 `;
