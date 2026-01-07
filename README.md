@@ -192,12 +192,14 @@ jobs:
     uses: jhlee0409/inner-lens/.github/workflows/analysis-engine.yml@v1
     with:
       provider: 'anthropic'  # or 'openai', 'google'
-      language: 'en'
+      language: 'en'         # en, ko, ja, zh, es, de, fr, pt
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
 Add your API key to **Settings → Secrets and variables → Actions**.
+
+> **Note:** The `language` option controls the AI analysis output language (8 languages supported). This is separate from the widget UI language.
 
 ### AI Providers
 

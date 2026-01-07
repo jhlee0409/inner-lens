@@ -941,15 +941,20 @@ export class InnerLensCore {
         body: JSON.stringify(payload),
       });
 
+      const data = (await response.json()) as BugReportResponse;
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const texts = this.getTexts();
+        if (data.errorCode === 'DAILY_LIMIT_EXCEEDED') {
+          throw new Error(texts.dailyLimitExceeded);
+        }
+        if (data.errorCode === 'RATE_LIMIT_EXCEEDED') {
+          throw new Error(texts.rateLimitExceeded);
+        }
         throw new Error(
-          (errorData as { message?: string }).message ||
-            `Failed to submit report (${response.status})`
+          data.message || `Failed to submit report (${response.status})`
         );
       }
-
-      const data = (await response.json()) as BugReportResponse;
 
       this.submissionState = 'success';
       this.issueUrl = data.issueUrl ?? null;

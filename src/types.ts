@@ -28,6 +28,8 @@ export interface WidgetTexts {
   entries: string;
   privacyNotice: string;
   submitting: string;
+  dailyLimitExceeded: string;
+  rateLimitExceeded: string;
 }
 
 /**
@@ -49,6 +51,8 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     entries: 'entries',
     privacyNotice: 'We collect clicks, navigation, and performance data. Sensitive info is automatically hidden.',
     submitting: 'Sending...',
+    dailyLimitExceeded: 'Daily limit reached. Please try again tomorrow.',
+    rateLimitExceeded: 'Too many requests. Please wait a moment.',
   },
   ko: {
     buttonText: '버그 제보',
@@ -65,6 +69,8 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     entries: '건',
     privacyNotice: '클릭, 페이지 이동, 성능 데이터를 수집해요. 민감한 정보는 자동으로 가려져요.',
     submitting: '제보 중...',
+    dailyLimitExceeded: '일일 한도에 도달했어요. 내일 다시 시도해주세요.',
+    rateLimitExceeded: '요청이 너무 많아요. 잠시 후 다시 시도해주세요.',
   },
   ja: {
     buttonText: 'バグを報告',
@@ -81,6 +87,8 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     entries: '件',
     privacyNotice: 'クリック、ページ遷移、パフォーマンスデータを収集します。機密情報は自動的に隠されます。',
     submitting: '送信中...',
+    dailyLimitExceeded: '本日の上限に達しました。明日もう一度お試しください。',
+    rateLimitExceeded: 'リクエストが多すぎます。しばらくしてからお試しください。',
   },
   zh: {
     buttonText: '反馈问题',
@@ -97,6 +105,8 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     entries: '条',
     privacyNotice: '我们会收集点击、页面跳转和性能数据。敏感信息会自动隐藏。',
     submitting: '提交中...',
+    dailyLimitExceeded: '今日已达上限，请明天再试。',
+    rateLimitExceeded: '请求过于频繁，请稍后再试。',
   },
   es: {
     buttonText: 'Reportar problema',
@@ -113,6 +123,8 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     entries: 'entradas',
     privacyNotice: 'Recopilamos clics, navegación y datos de rendimiento. Los datos sensibles se ocultan automáticamente.',
     submitting: 'Enviando...',
+    dailyLimitExceeded: 'Límite diario alcanzado. Por favor, inténtalo mañana.',
+    rateLimitExceeded: 'Demasiadas solicitudes. Por favor, espera un momento.',
   },
 };
 
@@ -482,6 +494,10 @@ export interface BugReportResponse {
   issueUrl?: string;
   issueNumber?: number;
   message?: string;
+  remaining?: number;
+  dailyLimit?: number;
+  errorCode?: 'DAILY_LIMIT_EXCEEDED' | 'RATE_LIMIT_EXCEEDED';
+  resetAt?: number;
 }
 
 /**
