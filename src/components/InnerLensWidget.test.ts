@@ -206,14 +206,13 @@ describe('InnerLensWidget Configuration', () => {
         onError: (err) => console.log('error', err),
 
         // Control
-        disabled: false,
-        devOnly: true,
+        hidden: false,
       };
 
       expect(config.endpoint).toBe('/api/bugs');
       expect(config.position).toBe('top-left');
       expect(config.buttonText).toBe('Report');
-      expect(config.disabled).toBe(false);
+      expect(config.hidden).toBe(false);
     });
   });
 });

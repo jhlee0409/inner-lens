@@ -18,7 +18,9 @@ var WIDGET_TEXTS = {
     entry: "entry",
     entries: "entries",
     privacyNotice: "We collect clicks, navigation, and performance data. Sensitive info is automatically hidden.",
-    submitting: "Sending..."
+    submitting: "Sending...",
+    dailyLimitExceeded: "Daily limit reached. Please try again tomorrow.",
+    rateLimitExceeded: "Too many requests. Please wait a moment."
   },
   ko: {
     buttonText: "\uBC84\uADF8 \uC81C\uBCF4",
@@ -34,7 +36,9 @@ var WIDGET_TEXTS = {
     entry: "\uAC74",
     entries: "\uAC74",
     privacyNotice: "\uD074\uB9AD, \uD398\uC774\uC9C0 \uC774\uB3D9, \uC131\uB2A5 \uB370\uC774\uD130\uB97C \uC218\uC9D1\uD574\uC694. \uBBFC\uAC10\uD55C \uC815\uBCF4\uB294 \uC790\uB3D9\uC73C\uB85C \uAC00\uB824\uC838\uC694.",
-    submitting: "\uC81C\uBCF4 \uC911..."
+    submitting: "\uC81C\uBCF4 \uC911...",
+    dailyLimitExceeded: "\uC77C\uC77C \uD55C\uB3C4\uC5D0 \uB3C4\uB2EC\uD588\uC5B4\uC694. \uB0B4\uC77C \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.",
+    rateLimitExceeded: "\uC694\uCCAD\uC774 \uB108\uBB34 \uB9CE\uC544\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694."
   },
   ja: {
     buttonText: "\u30D0\u30B0\u3092\u5831\u544A",
@@ -50,7 +54,9 @@ var WIDGET_TEXTS = {
     entry: "\u4EF6",
     entries: "\u4EF6",
     privacyNotice: "\u30AF\u30EA\u30C3\u30AF\u3001\u30DA\u30FC\u30B8\u9077\u79FB\u3001\u30D1\u30D5\u30A9\u30FC\u30DE\u30F3\u30B9\u30C7\u30FC\u30BF\u3092\u53CE\u96C6\u3057\u307E\u3059\u3002\u6A5F\u5BC6\u60C5\u5831\u306F\u81EA\u52D5\u7684\u306B\u96A0\u3055\u308C\u307E\u3059\u3002",
-    submitting: "\u9001\u4FE1\u4E2D..."
+    submitting: "\u9001\u4FE1\u4E2D...",
+    dailyLimitExceeded: "\u672C\u65E5\u306E\u4E0A\u9650\u306B\u9054\u3057\u307E\u3057\u305F\u3002\u660E\u65E5\u3082\u3046\u4E00\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002",
+    rateLimitExceeded: "\u30EA\u30AF\u30A8\u30B9\u30C8\u304C\u591A\u3059\u304E\u307E\u3059\u3002\u3057\u3070\u3089\u304F\u3057\u3066\u304B\u3089\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"
   },
   zh: {
     buttonText: "\u53CD\u9988\u95EE\u9898",
@@ -66,7 +72,9 @@ var WIDGET_TEXTS = {
     entry: "\u6761",
     entries: "\u6761",
     privacyNotice: "\u6211\u4EEC\u4F1A\u6536\u96C6\u70B9\u51FB\u3001\u9875\u9762\u8DF3\u8F6C\u548C\u6027\u80FD\u6570\u636E\u3002\u654F\u611F\u4FE1\u606F\u4F1A\u81EA\u52A8\u9690\u85CF\u3002",
-    submitting: "\u63D0\u4EA4\u4E2D..."
+    submitting: "\u63D0\u4EA4\u4E2D...",
+    dailyLimitExceeded: "\u4ECA\u65E5\u5DF2\u8FBE\u4E0A\u9650\uFF0C\u8BF7\u660E\u5929\u518D\u8BD5\u3002",
+    rateLimitExceeded: "\u8BF7\u6C42\u8FC7\u4E8E\u9891\u7E41\uFF0C\u8BF7\u7A0D\u540E\u518D\u8BD5\u3002"
   },
   es: {
     buttonText: "Reportar problema",
@@ -82,7 +90,9 @@ var WIDGET_TEXTS = {
     entry: "entrada",
     entries: "entradas",
     privacyNotice: "Recopilamos clics, navegaci\xF3n y datos de rendimiento. Los datos sensibles se ocultan autom\xE1ticamente.",
-    submitting: "Enviando..."
+    submitting: "Enviando...",
+    dailyLimitExceeded: "L\xEDmite diario alcanzado. Por favor, int\xE9ntalo ma\xF1ana.",
+    rateLimitExceeded: "Demasiadas solicitudes. Por favor, espera un momento."
   }
 };
 var HOSTED_API_ENDPOINT = "https://inner-lens-one.vercel.app/api/report";
@@ -1741,8 +1751,7 @@ function InnerLensWidget({
   onOpen,
   onClose,
   trigger,
-  disabled = false,
-  devOnly = true
+  hidden = false
 }) {
   const texts = WIDGET_TEXTS[language] ?? WIDGET_TEXTS.en;
   const t = {
@@ -1995,16 +2004,7 @@ function InnerLensWidget({
     onSuccess,
     onError
   ]);
-  const isProduction = (() => {
-    if (typeof import.meta !== "undefined" && import.meta.env?.PROD) {
-      return true;
-    }
-    if (typeof process !== "undefined" && process.env?.NODE_ENV === "production") {
-      return true;
-    }
-    return false;
-  })();
-  if (disabled || devOnly && isProduction) {
+  if (hidden) {
     return null;
   }
   const renderTrigger = () => {
@@ -2248,9 +2248,7 @@ var InnerLensCore = class {
       captureNavigation: true,
       capturePerformance: true,
       captureSessionReplay: false,
-      // Opt-in due to size
-      disabled: false,
-      devOnly: true,
+      hidden: false,
       language: lang,
       // UI Text defaults from i18n (can be overridden by config)
       buttonText: texts.buttonText,
@@ -2270,35 +2268,14 @@ var InnerLensCore = class {
     const lang = this.config.language ?? "en";
     return WIDGET_TEXTS[lang] ?? WIDGET_TEXTS.en;
   }
-  /**
-   * Check if widget should be disabled based on environment
-   */
-  isDisabledByEnvironment() {
-    if (this.config.disabled) return true;
-    if (this.config.devOnly) {
-      let isProduction = false;
-      if (typeof import.meta !== "undefined" && import.meta.env?.PROD) {
-        isProduction = true;
-      }
-      if (typeof process !== "undefined" && process.env?.NODE_ENV === "production") {
-        isProduction = true;
-      }
-      if (isProduction) {
-        if (typeof console !== "undefined" && console.info) {
-          console.info(
-            "[inner-lens] Widget disabled in production (devOnly: true). Set devOnly: false to enable in production. See: https://github.com/jhlee0409/inner-lens#-configuration"
-          );
-        }
-        return true;
-      }
-    }
-    return false;
+  isHidden() {
+    return this.config.hidden === true;
   }
   /**
    * Mount the widget to the DOM
    */
   mount(container) {
-    if (this.mounted || this.isDisabledByEnvironment()) return;
+    if (this.mounted || this.isHidden()) return;
     if (typeof window === "undefined") {
       console.warn("InnerLens: Cannot mount in non-browser environment");
       return;
@@ -2374,7 +2351,7 @@ var InnerLensCore = class {
    * Programmatically open the dialog
    */
   open() {
-    if (this.isDisabledByEnvironment() || !this.mounted) return;
+    if (this.isHidden() || !this.mounted) return;
     this.isOpen = true;
     this.logs = getCapturedLogs();
     if (this.config.captureUserActions) {
@@ -2763,13 +2740,19 @@ var InnerLensCore = class {
         },
         body: JSON.stringify(payload)
       });
+      const data = await response.json();
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const texts = this.getTexts();
+        if (data.errorCode === "DAILY_LIMIT_EXCEEDED") {
+          throw new Error(texts.dailyLimitExceeded);
+        }
+        if (data.errorCode === "RATE_LIMIT_EXCEEDED") {
+          throw new Error(texts.rateLimitExceeded);
+        }
         throw new Error(
-          errorData.message || `Failed to submit report (${response.status})`
+          data.message || `Failed to submit report (${response.status})`
         );
       }
-      const data = await response.json();
       this.submissionState = "success";
       this.issueUrl = data.issueUrl ?? null;
       clearCapturedLogs();
@@ -2850,7 +2833,7 @@ function useInnerLens(config5 = {}) {
   }, [
     config5.endpoint,
     config5.repository,
-    config5.disabled,
+    config5.hidden,
     config5.styles?.buttonColor,
     config5.styles?.buttonPosition
   ]);

@@ -119,6 +119,10 @@ interface BugReportResponse {
     issueUrl?: string;
     issueNumber?: number;
     message?: string;
+    remaining?: number;
+    dailyLimit?: number;
+    errorCode?: 'DAILY_LIMIT_EXCEEDED' | 'RATE_LIMIT_EXCEEDED';
+    resetAt?: number;
 }
 /**
  * GitHub Issue creation payload

@@ -302,17 +302,7 @@ export interface InnerLensConfig {
    */
   trigger?: ReactNode;
 
-  /**
-   * Disable the widget entirely
-   * @default false
-   */
-  disabled?: boolean;
-
-  /**
-   * Only show widget in development environment (NODE_ENV !== 'production')
-   * @default true
-   */
-  devOnly?: boolean;
+  hidden?: boolean;
 }
 
 /**

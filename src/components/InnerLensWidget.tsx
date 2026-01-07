@@ -134,8 +134,7 @@ export function InnerLensWidget({
   onOpen,
   onClose,
   trigger,
-  disabled = false,
-  devOnly = true,
+  hidden = false,
 }: InnerLensWidgetProps) {
   // Get i18n texts with custom overrides
   const texts = WIDGET_TEXTS[language] ?? WIDGET_TEXTS.en;
@@ -430,20 +429,7 @@ export function InnerLensWidget({
     onError,
   ]);
 
-  // Check if widget should be disabled
-  const isProduction = (() => {
-    // Check for Vite's import.meta.env.PROD
-    // @ts-expect-error import.meta.env is Vite-specific
-    if (typeof import.meta !== 'undefined' && import.meta.env?.PROD) {
-      return true;
-    }
-    // Check for Node.js / webpack / other bundlers
-    if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
-      return true;
-    }
-    return false;
-  })();
-  if (disabled || (devOnly && isProduction)) {
+  if (hidden) {
     return null;
   }
 

@@ -208,17 +208,7 @@ export interface InnerLensCoreConfig {
    */
   onClose?: () => void;
 
-  /**
-   * Disable the widget entirely
-   * @default false
-   */
-  disabled?: boolean;
-
-  /**
-   * Only show widget in development environment (NODE_ENV !== 'production')
-   * @default true
-   */
-  devOnly?: boolean;
+  hidden?: boolean;
 
   /**
    * Custom container element (defaults to document.body)
@@ -256,8 +246,7 @@ export class InnerLensCore {
       | 'captureNavigation'
       | 'capturePerformance'
       | 'captureSessionReplay'
-      | 'disabled'
-      | 'devOnly'
+      | 'hidden'
       | 'buttonText'
       | 'dialogTitle'
       | 'dialogDescription'
@@ -307,9 +296,8 @@ export class InnerLensCore {
       captureUserActions: true,
       captureNavigation: true,
       capturePerformance: true,
-      captureSessionReplay: false, // Opt-in due to size
-      disabled: false,
-      devOnly: true,
+      captureSessionReplay: false,
+      hidden: false,
       language: lang,
       // UI Text defaults from i18n (can be overridden by config)
       buttonText: texts.buttonText,
@@ -331,44 +319,15 @@ export class InnerLensCore {
     return WIDGET_TEXTS[lang] ?? WIDGET_TEXTS.en;
   }
 
-  /**
-   * Check if widget should be disabled based on environment
-   */
-  private isDisabledByEnvironment(): boolean {
-    if (this.config.disabled) return true;
-    if (this.config.devOnly) {
-      let isProduction = false;
-
-      // Check for Vite's import.meta.env.PROD
-      // @ts-expect-error import.meta.env is Vite-specific
-      if (typeof import.meta !== 'undefined' && import.meta.env?.PROD) {
-        isProduction = true;
-      }
-      // Check for Node.js / webpack / other bundlers
-      if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
-        isProduction = true;
-      }
-
-      if (isProduction) {
-        // Log info message for developers checking console
-        if (typeof console !== 'undefined' && console.info) {
-          console.info(
-            '[inner-lens] Widget disabled in production (devOnly: true). ' +
-            'Set devOnly: false to enable in production. ' +
-            'See: https://github.com/jhlee0409/inner-lens#-configuration'
-          );
-        }
-        return true;
-      }
-    }
-    return false;
+  private isHidden(): boolean {
+    return this.config.hidden === true;
   }
 
   /**
    * Mount the widget to the DOM
    */
   mount(container?: HTMLElement): void {
-    if (this.mounted || this.isDisabledByEnvironment()) return;
+    if (this.mounted || this.isHidden()) return;
 
     if (typeof window === 'undefined') {
       console.warn('InnerLens: Cannot mount in non-browser environment');
@@ -473,7 +432,7 @@ export class InnerLensCore {
    * Programmatically open the dialog
    */
   open(): void {
-    if (this.isDisabledByEnvironment() || !this.mounted) return;
+    if (this.isHidden() || !this.mounted) return;
     this.isOpen = true;
 
     // Collect all captured data

@@ -142,16 +142,7 @@ interface InnerLensConfig {
      * Custom trigger element (replaces default button)
      */
     trigger?: ReactNode;
-    /**
-     * Disable the widget entirely
-     * @default false
-     */
-    disabled?: boolean;
-    /**
-     * Only show widget in development environment (NODE_ENV !== 'production')
-     * @default true
-     */
-    devOnly?: boolean;
+    hidden?: boolean;
 }
 /**
  * Captured log entry
@@ -272,6 +263,10 @@ interface BugReportResponse {
     issueUrl?: string;
     issueNumber?: number;
     message?: string;
+    remaining?: number;
+    dailyLimit?: number;
+    errorCode?: 'DAILY_LIMIT_EXCEEDED' | 'RATE_LIMIT_EXCEEDED';
+    resetAt?: number;
 }
 /**
  * GitHub Issue creation payload
@@ -415,16 +410,7 @@ interface InnerLensCoreConfig {
      * Callback when dialog closes
      */
     onClose?: () => void;
-    /**
-     * Disable the widget entirely
-     * @default false
-     */
-    disabled?: boolean;
-    /**
-     * Only show widget in development environment (NODE_ENV !== 'production')
-     * @default true
-     */
-    devOnly?: boolean;
+    hidden?: boolean;
     /**
      * Custom container element (defaults to document.body)
      */
@@ -468,10 +454,7 @@ declare class InnerLensCore {
      * Get i18n texts for the current language
      */
     private getTexts;
-    /**
-     * Check if widget should be disabled based on environment
-     */
-    private isDisabledByEnvironment;
+    private isHidden;
     /**
      * Mount the widget to the DOM
      */
@@ -631,11 +614,7 @@ declare const InnerLensWidget: vue.DefineComponent<vue.ExtractPropTypes<{
         type: PropType<"en" | "ko" | "ja" | "zh" | "es">;
         default: string;
     };
-    disabled: {
-        type: BooleanConstructor;
-        default: boolean;
-    };
-    devOnly: {
+    hidden: {
         type: BooleanConstructor;
         default: boolean;
     };
@@ -674,11 +653,7 @@ declare const InnerLensWidget: vue.DefineComponent<vue.ExtractPropTypes<{
         type: PropType<"en" | "ko" | "ja" | "zh" | "es">;
         default: string;
     };
-    disabled: {
-        type: BooleanConstructor;
-        default: boolean;
-    };
-    devOnly: {
+    hidden: {
         type: BooleanConstructor;
         default: boolean;
     };
@@ -696,8 +671,7 @@ declare const InnerLensWidget: vue.DefineComponent<vue.ExtractPropTypes<{
     maskSensitiveData: boolean;
     styles: StyleConfig;
     language: "en" | "ko" | "ja" | "zh" | "es";
-    disabled: boolean;
-    devOnly: boolean;
+    hidden: boolean;
 }, {}, {}, {}, string, vue.ComponentProvideOptions, true, {}, any>;
 
 export { type AIProvider, type BugReportPayload, type BugReportResponse, type GitHubIssuePayload, type InnerLensConfig, InnerLensWidget, type LogEntry, type WidgetLanguage, addCustomLog, clearCapturedLogs, getCapturedLogs, initLogCapture, maskSensitiveData, maskSensitiveObject, restoreConsole, useInnerLens, validateMasking };

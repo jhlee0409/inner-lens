@@ -241,8 +241,7 @@ jobs:
 | 옵션 | 타입 | 기본값 | 설명 |
 |------|------|--------|------|
 | `language` | `string` | `en` | UI 언어 (`en`, `ko`, `ja`, `zh`, `es`) |
-| `devOnly` | `boolean` | `true` | 프로덕션에서 숨기기 |
-| `disabled` | `boolean` | `false` | 위젯 비활성화 |
+| `hidden` | `boolean` | `false` | 위젯 숨김 (환경 기반 표시 제어용) |
 | `position` | `string` | `bottom-right` | 버튼 위치 |
 | `buttonColor` | `string` | `#6366f1` | 버튼 색상 |
 | `buttonSize` | `string` | `lg` | 버튼 크기 (`sm`, `md`, `lg`) |
@@ -283,11 +282,23 @@ jobs:
 />
 ```
 
-#### 프로덕션 사용
+#### 환경 기반 표시 제어
 
 ```tsx
-// 프로덕션에서 활성화
-<InnerLensWidget repository="owner/repo" devOnly={false} />
+// 프로덕션에서만 숨기기
+<InnerLensWidget 
+  repository="owner/repo" 
+  hidden={process.env.NODE_ENV === 'production'} 
+/>
+
+// Vercel 환경 기반 숨기기
+<InnerLensWidget 
+  repository="owner/repo" 
+  hidden={process.env.NEXT_PUBLIC_VERCEL_ENV === 'production'} 
+/>
+
+// 항상 표시 (기본값)
+<InnerLensWidget repository="owner/repo" />
 ```
 
 #### 커스텀 트리거 (React)
@@ -572,7 +583,7 @@ export default {
 <details>
 <summary><b>위젯이 나타나지 않음</b></summary>
 
-1. `disabled`와 `devOnly` props 확인
+1. `hidden` prop 확인 (`false`이거나 생략되어야 함)
 2. import 경로가 프레임워크와 맞는지 확인
 3. 브라우저 콘솔에서 에러 확인
 </details>

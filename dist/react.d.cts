@@ -141,16 +141,7 @@ interface InnerLensConfig {
      * Custom trigger element (replaces default button)
      */
     trigger?: ReactNode;
-    /**
-     * Disable the widget entirely
-     * @default false
-     */
-    disabled?: boolean;
-    /**
-     * Only show widget in development environment (NODE_ENV !== 'production')
-     * @default true
-     */
-    devOnly?: boolean;
+    hidden?: boolean;
 }
 /**
  * Captured log entry
@@ -271,6 +262,10 @@ interface BugReportResponse {
     issueUrl?: string;
     issueNumber?: number;
     message?: string;
+    remaining?: number;
+    dailyLimit?: number;
+    errorCode?: 'DAILY_LIMIT_EXCEEDED' | 'RATE_LIMIT_EXCEEDED';
+    resetAt?: number;
 }
 /**
  * GitHub Issue creation payload
@@ -284,7 +279,7 @@ interface GitHubIssuePayload {
 
 interface InnerLensWidgetProps extends InnerLensConfig {
 }
-declare function InnerLensWidget({ endpoint, repository, labels, captureConsoleLogs, maxLogEntries, maskSensitiveData: enableMasking, captureUserActions, captureNavigation, capturePerformance, captureSessionReplay, styles: styleConfig, language, position, buttonColor, buttonSize, buttonText, dialogTitle, dialogDescription, submitText, cancelText, successMessage, onSuccess, onError, onOpen, onClose, trigger, disabled, devOnly, }: InnerLensWidgetProps): react_jsx_runtime.JSX.Element | null;
+declare function InnerLensWidget({ endpoint, repository, labels, captureConsoleLogs, maxLogEntries, maskSensitiveData: enableMasking, captureUserActions, captureNavigation, capturePerformance, captureSessionReplay, styles: styleConfig, language, position, buttonColor, buttonSize, buttonText, dialogTitle, dialogDescription, submitText, cancelText, successMessage, onSuccess, onError, onOpen, onClose, trigger, hidden, }: InnerLensWidgetProps): react_jsx_runtime.JSX.Element | null;
 
 type ButtonSize = 'sm' | 'md' | 'lg';
 interface StyleConfig {
@@ -418,16 +413,7 @@ interface InnerLensCoreConfig {
      * Callback when dialog closes
      */
     onClose?: () => void;
-    /**
-     * Disable the widget entirely
-     * @default false
-     */
-    disabled?: boolean;
-    /**
-     * Only show widget in development environment (NODE_ENV !== 'production')
-     * @default true
-     */
-    devOnly?: boolean;
+    hidden?: boolean;
     /**
      * Custom container element (defaults to document.body)
      */
@@ -471,10 +457,7 @@ declare class InnerLensCore {
      * Get i18n texts for the current language
      */
     private getTexts;
-    /**
-     * Check if widget should be disabled based on environment
-     */
-    private isDisabledByEnvironment;
+    private isHidden;
     /**
      * Mount the widget to the DOM
      */

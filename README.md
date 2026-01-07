@@ -249,8 +249,7 @@ Add your API key to **Settings → Secrets and variables → Actions**.
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `language` | `string` | `en` | UI language (`en`, `ko`, `ja`, `zh`, `es`) |
-| `devOnly` | `boolean` | `true` | Hide in production |
-| `disabled` | `boolean` | `false` | Disable widget |
+| `hidden` | `boolean` | `false` | Hide widget (use for environment-based visibility) |
 | `position` | `string` | `bottom-right` | Button position |
 | `buttonColor` | `string` | `#6366f1` | Button color |
 | `buttonSize` | `string` | `lg` | Button size (`sm`, `md`, `lg`) |
@@ -291,11 +290,23 @@ Add your API key to **Settings → Secrets and variables → Actions**.
 />
 ```
 
-#### Production Usage
+#### Environment-Based Visibility
 
 ```tsx
-// Enable in production
-<InnerLensWidget repository="owner/repo" devOnly={false} />
+// Hide in production only
+<InnerLensWidget 
+  repository="owner/repo" 
+  hidden={process.env.NODE_ENV === 'production'} 
+/>
+
+// Hide based on Vercel environment
+<InnerLensWidget 
+  repository="owner/repo" 
+  hidden={process.env.NEXT_PUBLIC_VERCEL_ENV === 'production'} 
+/>
+
+// Always visible (default)
+<InnerLensWidget repository="owner/repo" />
 ```
 
 #### Custom Trigger (React)
@@ -580,7 +591,7 @@ Sensitive data is automatically masked before transmission (20 patterns):
 <details>
 <summary><b>Widget doesn't appear</b></summary>
 
-1. Check `disabled` and `devOnly` props
+1. Check `hidden` prop (should be `false` or omitted)
 2. Verify import path matches your framework
 3. Check browser console for errors
 </details>
