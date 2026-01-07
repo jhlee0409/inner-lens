@@ -30,6 +30,13 @@ npm install inner-lens
 yarn add inner-lens
 # or
 pnpm add inner-lens
+
+# Optional: With Session Replay (see below)
+npm install inner-lens rrweb
+# or
+yarn add inner-lens rrweb
+# or
+pnpm add inner-lens rrweb
 ```
 
 ## Quick Start

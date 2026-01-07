@@ -30,6 +30,13 @@ npm install inner-lens
 yarn add inner-lens
 # or
 pnpm add inner-lens
+
+# 선택: 세션 리플레이 포함 (하단 참고)
+npm install inner-lens rrweb
+# or
+yarn add inner-lens rrweb
+# or
+pnpm add inner-lens rrweb
 ```
 
 ## 빠른 시작
