@@ -30,6 +30,7 @@ export interface WidgetTexts {
   submitting: string;
   dailyLimitExceeded: string;
   rateLimitExceeded: string;
+  descriptionRequired: string;
 }
 
 /**
@@ -53,6 +54,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     submitting: 'Sending...',
     dailyLimitExceeded: 'Daily limit reached. Please try again tomorrow.',
     rateLimitExceeded: 'Too many requests. Please wait a moment.',
+    descriptionRequired: 'Please provide a description of the issue.',
   },
   ko: {
     buttonText: '버그 제보',
@@ -71,6 +73,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     submitting: '제보 중...',
     dailyLimitExceeded: '일일 한도에 도달했어요. 내일 다시 시도해주세요.',
     rateLimitExceeded: '요청이 너무 많아요. 잠시 후 다시 시도해주세요.',
+    descriptionRequired: '문제 설명을 입력해주세요.',
   },
   ja: {
     buttonText: 'バグを報告',
@@ -89,6 +92,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     submitting: '送信中...',
     dailyLimitExceeded: '本日の上限に達しました。明日もう一度お試しください。',
     rateLimitExceeded: 'リクエストが多すぎます。しばらくしてからお試しください。',
+    descriptionRequired: '問題の説明を入力してください。',
   },
   zh: {
     buttonText: '反馈问题',
@@ -107,6 +111,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     submitting: '提交中...',
     dailyLimitExceeded: '今日已达上限，请明天再试。',
     rateLimitExceeded: '请求过于频繁，请稍后再试。',
+    descriptionRequired: '请输入问题描述。',
   },
   es: {
     buttonText: 'Reportar problema',
@@ -125,6 +130,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     submitting: 'Enviando...',
     dailyLimitExceeded: 'Límite diario alcanzado. Por favor, inténtalo mañana.',
     rateLimitExceeded: 'Demasiadas solicitudes. Por favor, espera un momento.',
+    descriptionRequired: 'Por favor, proporciona una descripción del problema.',
   },
 };
 
@@ -538,6 +544,17 @@ export const HOSTED_API_ENDPOINT =
  * Used consistently across Core, Hosted API, and Self-hosted server
  */
 export const MAX_LOG_ENTRIES = 50;
+
+/**
+ * Maximum session replay size in bytes (5MB)
+ * Session replay can be large, this prevents excessive payload sizes
+ */
+export const MAX_SESSION_REPLAY_SIZE = 5 * 1024 * 1024;
+
+/**
+ * Maximum total payload size in bytes (10MB)
+ */
+export const MAX_PAYLOAD_SIZE = 10 * 1024 * 1024;
 
 // ============================================
 // Hosted API Types (Centralized Mode)

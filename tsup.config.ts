@@ -1,4 +1,7 @@
 import { defineConfig } from 'tsup';
+import fs from 'fs';
+
+const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf-8'));
 
 export default defineConfig([
   // Core library build (framework-agnostic)
@@ -129,6 +132,9 @@ export default defineConfig([
       js: '#!/usr/bin/env node',
     },
     outExtension: () => ({ js: '.cjs' }),
+    define: {
+      __INNER_LENS_VERSION__: JSON.stringify(pkg.version),
+    },
   },
   // create-inner-lens wrapper (for npx create-inner-lens)
   {

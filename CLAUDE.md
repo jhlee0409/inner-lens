@@ -117,7 +117,7 @@ inner-lens/
 │   ├── hooks/
 │   │   └── useInnerLens.ts       # React Hook
 │   ├── utils/
-│   │   ├── masking.ts            # 민감정보 마스킹 (20개 패턴) ⭐
+│   │   ├── masking.ts            # 민감정보 마스킹 (22개 패턴) ⭐
 │   │   ├── log-capture.ts        # 콘솔 로그 캡처
 │   │   ├── user-action-capture.ts # 클릭/입력 캡처
 │   │   ├── navigation-capture.ts  # 라우팅 히스토리 캡처
@@ -190,7 +190,7 @@ class InnerLensCore {
 
 ### 2. 마스킹 시스템 (src/utils/masking.ts)
 
-20개 정규식 패턴으로 민감정보 마스킹:
+22개 정규식 패턴으로 민감정보 마스킹:
 
 | 패턴 | 치환값 |
 |------|--------|
@@ -204,7 +204,7 @@ class InnerLensCore {
 | 전화번호 | `[PHONE_REDACTED]` |
 | SSN | `[SSN_REDACTED]` |
 | IP 주소 | `[IP_REDACTED]` |
-| ... 등 20개 패턴 |
+| ... 등 22개 패턴 |
 
 ### 3. 서버 핸들러 (src/server.ts)
 

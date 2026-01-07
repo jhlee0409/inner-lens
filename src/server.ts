@@ -9,7 +9,7 @@
 import { Octokit } from '@octokit/rest';
 import { z } from 'zod';
 import type { BugReportPayload, BugReportResponse, GitHubIssuePayload } from './types';
-import { MAX_LOG_ENTRIES } from './types';
+import { MAX_LOG_ENTRIES, MAX_SESSION_REPLAY_SIZE, MAX_PAYLOAD_SIZE } from './types';
 import { maskSensitiveData } from './utils/masking';
 
 /**
@@ -124,7 +124,7 @@ export const BugReportSchema = z.object({
   userActions: z.array(UserActionSchema).optional(),
   navigations: z.array(NavigationEntrySchema).optional(),
   performance: PerformanceSummarySchema.optional(),
-  sessionReplay: z.string().optional(),
+  sessionReplay: z.string().max(MAX_SESSION_REPLAY_SIZE, 'Session replay data exceeds 5MB limit').optional(),
   pageContext: PageContextSchema.optional(),
   reporter: z.object({
     name: z.string(),
@@ -450,6 +450,14 @@ export async function handleBugReport(
   body: unknown,
   config: IssueCreatorConfig
 ): Promise<{ status: number; body: BugReportResponse | { success: false; message: string } }> {
+  const payloadSize = JSON.stringify(body).length;
+  if (payloadSize > MAX_PAYLOAD_SIZE) {
+    return {
+      status: 413,
+      body: { success: false, message: `Payload too large (${Math.round(payloadSize / 1024 / 1024)}MB). Maximum allowed: 10MB.` },
+    };
+  }
+
   const validation = validateBugReport(body);
 
   if (!validation.success) {

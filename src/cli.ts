@@ -5,7 +5,10 @@ import fs from 'fs-extra';
 import path from 'path';
 import { execSync } from 'child_process';
 
-const PACKAGE_VERSION = '0.1.0';
+declare const __INNER_LENS_VERSION__: string;
+const PACKAGE_VERSION = typeof __INNER_LENS_VERSION__ !== 'undefined' 
+  ? __INNER_LENS_VERSION__ 
+  : '0.0.0-dev';
 
 // GitHub OAuth App Client ID for inner-lens
 const GITHUB_CLIENT_ID = 'Ov23li3zMscAsVeYVXt5';

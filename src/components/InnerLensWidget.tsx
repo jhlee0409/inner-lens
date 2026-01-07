@@ -343,7 +343,7 @@ export function InnerLensWidget({
 
   const handleSubmit = useCallback(async () => {
     if (!description.trim()) {
-      setErrorMessage('Please provide a description of the issue.');
+      setErrorMessage(texts.descriptionRequired);
       return;
     }
 
@@ -543,6 +543,9 @@ export function InnerLensWidget({
             style={textareaStyle}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
+            aria-required="true"
+            aria-invalid={submissionState === 'error' && errorMessage !== null}
+            aria-describedby={submissionState === 'error' && errorMessage ? 'inner-lens-error' : undefined}
           />
 
           {logs.length > 0 && (
@@ -579,7 +582,7 @@ export function InnerLensWidget({
           </div>
 
           {submissionState === 'error' && errorMessage && (
-            <div style={styles.errorMessage}>{errorMessage}</div>
+            <div id="inner-lens-error" role="alert" style={styles.errorMessage}>{errorMessage}</div>
           )}
         </div>
 

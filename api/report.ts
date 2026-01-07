@@ -14,6 +14,7 @@ import {
   validateHostedBugReport,
   formatIssueBody,
   type ValidatedHostedBugReport,
+  MAX_PAYLOAD_SIZE,
 } from './_shared.js';
 
 // Type for the Octokit instance returned by the App
@@ -241,6 +242,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    const payloadSize = JSON.stringify(req.body).length;
+    if (payloadSize > MAX_PAYLOAD_SIZE) {
+      return res.status(413).json({ 
+        error: `Payload too large (${Math.round(payloadSize / 1024 / 1024)}MB). Maximum allowed: 10MB.`,
+        errorCode: 'PAYLOAD_TOO_LARGE',
+      });
+    }
+
     const validation = validateHostedBugReport(req.body);
     if (!validation.success) {
       return res.status(400).json({ error: validation.error });

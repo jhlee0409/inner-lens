@@ -38,7 +38,6 @@ export function useInnerLens(config: InnerLensCoreConfig = {}) {
     };
   }, []);
 
-  // Update config when it changes
   useEffect(() => {
     if (instanceRef.current) {
       instanceRef.current.unmount();
@@ -50,8 +49,29 @@ export function useInnerLens(config: InnerLensCoreConfig = {}) {
     config.repository,
     config.hidden,
     config.disabled,
+    config.language,
+    config.captureConsoleLogs,
+    config.maxLogEntries,
+    config.maskSensitiveData,
+    config.captureUserActions,
+    config.captureNavigation,
+    config.capturePerformance,
+    config.captureSessionReplay,
+    config.position,
+    config.buttonColor,
+    config.buttonSize,
+    config.buttonText,
+    config.dialogTitle,
+    config.dialogDescription,
+    config.submitText,
+    config.cancelText,
+    config.successMessage,
     config.styles?.buttonColor,
     config.styles?.buttonPosition,
+    config.styles?.buttonSize,
+    config.reporter?.name,
+    config.reporter?.email,
+    config.reporter?.id,
   ]);
 
   const open = useCallback(() => {

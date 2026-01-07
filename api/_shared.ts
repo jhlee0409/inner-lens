@@ -124,6 +124,8 @@ export interface HostedBugReportPayload {
 // ============================================
 
 export const MAX_LOG_ENTRIES = 50;
+export const MAX_SESSION_REPLAY_SIZE = 5 * 1024 * 1024;
+export const MAX_PAYLOAD_SIZE = 10 * 1024 * 1024;
 
 // ============================================
 // Masking

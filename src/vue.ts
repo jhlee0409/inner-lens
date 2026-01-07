@@ -207,16 +207,22 @@ export const InnerLensWidget = defineComponent({
       instance.value = null;
     });
 
-    // Watch for prop changes
     watch(
       () => [
         props.endpoint,
         props.repository,
-        props.language,
         props.hidden,
         props.disabled,
+        props.language,
+        props.captureConsoleLogs,
+        props.maxLogEntries,
+        props.maskSensitiveData,
         props.styles?.buttonColor,
         props.styles?.buttonPosition,
+        props.styles?.buttonSize,
+        props.reporter?.name,
+        props.reporter?.email,
+        props.reporter?.id,
       ],
       () => {
         createInstance();

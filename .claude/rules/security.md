@@ -25,7 +25,7 @@ await analyzeWithAI(maskedLogs);
 await analyzeWithAI(rawLogs); // 마스킹 없이 전송
 ```
 
-## 마스킹 패턴 (20개)
+## 마스킹 패턴 (22개)
 
 | 패턴 | 치환값 |
 |------|--------|

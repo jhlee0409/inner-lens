@@ -706,10 +706,10 @@ export class InnerLensCore {
   private renderForm(styles: ReturnType<typeof createStyles>): string {
     const t = this.getTexts();
     const logsHtml = this.logs.length > 0 ? this.renderLogs(styles) : '';
-    const errorHtml =
-      this.submissionState === 'error' && this.errorMessage
-        ? `<div style="${this.styleToString(styles.errorMessage)}">${this.escapeHtml(this.errorMessage)}</div>`
-        : '';
+    const hasError = this.submissionState === 'error' && this.errorMessage !== null;
+    const errorHtml = hasError && this.errorMessage
+      ? `<div id="inner-lens-error" role="alert" style="${this.styleToString(styles.errorMessage)}">${this.escapeHtml(this.errorMessage)}</div>`
+      : '';
 
     return `
       <div style="${this.styleToString(styles.content)}">
@@ -720,6 +720,8 @@ export class InnerLensCore {
           id="inner-lens-description"
           placeholder="${this.escapeHtml(t.placeholder)}"
           style="${this.styleToString(styles.textarea)}"
+          aria-required="true"
+          ${hasError ? 'aria-invalid="true" aria-describedby="inner-lens-error"' : ''}
         >${this.escapeHtml(this.description)}</textarea>
 
         ${logsHtml}
@@ -848,7 +850,7 @@ export class InnerLensCore {
 
   private async submit(): Promise<void> {
     if (!this.description.trim()) {
-      this.errorMessage = 'Please provide a description of the issue.';
+      this.errorMessage = this.getTexts().descriptionRequired;
       this.render();
       return;
     }
