@@ -100,6 +100,51 @@ describe('maskSensitiveData', () => {
       'Loopback: [IP_REDACTED]'
     );
   });
+
+  it('masks Discord webhook URLs', () => {
+    expect(maskSensitiveData('https://discord.com/api/webhooks/1234567890123456789/abc-XYZ_123')).toBe(
+      '[DISCORD_WEBHOOK_REDACTED]'
+    );
+    expect(maskSensitiveData('https://discordapp.com/api/webhooks/9876543210/token-here')).toBe(
+      '[DISCORD_WEBHOOK_REDACTED]'
+    );
+    expect(maskSensitiveData('https://ptb.discord.com/api/webhooks/1112223334445556667/test')).toBe(
+      '[DISCORD_WEBHOOK_REDACTED]'
+    );
+  });
+
+  it('masks Slack tokens', () => {
+    expect(maskSensitiveData('xoxb-123456789012-1234567890123-abcdefghij')).toBe(
+      '[SLACK_TOKEN_REDACTED]'
+    );
+    expect(maskSensitiveData('xoxp-user-token-here')).toBe(
+      '[SLACK_TOKEN_REDACTED]'
+    );
+    expect(maskSensitiveData('xoxa-app-token-12345')).toBe(
+      '[SLACK_TOKEN_REDACTED]'
+    );
+  });
+
+  it('masks NPM tokens', () => {
+    expect(maskSensitiveData('npm_abcdefghijklmnopqrstuvwxyz1234567890')).toBe(
+      '[NPM_TOKEN_REDACTED]'
+    );
+  });
+
+  it('masks SendGrid API keys', () => {
+    expect(maskSensitiveData('SG.abcdefghijklmnopqrstuv.wxyz1234567890abcdefgh')).toBe(
+      '[SENDGRID_KEY_REDACTED]'
+    );
+  });
+
+  it('masks Twilio credentials', () => {
+    expect(maskSensitiveData('ACaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toBe(
+      '[TWILIO_REDACTED]'
+    );
+    expect(maskSensitiveData('SKbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb')).toBe(
+      '[TWILIO_REDACTED]'
+    );
+  });
 });
 
 describe('maskSensitiveObject', () => {

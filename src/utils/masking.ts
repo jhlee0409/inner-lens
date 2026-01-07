@@ -13,6 +13,19 @@ interface MaskingPattern {
  * Collection of regex patterns to detect and mask sensitive data
  */
 const MASKING_PATTERNS: MaskingPattern[] = [
+  // URL-based patterns must come FIRST to avoid partial matches by phone/SSN patterns
+  // Discord webhook URLs
+  {
+    name: 'discord_webhook',
+    pattern: /https:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+/gi,
+    replacement: '[DISCORD_WEBHOOK_REDACTED]',
+  },
+  // Database connection strings
+  {
+    name: 'database_url',
+    pattern: /(?:mongodb|mysql|postgresql|postgres|redis|amqp):\/\/[^\s"']+/gi,
+    replacement: '[DATABASE_URL_REDACTED]',
+  },
   // Email addresses
   {
     name: 'email',
@@ -127,17 +140,35 @@ const MASKING_PATTERNS: MaskingPattern[] = [
     pattern: /(?:SECRET|PASSWORD|PASSWD|PWD|TOKEN|PRIVATE[_-]?KEY)[=:\s]+["']?[^\s"']{8,}["']?/gi,
     replacement: '[SECRET_REDACTED]',
   },
-  // Database connection strings
-  {
-    name: 'database_url',
-    pattern: /(?:mongodb|mysql|postgresql|postgres|redis|amqp):\/\/[^\s"']+/gi,
-    replacement: '[DATABASE_URL_REDACTED]',
-  },
   // Private keys (PEM format markers)
   {
     name: 'private_key',
     pattern: /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/g,
     replacement: '[PRIVATE_KEY_REDACTED]',
+  },
+  // Slack tokens (bot, user, app, session)
+  {
+    name: 'slack_token',
+    pattern: /xox[bpas]-[\w-]{10,}/g,
+    replacement: '[SLACK_TOKEN_REDACTED]',
+  },
+  // NPM tokens
+  {
+    name: 'npm_token',
+    pattern: /npm_[a-zA-Z0-9]{36,}/g,
+    replacement: '[NPM_TOKEN_REDACTED]',
+  },
+  // SendGrid API keys
+  {
+    name: 'sendgrid_key',
+    pattern: /SG\.[\w-]{22,}\.[\w-]{22,}/g,
+    replacement: '[SENDGRID_KEY_REDACTED]',
+  },
+  // Twilio Account SID and Auth Token
+  {
+    name: 'twilio_sid',
+    pattern: /(?:AC|SK)[a-f0-9]{32}/gi,
+    replacement: '[TWILIO_REDACTED]',
   },
 ];
 

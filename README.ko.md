@@ -273,7 +273,7 @@ npm install rrweb@2.0.0-alpha.17
 
 ## 보안
 
-민감한 데이터는 전송 전 자동으로 마스킹됩니다 (22개 패턴):
+민감한 데이터는 전송 전 자동으로 마스킹됩니다 (27개 패턴):
 
 | 카테고리 | 치환값 |
 |----------|--------|
@@ -282,6 +282,8 @@ npm install rrweb@2.0.0-alpha.17
 | 인증 토큰, JWT | `[TOKEN_REDACTED]`, `[JWT_REDACTED]` |
 | API 키 (AWS, OpenAI, Anthropic, Google, Stripe, GitHub) | `[*_KEY_REDACTED]` |
 | 데이터베이스 URL, 개인키 | `[DATABASE_URL_REDACTED]`, `[PRIVATE_KEY_REDACTED]` |
+| Discord 웹훅, Slack 토큰 | `[DISCORD_WEBHOOK_REDACTED]`, `[SLACK_TOKEN_REDACTED]` |
+| NPM, SendGrid, Twilio | `[NPM_TOKEN_REDACTED]`, `[SENDGRID_KEY_REDACTED]`, `[TWILIO_REDACTED]` |
 
 ---
 

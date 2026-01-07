@@ -273,7 +273,7 @@ npm install rrweb@2.0.0-alpha.17
 
 ## Security
 
-Sensitive data is automatically masked before transmission (22 patterns):
+Sensitive data is automatically masked before transmission (27 patterns):
 
 | Category | Replacement |
 |----------|-------------|
@@ -282,6 +282,8 @@ Sensitive data is automatically masked before transmission (22 patterns):
 | Auth tokens, JWTs | `[TOKEN_REDACTED]`, `[JWT_REDACTED]` |
 | API keys (AWS, OpenAI, Anthropic, Google, Stripe, GitHub) | `[*_KEY_REDACTED]` |
 | Database URLs, Private keys | `[DATABASE_URL_REDACTED]`, `[PRIVATE_KEY_REDACTED]` |
+| Discord webhooks, Slack tokens | `[DISCORD_WEBHOOK_REDACTED]`, `[SLACK_TOKEN_REDACTED]` |
+| NPM, SendGrid, Twilio | `[NPM_TOKEN_REDACTED]`, `[SENDGRID_KEY_REDACTED]`, `[TWILIO_REDACTED]` |
 
 ---
 

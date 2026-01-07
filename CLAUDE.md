@@ -117,7 +117,7 @@ inner-lens/
 │   ├── hooks/
 │   │   └── useInnerLens.ts       # React Hook
 │   ├── utils/
-│   │   ├── masking.ts            # 민감정보 마스킹 (22개 패턴) ⭐
+│   │   ├── masking.ts            # 민감정보 마스킹 (27개 패턴) ⭐
 │   │   ├── log-capture.ts        # 콘솔 로그 캡처
 │   │   ├── user-action-capture.ts # 클릭/입력 캡처
 │   │   ├── navigation-capture.ts  # 라우팅 히스토리 캡처
@@ -204,7 +204,11 @@ class InnerLensCore {
 | 전화번호 | `[PHONE_REDACTED]` |
 | SSN | `[SSN_REDACTED]` |
 | IP 주소 | `[IP_REDACTED]` |
-| ... 등 22개 패턴 |
+| Discord Webhook | `[DISCORD_WEBHOOK_REDACTED]` |
+| Slack 토큰 | `[SLACK_TOKEN_REDACTED]` |
+| NPM 토큰 | `[NPM_TOKEN_REDACTED]` |
+| SendGrid 키 | `[SENDGRID_KEY_REDACTED]` |
+| Twilio 자격증명 | `[TWILIO_REDACTED]` |
 
 ### 3. 서버 핸들러 (src/server.ts)
 
