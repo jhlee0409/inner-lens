@@ -33,6 +33,7 @@ export interface WidgetTexts {
   networkError: string;
   descriptionRequired: string;
   submitError: string;
+  timeoutError: string;
 }
 
 /**
@@ -59,6 +60,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     networkError: 'Network error. Please check your connection and try again.',
     descriptionRequired: 'Please provide a description of the issue.',
     submitError: 'Failed to submit report. Please try again.',
+    timeoutError: 'Request timed out. Please try again.',
   },
   ko: {
     buttonText: '버그 제보',
@@ -80,6 +82,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     networkError: '네트워크 오류가 발생했어요. 연결 상태를 확인하고 다시 시도해주세요.',
     descriptionRequired: '문제 설명을 입력해주세요.',
     submitError: '제보에 실패했어요. 다시 시도해주세요.',
+    timeoutError: '요청 시간이 초과됐어요. 다시 시도해주세요.',
   },
   ja: {
     buttonText: 'バグを報告',
@@ -101,6 +104,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     networkError: 'ネットワークエラーが発生しました。接続を確認してもう一度お試しください。',
     descriptionRequired: '問題の説明を入力してください。',
     submitError: '送信に失敗しました。もう一度お試しください。',
+    timeoutError: 'リクエストがタイムアウトしました。もう一度お試しください。',
   },
   zh: {
     buttonText: '反馈问题',
@@ -122,6 +126,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     networkError: '网络错误，请检查连接后重试。',
     descriptionRequired: '请输入问题描述。',
     submitError: '提交失败，请重试。',
+    timeoutError: '请求超时，请重试。',
   },
   es: {
     buttonText: 'Reportar problema',
@@ -143,6 +148,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     networkError: 'Error de red. Por favor, verifica tu conexión e inténtalo de nuevo.',
     descriptionRequired: 'Por favor, proporciona una descripción del problema.',
     submitError: 'Error al enviar el reporte. Por favor, inténtalo de nuevo.',
+    timeoutError: 'La solicitud ha expirado. Por favor, inténtalo de nuevo.',
   },
 };
 

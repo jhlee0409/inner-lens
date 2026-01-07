@@ -720,6 +720,7 @@ export class InnerLensCore {
           id="inner-lens-description"
           placeholder="${this.escapeHtml(t.placeholder)}"
           style="${this.styleToString(styles.textarea)}"
+          maxlength="10000"
           aria-required="true"
           ${hasError ? 'aria-invalid="true" aria-describedby="inner-lens-error"' : ''}
         >${this.escapeHtml(this.description)}</textarea>
@@ -915,13 +916,19 @@ export class InnerLensCore {
         },
       };
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
       const response = await fetch(this.config.endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       const data = (await response.json()) as BugReportResponse;
 
@@ -961,13 +968,19 @@ export class InnerLensCore {
       const err = error instanceof Error ? error : new Error(String(error));
       this.submissionState = 'error';
       
+      const texts = this.getTexts();
+      const isTimeoutError = err.name === 'AbortError';
       const networkErrorPatterns = ['fetch', 'network', 'Network', 'NetworkError'];
       const isNetworkError = err.name === 'TypeError' || 
         networkErrorPatterns.some(pattern => err.message.includes(pattern));
       
-      this.errorMessage = isNetworkError 
-        ? this.getTexts().networkError 
-        : err.message;
+      if (isTimeoutError) {
+        this.errorMessage = texts.timeoutError;
+      } else if (isNetworkError) {
+        this.errorMessage = texts.networkError;
+      } else {
+        this.errorMessage = err.message;
+      }
       
       this.config.onError?.(err);
     }
