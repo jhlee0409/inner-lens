@@ -22,6 +22,10 @@ concurrency:
   group: analyze-issue-${{ github.event.issue.number || inputs.issue_number }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   check:
     name: Check Conditions
