@@ -343,6 +343,18 @@ const InnerLensWidget = dynamic(
 3. 브라우저 개발자 도구(F12) 콘솔에서 에러 메시지 확인
 </details>
 
+<details>
+<summary><b>브라우저 호환성은 어떻게 되나요?</b></summary>
+
+inner-lens는 ES2022를 타겟으로 하며 최신 브라우저에서 작동합니다:
+- Chrome 94+
+- Firefox 93+
+- Safari 15.4+
+- Edge 94+
+
+서버 사이드 기능은 Node.js 18+ 필요.
+</details>
+
 ---
 
 ## 기여
