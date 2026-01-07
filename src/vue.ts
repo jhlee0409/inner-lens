@@ -42,6 +42,13 @@ export type {
   GitHubIssuePayload,
   WidgetLanguage,
   Reporter,
+  UserAction,
+  UserActionType,
+  NavigationEntry,
+  NavigationType,
+  PerformanceSummary,
+  CoreWebVitals,
+  PageContext,
 } from './types';
 
 // Re-export utilities

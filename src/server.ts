@@ -722,6 +722,15 @@ export type {
   BugReportPayload,
   BugReportResponse,
   GitHubIssuePayload,
+  LogEntry,
+  UserAction,
+  UserActionType,
+  NavigationEntry,
+  NavigationType,
+  PerformanceSummary,
+  CoreWebVitals,
+  PageContext,
+  Reporter,
 } from './types';
 
 export { maskSensitiveData, maskSensitiveObject } from './utils/masking';
