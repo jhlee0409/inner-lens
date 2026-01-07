@@ -96,7 +96,7 @@ export default defineConfig([
     target: 'node18',
     noExternal: ['zod', '@octokit/rest'],
   },
-  // Session Replay build (optional, large bundle)
+  // Session Replay build (uses user's rrweb)
   {
     entry: {
       replay: 'src/replay.ts',
@@ -109,7 +109,7 @@ export default defineConfig([
     treeshake: true,
     minify: false,
     target: 'es2022',
-    noExternal: ['rrweb', '@rrweb/types'],
+    external: ['rrweb', '@rrweb/types'],
   },
   // CLI executable build
   {

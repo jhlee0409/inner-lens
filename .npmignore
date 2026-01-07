@@ -21,6 +21,9 @@ node_modules/
 coverage/
 *.tsbuildinfo
 
+# Sourcemaps (not needed in production)
+*.map
+
 # Keep these (via package.json files field):
 # - dist/
 # - README.md
