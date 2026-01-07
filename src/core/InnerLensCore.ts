@@ -934,7 +934,7 @@ export class InnerLensCore {
           throw new Error(texts.rateLimitExceeded);
         }
         throw new Error(
-          data.message || `Failed to submit report (${response.status})`
+          data.message || texts.submitError
         );
       }
 
