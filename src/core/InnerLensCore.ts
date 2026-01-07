@@ -37,13 +37,7 @@ import {
   getPerformanceData,
   stopPerformanceCapture,
 } from '../utils/performance-capture';
-import {
-  startSessionReplay,
-  stopSessionReplay,
-  getSessionReplaySnapshot,
-  compressReplayData,
-  type SessionReplayData,
-} from '../utils/session-replay';
+import type { SessionReplayData } from '../utils/session-replay';
 import { maskSensitiveData } from '../utils/masking';
 import { createStyles, keyframesCSS, type StyleConfig } from '../utils/styles';
 
@@ -279,6 +273,18 @@ export class InnerLensCore {
   private issueUrl: string | null = null;
   private styleElement: HTMLStyleElement | null = null;
   private mounted = false;
+  private sessionReplayModule: typeof import('../utils/session-replay') | null = null;
+
+  private async loadSessionReplayModule() {
+    if (this.sessionReplayModule) return this.sessionReplayModule;
+    try {
+      this.sessionReplayModule = await import('../utils/session-replay');
+      return this.sessionReplayModule;
+    } catch {
+      console.warn('[inner-lens] Session replay requires rrweb. Install with: npm install rrweb');
+      return null;
+    }
+  }
 
   constructor(config: InnerLensCoreConfig = {}) {
     const mergedStyles: StyleConfig = {
@@ -376,10 +382,10 @@ export class InnerLensCore {
 
     // Initialize session replay (async, non-blocking)
     if (this.config.captureSessionReplay) {
-      startSessionReplay({
-        maskInputs: true,
-      }).catch((err) => {
-        console.warn('[inner-lens] Session replay failed to start:', err);
+      this.loadSessionReplayModule().then((mod) => {
+        mod?.startSessionReplay({ maskInputs: true }).catch((err: Error) => {
+          console.warn('[inner-lens] Session replay failed to start:', err);
+        });
       });
     }
 
@@ -422,8 +428,8 @@ export class InnerLensCore {
     if (this.config.capturePerformance) {
       stopPerformanceCapture();
     }
-    if (this.config.captureSessionReplay) {
-      stopSessionReplay();
+    if (this.config.captureSessionReplay && this.sessionReplayModule) {
+      this.sessionReplayModule.stopSessionReplay();
     }
 
     if (this.widgetRoot) {
@@ -467,8 +473,8 @@ export class InnerLensCore {
       };
     }
 
-    if (this.config.captureSessionReplay) {
-      this.sessionReplayData = getSessionReplaySnapshot();
+    if (this.config.captureSessionReplay && this.sessionReplayModule) {
+      this.sessionReplayData = this.sessionReplayModule.getSessionReplaySnapshot();
     }
 
     this.pageContext = this.capturePageContext();
@@ -868,15 +874,14 @@ export class InnerLensCore {
 
       // Prepare session replay data if available
       let sessionReplayBase64: string | undefined;
-      if (this.sessionReplayData && this.sessionReplayData.events.length > 0) {
+      if (this.sessionReplayData && this.sessionReplayData.events.length > 0 && this.sessionReplayModule) {
         try {
-          const compressed = await compressReplayData(this.sessionReplayData);
+          const compressed = await this.sessionReplayModule.compressReplayData(this.sessionReplayData);
           const buffer = await compressed.arrayBuffer();
           sessionReplayBase64 = btoa(
             String.fromCharCode(...new Uint8Array(buffer))
           );
         } catch (error) {
-          // Fallback to uncompressed if compression fails
           console.warn('[inner-lens] Session replay compression failed, using uncompressed:', error);
           sessionReplayBase64 = btoa(
             JSON.stringify(this.sessionReplayData.events)
@@ -942,10 +947,9 @@ export class InnerLensCore {
       if (this.config.captureNavigation) {
         clearCapturedNavigations();
       }
-      if (this.config.captureSessionReplay) {
-        // Stop and restart session replay for fresh recording
-        stopSessionReplay();
-        startSessionReplay({ maskInputs: true }).catch(() => {});
+      if (this.config.captureSessionReplay && this.sessionReplayModule) {
+        this.sessionReplayModule.stopSessionReplay();
+        this.sessionReplayModule.startSessionReplay({ maskInputs: true }).catch(() => {});
       }
 
       this.config.onSuccess?.(data.issueUrl);

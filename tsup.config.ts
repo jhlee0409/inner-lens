@@ -14,6 +14,7 @@ export default defineConfig([
     treeshake: true,
     minify: false,
     target: 'es2022',
+    external: ['rrweb', '@rrweb/types'],
   },
   // React library build (with "use client" directive for Next.js RSC compatibility)
   {
@@ -25,7 +26,7 @@ export default defineConfig([
     splitting: false,
     sourcemap: true,
     clean: false,
-    external: ['react', 'react-dom'],
+    external: ['react', 'react-dom', 'rrweb', '@rrweb/types'],
     treeshake: true,
     minify: false,
     target: 'es2022',
@@ -60,7 +61,7 @@ export default defineConfig([
     splitting: false,
     sourcemap: true,
     clean: false,
-    external: ['vue'],
+    external: ['vue', 'rrweb', '@rrweb/types'],
     treeshake: true,
     minify: false,
     target: 'es2022',
@@ -78,6 +79,7 @@ export default defineConfig([
     treeshake: true,
     minify: false,
     target: 'es2022',
+    external: ['rrweb', '@rrweb/types'],
   },
   // Server library build
   {
@@ -92,6 +94,7 @@ export default defineConfig([
     treeshake: true,
     minify: false,
     target: 'node18',
+    noExternal: ['zod', '@octokit/rest'],
   },
   // Session Replay build (optional, large bundle)
   {
@@ -106,7 +109,7 @@ export default defineConfig([
     treeshake: true,
     minify: false,
     target: 'es2022',
-    external: [], // Bundle rrweb for standalone use
+    noExternal: ['rrweb', '@rrweb/types'],
   },
   // CLI executable build
   {
@@ -121,6 +124,7 @@ export default defineConfig([
     treeshake: true,
     minify: false,
     target: 'node18',
+    noExternal: [/.*/],
     banner: {
       js: '#!/usr/bin/env node',
     },
@@ -139,6 +143,7 @@ export default defineConfig([
     treeshake: true,
     minify: false,
     target: 'node18',
+    noExternal: [/.*/],
     banner: {
       js: '#!/usr/bin/env node',
     },

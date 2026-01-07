@@ -1,6 +1,6 @@
 {
   "name": "inner-lens",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Self-Debugging QA Agent - Universal bug reporting widget with AI-powered analysis for any frontend framework",
   "author": "jack",
   "license": "MIT",
@@ -119,7 +119,8 @@
   "peerDependencies": {
     "react": ">=17.0.0",
     "react-dom": ">=17.0.0",
-    "vue": ">=3.0.0"
+    "vue": ">=3.0.0",
+    "rrweb": ">=2.0.0-alpha.17"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -130,9 +131,13 @@
     },
     "vue": {
       "optional": true
+    },
+    "rrweb": {
+      "optional": true
     }
   },
-  "dependencies": {
+  "dependencies": {},
+  "devDependencies": {
     "@clack/prompts": "^0.11.0",
     "@octokit/app": "^15.0.0",
     "@octokit/rest": "^21.0.2",
@@ -142,9 +147,7 @@
     "commander": "^12.1.0",
     "fs-extra": "^11.2.0",
     "rrweb": "^2.0.0-alpha.17",
-    "zod": "^3.23.8"
-  },
-  "devDependencies": {
+    "zod": "^3.23.8",
     "@ai-sdk/anthropic": "^1.0.0",
     "@ai-sdk/google": "^1.0.0",
     "@ai-sdk/openai": "^1.0.0",
