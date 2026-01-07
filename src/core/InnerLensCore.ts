@@ -851,6 +851,7 @@ export class InnerLensCore {
 
   private async submit(): Promise<void> {
     if (!this.description.trim()) {
+      this.submissionState = 'error';
       this.errorMessage = this.getTexts().descriptionRequired;
       this.render();
       return;
