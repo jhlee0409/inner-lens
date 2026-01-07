@@ -30,6 +30,7 @@ export interface WidgetTexts {
   submitting: string;
   dailyLimitExceeded: string;
   rateLimitExceeded: string;
+  networkError: string;
   descriptionRequired: string;
 }
 
@@ -54,6 +55,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     submitting: 'Sending...',
     dailyLimitExceeded: 'Daily limit reached. Please try again tomorrow.',
     rateLimitExceeded: 'Too many requests. Please wait a moment.',
+    networkError: 'Network error. Please check your connection and try again.',
     descriptionRequired: 'Please provide a description of the issue.',
   },
   ko: {
@@ -73,6 +75,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     submitting: '제보 중...',
     dailyLimitExceeded: '일일 한도에 도달했어요. 내일 다시 시도해주세요.',
     rateLimitExceeded: '요청이 너무 많아요. 잠시 후 다시 시도해주세요.',
+    networkError: '네트워크 오류가 발생했어요. 연결 상태를 확인하고 다시 시도해주세요.',
     descriptionRequired: '문제 설명을 입력해주세요.',
   },
   ja: {
@@ -92,6 +95,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     submitting: '送信中...',
     dailyLimitExceeded: '本日の上限に達しました。明日もう一度お試しください。',
     rateLimitExceeded: 'リクエストが多すぎます。しばらくしてからお試しください。',
+    networkError: 'ネットワークエラーが発生しました。接続を確認してもう一度お試しください。',
     descriptionRequired: '問題の説明を入力してください。',
   },
   zh: {
@@ -111,6 +115,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     submitting: '提交中...',
     dailyLimitExceeded: '今日已达上限，请明天再试。',
     rateLimitExceeded: '请求过于频繁，请稍后再试。',
+    networkError: '网络错误，请检查连接后重试。',
     descriptionRequired: '请输入问题描述。',
   },
   es: {
@@ -130,6 +135,7 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
     submitting: 'Enviando...',
     dailyLimitExceeded: 'Límite diario alcanzado. Por favor, inténtalo mañana.',
     rateLimitExceeded: 'Demasiadas solicitudes. Por favor, espera un momento.',
+    networkError: 'Error de red. Por favor, verifica tu conexión e inténtalo de nuevo.',
     descriptionRequired: 'Por favor, proporciona una descripción del problema.',
   },
 };

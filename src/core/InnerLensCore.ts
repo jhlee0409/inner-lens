@@ -960,7 +960,15 @@ export class InnerLensCore {
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       this.submissionState = 'error';
-      this.errorMessage = err.message;
+      
+      const networkErrorPatterns = ['fetch', 'network', 'Network', 'NetworkError'];
+      const isNetworkError = err.name === 'TypeError' || 
+        networkErrorPatterns.some(pattern => err.message.includes(pattern));
+      
+      this.errorMessage = isNetworkError 
+        ? this.getTexts().networkError 
+        : err.message;
+      
       this.config.onError?.(err);
     }
 
