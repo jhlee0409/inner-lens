@@ -98,6 +98,7 @@ jobs:
     if: needs.check.outputs.should_run == 'run'
     uses: ./.github/workflows/analysis-engine.yml
     with:
+      issue_number: ${{ needs.check.outputs.issue_number }}
       provider: 'google'
       model: 'gemini-2.0-flash-lite'
       max_files: 25
