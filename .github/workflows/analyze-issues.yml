@@ -99,6 +99,7 @@ jobs:
     uses: ./.github/workflows/analysis-engine.yml
     with:
       provider: 'google'
+      model: 'gemini-2.0-flash-lite'
       max_files: 25
       max_tokens: 4000
       language: 'ko'
