@@ -347,8 +347,15 @@ export class InnerLensCore {
     if (this.mounted || this.isHidden()) return;
 
     if (typeof window === 'undefined') {
-      console.warn('InnerLens: Cannot mount in non-browser environment');
+      console.warn('[inner-lens] Cannot mount in non-browser environment');
       return;
+    }
+
+    if (this.config.endpoint === HOSTED_API_ENDPOINT) {
+      const [owner, repo] = (this.config.repository || '').split('/');
+      if (!owner || !repo) {
+        console.warn('[inner-lens] Missing or invalid repository. Expected format: "owner/repo". Bug reports will fail until configured.');
+      }
     }
 
     this.container = container ?? this.config.container ?? document.body;
