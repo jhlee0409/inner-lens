@@ -113,13 +113,14 @@ export const BugReportSchema = z.object({
   url: z.string().url().or(z.string().length(0)),
   userAgent: z.string(),
   timestamp: z.number(),
+  owner: z.string().optional(),
+  repo: z.string().optional(),
   metadata: z
     .object({
       repository: z.string().optional(),
       labels: z.array(z.string()).optional(),
     })
     .optional(),
-  // Extended context fields
   userActions: z.array(UserActionSchema).optional(),
   navigations: z.array(NavigationEntrySchema).optional(),
   performance: PerformanceSummarySchema.optional(),
@@ -537,6 +538,16 @@ export function createExpressHandler(config: IssueCreatorConfig) {
     res: { status: (code: number) => { json: (body: unknown) => void } }
   ): Promise<void> => {
     try {
+      if (req.body === undefined || req.body === null) {
+        res.status(400).json({
+          success: false,
+          message:
+            'Request body is missing. Make sure body-parser middleware is configured. ' +
+            'Example: app.use(express.json())',
+        });
+        return;
+      }
+
       const result = await handleBugReport(req.body, config);
       res.status(result.status).json(result.body);
     } catch (error) {
@@ -569,6 +580,14 @@ export function createFastifyHandler(config: IssueCreatorConfig) {
     reply: { status: (code: number) => { send: (body: unknown) => void } }
   ): Promise<void> => {
     try {
+      if (request.body === undefined || request.body === null) {
+        reply.status(400).send({
+          success: false,
+          message: 'Request body is missing. Ensure Content-Type is application/json.',
+        });
+        return;
+      }
+
       const result = await handleBugReport(request.body, config);
       reply.status(result.status).send(result.body);
     } catch (error) {
@@ -612,6 +631,17 @@ export function createKoaHandler(config: IssueCreatorConfig) {
     body: unknown;
   }): Promise<void> => {
     try {
+      if (ctx.request.body === undefined || ctx.request.body === null) {
+        ctx.status = 400;
+        ctx.body = {
+          success: false,
+          message:
+            'Request body is missing. Make sure koa-bodyparser middleware is configured. ' +
+            'Example: app.use(bodyParser())',
+        };
+        return;
+      }
+
       const result = await handleBugReport(ctx.request.body, config);
       ctx.status = result.status;
       ctx.body = result.body;
