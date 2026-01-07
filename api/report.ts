@@ -251,10 +251,30 @@ function formatIssueBody(payload: HostedBugReportPayload): string {
       ].filter(Boolean).join('\n')
     : null;
 
+  const formattedReporter = payload.reporter
+    ? [
+        `**Name:** ${payload.reporter.name}`,
+        payload.reporter.email ? `**Email:** ${maskSensitiveData(payload.reporter.email)}` : null,
+        payload.reporter.id ? `**ID:** ${payload.reporter.id}` : null,
+      ].filter(Boolean).join(' | ')
+    : null;
+
   let body = `## Bug Report
 
 ${maskedDescription}
+`;
 
+  if (formattedReporter) {
+    body += `
+---
+
+### Reporter
+
+${formattedReporter}
+`;
+  }
+
+  body += `
 ---
 
 ### Environment

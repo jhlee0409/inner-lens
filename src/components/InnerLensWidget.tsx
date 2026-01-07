@@ -136,6 +136,7 @@ export function InnerLensWidget({
   trigger,
   hidden = false,
   disabled = false,
+  reporter,
 }: InnerLensWidgetProps) {
   // Get i18n texts with custom overrides
   const texts = WIDGET_TEXTS[language] ?? WIDGET_TEXTS.en;
@@ -367,6 +368,7 @@ export function InnerLensWidget({
         performance: performance ?? undefined,
         sessionReplay: sessionReplayDataRef.current ?? undefined,
         pageContext: pageContext ?? undefined,
+        reporter,
         metadata: {
           repository,
           labels,
@@ -427,6 +429,7 @@ export function InnerLensWidget({
     captureUserActions,
     captureNavigation,
     captureSessionReplay,
+    reporter,
     onSuccess,
     onError,
   ]);

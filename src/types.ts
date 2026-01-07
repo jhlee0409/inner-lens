@@ -129,6 +129,15 @@ export const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts> = {
 };
 
 /**
+ * Reporter information for bug reports
+ */
+export interface Reporter {
+  name: string;
+  email?: string;
+  id?: string;
+}
+
+/**
  * Configuration for the InnerLens Widget
  */
 export interface InnerLensConfig {
@@ -313,6 +322,8 @@ export interface InnerLensConfig {
    * @default false
    */
   disabled?: boolean;
+
+  reporter?: Reporter;
 }
 
 /**
@@ -484,6 +495,7 @@ export interface BugReportPayload {
   performance?: PerformanceSummary;
   sessionReplay?: string;
   pageContext?: PageContext;
+  reporter?: Reporter;
 }
 
 /**
@@ -556,4 +568,5 @@ export interface HostedBugReportPayload {
   performance?: PerformanceSummary;
   sessionReplay?: string; // Base64 encoded rrweb data
   pageContext?: PageContext;
+  reporter?: Reporter;
 }

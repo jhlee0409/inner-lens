@@ -158,6 +158,10 @@ export const InnerLensWidget = defineComponent({
       type: Boolean,
       default: false,
     },
+    reporter: {
+      type: Object as PropType<{ name: string; email?: string; id?: string }>,
+      default: undefined,
+    },
   },
   emits: ['success', 'error', 'open', 'close'],
   setup(props, { emit }) {
@@ -180,6 +184,7 @@ export const InnerLensWidget = defineComponent({
         language: props.language,
         hidden: props.hidden,
         disabled: props.disabled,
+        reporter: props.reporter,
         onSuccess: (url) => emit('success', url),
         onError: (error) => emit('error', error),
         onOpen: () => emit('open'),

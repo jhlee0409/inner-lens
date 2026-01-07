@@ -32,6 +32,14 @@ interface WidgetTexts {
  */
 declare const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts>;
 /**
+ * Reporter information for bug reports
+ */
+interface Reporter {
+    name: string;
+    email?: string;
+    id?: string;
+}
+/**
  * Captured log entry
  */
 interface LogEntry {
@@ -158,6 +166,7 @@ interface BugReportPayload {
     performance?: PerformanceSummary;
     sessionReplay?: string;
     pageContext?: PageContext;
+    reporter?: Reporter;
 }
 /**
  * Server response from bug report submission
@@ -209,6 +218,7 @@ interface HostedBugReportPayload {
     performance?: PerformanceSummary;
     sessionReplay?: string;
     pageContext?: PageContext;
+    reporter?: Reporter;
 }
 
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -345,9 +355,11 @@ interface InnerLensCoreConfig {
     onClose?: () => void;
     hidden?: boolean;
     disabled?: boolean;
-    /**
-     * Custom container element (defaults to document.body)
-     */
+    reporter?: {
+        name: string;
+        email?: string;
+        id?: string;
+    };
     container?: HTMLElement;
 }
 /**
@@ -488,4 +500,4 @@ declare global {
     }
 }
 
-export { type AIProvider, type BugReportPayload, type BugReportResponse, type CapturedContext, type CoreWebVitals, type GitHubIssuePayload, HOSTED_API_ENDPOINT, type HostedBugReportPayload, InnerLensCore as InnerLens, type InnerLensCoreConfig as InnerLensConfig, type LogEntry, MAX_LOG_ENTRIES, type NavigationEntry, type NavigationType, type PageContext, type PerformanceSummary, type UserAction, type UserActionType, WIDGET_TEXTS, type WidgetLanguage, type WidgetTexts, addCustomLog, clearCapturedLogs, getCapturedLogs, initLogCapture, maskSensitiveData, maskSensitiveObject, restoreConsole, validateMasking };
+export { type AIProvider, type BugReportPayload, type BugReportResponse, type CapturedContext, type CoreWebVitals, type GitHubIssuePayload, HOSTED_API_ENDPOINT, type HostedBugReportPayload, InnerLensCore as InnerLens, type InnerLensCoreConfig as InnerLensConfig, type LogEntry, MAX_LOG_ENTRIES, type NavigationEntry, type NavigationType, type PageContext, type PerformanceSummary, type Reporter, type UserAction, type UserActionType, WIDGET_TEXTS, type WidgetLanguage, type WidgetTexts, addCustomLog, clearCapturedLogs, getCapturedLogs, initLogCapture, maskSensitiveData, maskSensitiveObject, restoreConsole, validateMasking };

@@ -259,6 +259,7 @@ jobs:
 | `captureNavigation` | `boolean` | `true` | 라우트 변경 캡처 |
 | `capturePerformance` | `boolean` | `true` | Core Web Vitals 캡처 |
 | `captureSessionReplay` | `boolean` | `false` | DOM 녹화 활성화 |
+| `reporter` | `object` | `undefined` | 제보자 정보: `{ name, email?, id? }` |
 
 #### 텍스트 커스터마이징
 
@@ -300,6 +301,21 @@ jobs:
 
 // 항상 표시 (기본값)
 <InnerLensWidget repository="owner/repo" />
+```
+
+#### 제보자 정보
+
+인증된 사용자 정보를 버그 리포트에 포함:
+
+```tsx
+<InnerLensWidget 
+  repository="owner/repo"
+  reporter={{
+    name: user.name,           // 필수
+    email: user.email,         // 선택, 자동 마스킹
+    id: user.id,               // 선택
+  }}
+/>
 ```
 
 #### 커스텀 트리거 (React)

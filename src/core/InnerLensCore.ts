@@ -212,9 +212,12 @@ export interface InnerLensCoreConfig {
 
   disabled?: boolean;
 
-  /**
-   * Custom container element (defaults to document.body)
-   */
+  reporter?: {
+    name: string;
+    email?: string;
+    id?: string;
+  };
+
   container?: HTMLElement;
 }
 
@@ -898,7 +901,7 @@ export class InnerLensCore {
         performance: this.performance ?? undefined,
         sessionReplay: sessionReplayBase64,
         pageContext: this.pageContext ?? undefined,
-        // Legacy: keep metadata for backwards compatibility
+        reporter: this.config.reporter,
         metadata: {
           repository: this.config.repository,
           labels: this.config.labels,

@@ -257,7 +257,12 @@ var BugReportSchema = z.object({
   navigations: z.array(NavigationEntrySchema).optional(),
   performance: PerformanceSummarySchema.optional(),
   sessionReplay: z.string().optional(),
-  pageContext: PageContextSchema.optional()
+  pageContext: PageContextSchema.optional(),
+  reporter: z.object({
+    name: z.string(),
+    email: z.string().optional(),
+    id: z.string().optional()
+  }).optional()
 });
 var ERROR_MESSAGES = {
   INVALID_REPO_FORMAT: (repo) => `Invalid repository format: "${repo}". Expected "owner/repo" format (e.g., "jhlee0409/inner-lens"). See: https://github.com/jhlee0409/inner-lens#troubleshooting`,
@@ -315,11 +320,23 @@ ${maskSensitiveData(log.stack)}` : ""}`;
     `**Time on Page:** ${(payload.pageContext.timeOnPage / 1e3).toFixed(1)}s`,
     payload.pageContext.componentStack ? `**Component:** ${payload.pageContext.componentStack}` : null
   ].filter(Boolean).join("\n") : null;
+  const formattedReporter = payload.reporter ? [
+    `**Name:** ${payload.reporter.name}`,
+    payload.reporter.email ? `**Email:** ${maskSensitiveData(payload.reporter.email)}` : null,
+    payload.reporter.id ? `**ID:** ${payload.reporter.id}` : null
+  ].filter(Boolean).join(" | ") : null;
   let issueBody = `## Bug Report
 
 ### Description
 ${maskSensitiveData(payload.description)}
-
+`;
+  if (formattedReporter) {
+    issueBody += `
+### Reporter
+${formattedReporter}
+`;
+  }
+  issueBody += `
 ### Environment
 - **URL:** ${maskSensitiveData(payload.url || "N/A")}
 - **User Agent:** ${payload.userAgent || "N/A"}

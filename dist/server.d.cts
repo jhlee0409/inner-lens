@@ -1,6 +1,14 @@
 import { z } from 'zod';
 
 /**
+ * Reporter information for bug reports
+ */
+interface Reporter {
+    name: string;
+    email?: string;
+    id?: string;
+}
+/**
  * Captured log entry
  */
 interface LogEntry {
@@ -110,6 +118,7 @@ interface BugReportPayload {
     performance?: PerformanceSummary;
     sessionReplay?: string;
     pageContext?: PageContext;
+    reporter?: Reporter;
 }
 /**
  * Server response from bug report submission
@@ -355,6 +364,19 @@ declare const BugReportSchema: z.ZodObject<{
         componentStack?: string | undefined;
         referrer?: string | undefined;
     }>>;
+    reporter: z.ZodOptional<z.ZodObject<{
+        name: z.ZodString;
+        email: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        name: string;
+        email?: string | undefined;
+        id?: string | undefined;
+    }, {
+        name: string;
+        email?: string | undefined;
+        id?: string | undefined;
+    }>>;
 }, "strip", z.ZodTypeAny, {
     timestamp: number;
     description: string;
@@ -418,6 +440,11 @@ declare const BugReportSchema: z.ZodObject<{
         componentStack?: string | undefined;
         referrer?: string | undefined;
     } | undefined;
+    reporter?: {
+        name: string;
+        email?: string | undefined;
+        id?: string | undefined;
+    } | undefined;
 }, {
     timestamp: number;
     description: string;
@@ -480,6 +507,11 @@ declare const BugReportSchema: z.ZodObject<{
         timeOnPage: number;
         componentStack?: string | undefined;
         referrer?: string | undefined;
+    } | undefined;
+    reporter?: {
+        name: string;
+        email?: string | undefined;
+        id?: string | undefined;
     } | undefined;
 }>;
 type ValidatedBugReport = z.infer<typeof BugReportSchema>;

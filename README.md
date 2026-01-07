@@ -267,6 +267,7 @@ Add your API key to **Settings → Secrets and variables → Actions**.
 | `captureNavigation` | `boolean` | `true` | Capture route changes |
 | `capturePerformance` | `boolean` | `true` | Capture Core Web Vitals |
 | `captureSessionReplay` | `boolean` | `false` | Enable DOM recording |
+| `reporter` | `object` | `undefined` | Reporter info: `{ name, email?, id? }` |
 
 #### Text Customization
 
@@ -308,6 +309,21 @@ Add your API key to **Settings → Secrets and variables → Actions**.
 
 // Always visible (default)
 <InnerLensWidget repository="owner/repo" />
+```
+
+#### Reporter Information
+
+Include user info in bug reports (useful for authenticated users):
+
+```tsx
+<InnerLensWidget 
+  repository="owner/repo"
+  reporter={{
+    name: user.name,           // required
+    email: user.email,         // optional, auto-masked
+    id: user.id,               // optional
+  }}
+/>
 ```
 
 #### Custom Trigger (React)

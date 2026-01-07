@@ -11,6 +11,14 @@ type AIProvider = 'anthropic' | 'openai' | 'google';
  */
 type WidgetLanguage = 'en' | 'ko' | 'ja' | 'zh' | 'es';
 /**
+ * Reporter information for bug reports
+ */
+interface Reporter {
+    name: string;
+    email?: string;
+    id?: string;
+}
+/**
  * Configuration for the InnerLens Widget
  */
 interface InnerLensConfig {
@@ -152,6 +160,7 @@ interface InnerLensConfig {
      * @default false
      */
     disabled?: boolean;
+    reporter?: Reporter;
 }
 /**
  * Captured log entry
@@ -263,6 +272,7 @@ interface BugReportPayload {
     performance?: PerformanceSummary;
     sessionReplay?: string;
     pageContext?: PageContext;
+    reporter?: Reporter;
 }
 /**
  * Server response from bug report submission
@@ -421,9 +431,11 @@ interface InnerLensCoreConfig {
     onClose?: () => void;
     hidden?: boolean;
     disabled?: boolean;
-    /**
-     * Custom container element (defaults to document.body)
-     */
+    reporter?: {
+        name: string;
+        email?: string;
+        id?: string;
+    };
     container?: HTMLElement;
 }
 /**
@@ -633,6 +645,14 @@ declare const InnerLensWidget: vue.DefineComponent<vue.ExtractPropTypes<{
         type: BooleanConstructor;
         default: boolean;
     };
+    reporter: {
+        type: PropType<{
+            name: string;
+            email?: string;
+            id?: string;
+        }>;
+        default: undefined;
+    };
 }>, () => vue.VNode<vue.RendererNode, vue.RendererElement, {
     [key: string]: any;
 }>, {}, {}, {}, vue.ComponentOptionsMixin, vue.ComponentOptionsMixin, ("open" | "close" | "success" | "error")[], "open" | "close" | "success" | "error", vue.PublicProps, Readonly<vue.ExtractPropTypes<{
@@ -676,6 +696,14 @@ declare const InnerLensWidget: vue.DefineComponent<vue.ExtractPropTypes<{
         type: BooleanConstructor;
         default: boolean;
     };
+    reporter: {
+        type: PropType<{
+            name: string;
+            email?: string;
+            id?: string;
+        }>;
+        default: undefined;
+    };
 }>> & Readonly<{
     onOpen?: ((...args: any[]) => any) | undefined;
     onClose?: ((...args: any[]) => any) | undefined;
@@ -692,6 +720,11 @@ declare const InnerLensWidget: vue.DefineComponent<vue.ExtractPropTypes<{
     language: "en" | "ko" | "ja" | "zh" | "es";
     hidden: boolean;
     disabled: boolean;
+    reporter: {
+        name: string;
+        email?: string;
+        id?: string;
+    };
 }, {}, {}, {}, string, vue.ComponentProvideOptions, true, {}, any>;
 
 export { type AIProvider, type BugReportPayload, type BugReportResponse, type GitHubIssuePayload, type InnerLensConfig, InnerLensWidget, type LogEntry, type WidgetLanguage, addCustomLog, clearCapturedLogs, getCapturedLogs, initLogCapture, maskSensitiveData, maskSensitiveObject, restoreConsole, useInnerLens, validateMasking };

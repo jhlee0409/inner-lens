@@ -34,6 +34,14 @@ interface WidgetTexts {
  */
 declare const WIDGET_TEXTS: Record<WidgetLanguage, WidgetTexts>;
 /**
+ * Reporter information for bug reports
+ */
+interface Reporter {
+    name: string;
+    email?: string;
+    id?: string;
+}
+/**
  * Configuration for the InnerLens Widget
  */
 interface InnerLensConfig {
@@ -175,6 +183,7 @@ interface InnerLensConfig {
      * @default false
      */
     disabled?: boolean;
+    reporter?: Reporter;
 }
 /**
  * Captured log entry
@@ -303,6 +312,7 @@ interface BugReportPayload {
     performance?: PerformanceSummary;
     sessionReplay?: string;
     pageContext?: PageContext;
+    reporter?: Reporter;
 }
 /**
  * Server response from bug report submission
@@ -354,6 +364,7 @@ interface HostedBugReportPayload {
     performance?: PerformanceSummary;
     sessionReplay?: string;
     pageContext?: PageContext;
+    reporter?: Reporter;
 }
 
 /**
@@ -543,9 +554,11 @@ interface InnerLensCoreConfig {
     onClose?: () => void;
     hidden?: boolean;
     disabled?: boolean;
-    /**
-     * Custom container element (defaults to document.body)
-     */
+    reporter?: {
+        name: string;
+        email?: string;
+        id?: string;
+    };
     container?: HTMLElement;
 }
 /**
@@ -626,4 +639,4 @@ declare class InnerLensCore {
     private getCheckIcon;
 }
 
-export { type AIProvider, type BugReportPayload, type BugReportResponse, type CapturedContext, type CoreWebVitals, type GitHubIssuePayload, HOSTED_API_ENDPOINT, type HostedBugReportPayload, type InnerLensConfig, InnerLensCore, type InnerLensCoreConfig, type LogEntry, MAX_LOG_ENTRIES, type NavigationEntry, type NavigationType, type PageContext, type PerformanceSummary, type UserAction, type UserActionType, WIDGET_TEXTS, type WidgetLanguage, type WidgetTexts, addCustomLog, clearCapturedLogs, getCapturedLogs, initLogCapture, maskSensitiveData, maskSensitiveObject, restoreConsole, validateMasking };
+export { type AIProvider, type BugReportPayload, type BugReportResponse, type CapturedContext, type CoreWebVitals, type GitHubIssuePayload, HOSTED_API_ENDPOINT, type HostedBugReportPayload, type InnerLensConfig, InnerLensCore, type InnerLensCoreConfig, type LogEntry, MAX_LOG_ENTRIES, type NavigationEntry, type NavigationType, type PageContext, type PerformanceSummary, type Reporter, type UserAction, type UserActionType, WIDGET_TEXTS, type WidgetLanguage, type WidgetTexts, addCustomLog, clearCapturedLogs, getCapturedLogs, initLogCapture, maskSensitiveData, maskSensitiveObject, restoreConsole, validateMasking };

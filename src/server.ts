@@ -125,6 +125,11 @@ export const BugReportSchema = z.object({
   performance: PerformanceSummarySchema.optional(),
   sessionReplay: z.string().optional(),
   pageContext: PageContextSchema.optional(),
+  reporter: z.object({
+    name: z.string(),
+    email: z.string().optional(),
+    id: z.string().optional(),
+  }).optional(),
 });
 
 export type ValidatedBugReport = z.infer<typeof BugReportSchema>;
@@ -248,12 +253,30 @@ export async function createGitHubIssue(
       ].filter(Boolean).join('\n')
     : null;
 
+  // Format reporter
+  const formattedReporter = payload.reporter
+    ? [
+        `**Name:** ${payload.reporter.name}`,
+        payload.reporter.email ? `**Email:** ${maskSensitiveData(payload.reporter.email)}` : null,
+        payload.reporter.id ? `**ID:** ${payload.reporter.id}` : null,
+      ].filter(Boolean).join(' | ')
+    : null;
+
   // Create issue body with structured format
   let issueBody = `## Bug Report
 
 ### Description
 ${maskSensitiveData(payload.description)}
+`;
 
+  if (formattedReporter) {
+    issueBody += `
+### Reporter
+${formattedReporter}
+`;
+  }
+
+  issueBody += `
 ### Environment
 - **URL:** ${maskSensitiveData(payload.url || 'N/A')}
 - **User Agent:** ${payload.userAgent || 'N/A'}

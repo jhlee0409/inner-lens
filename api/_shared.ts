@@ -93,6 +93,12 @@ export interface PageContext {
   referrer?: string;
 }
 
+export interface Reporter {
+  name: string;
+  email?: string;
+  id?: string;
+}
+
 export interface HostedBugReportPayload {
   owner: string;
   repo: string;
@@ -108,6 +114,7 @@ export interface HostedBugReportPayload {
   performance?: PerformanceSummary;
   sessionReplay?: string;
   pageContext?: PageContext;
+  reporter?: Reporter;
 }
 
 // ============================================

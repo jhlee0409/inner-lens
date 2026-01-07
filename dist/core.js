@@ -2196,7 +2196,7 @@ var InnerLensCore = class {
         performance: this.performance ?? void 0,
         sessionReplay: sessionReplayBase64,
         pageContext: this.pageContext ?? void 0,
-        // Legacy: keep metadata for backwards compatibility
+        reporter: this.config.reporter,
         metadata: {
           repository: this.config.repository,
           labels: this.config.labels

@@ -10,6 +10,14 @@ type AIProvider = 'anthropic' | 'openai' | 'google';
  */
 type WidgetLanguage = 'en' | 'ko' | 'ja' | 'zh' | 'es';
 /**
+ * Reporter information for bug reports
+ */
+interface Reporter {
+    name: string;
+    email?: string;
+    id?: string;
+}
+/**
  * Configuration for the InnerLens Widget
  */
 interface InnerLensConfig {
@@ -151,6 +159,7 @@ interface InnerLensConfig {
      * @default false
      */
     disabled?: boolean;
+    reporter?: Reporter;
 }
 /**
  * Captured log entry
@@ -262,6 +271,7 @@ interface BugReportPayload {
     performance?: PerformanceSummary;
     sessionReplay?: string;
     pageContext?: PageContext;
+    reporter?: Reporter;
 }
 /**
  * Server response from bug report submission
@@ -288,7 +298,7 @@ interface GitHubIssuePayload {
 
 interface InnerLensWidgetProps extends InnerLensConfig {
 }
-declare function InnerLensWidget({ endpoint, repository, labels, captureConsoleLogs, maxLogEntries, maskSensitiveData: enableMasking, captureUserActions, captureNavigation, capturePerformance, captureSessionReplay, styles: styleConfig, language, position, buttonColor, buttonSize, buttonText, dialogTitle, dialogDescription, submitText, cancelText, successMessage, onSuccess, onError, onOpen, onClose, trigger, hidden, disabled, }: InnerLensWidgetProps): react_jsx_runtime.JSX.Element | null;
+declare function InnerLensWidget({ endpoint, repository, labels, captureConsoleLogs, maxLogEntries, maskSensitiveData: enableMasking, captureUserActions, captureNavigation, capturePerformance, captureSessionReplay, styles: styleConfig, language, position, buttonColor, buttonSize, buttonText, dialogTitle, dialogDescription, submitText, cancelText, successMessage, onSuccess, onError, onOpen, onClose, trigger, hidden, disabled, reporter, }: InnerLensWidgetProps): react_jsx_runtime.JSX.Element | null;
 
 type ButtonSize = 'sm' | 'md' | 'lg';
 interface StyleConfig {
@@ -424,9 +434,11 @@ interface InnerLensCoreConfig {
     onClose?: () => void;
     hidden?: boolean;
     disabled?: boolean;
-    /**
-     * Custom container element (defaults to document.body)
-     */
+    reporter?: {
+        name: string;
+        email?: string;
+        id?: string;
+    };
     container?: HTMLElement;
 }
 /**

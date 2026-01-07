@@ -1754,7 +1754,8 @@ function InnerLensWidget({
   onClose,
   trigger,
   hidden = false,
-  disabled = false
+  disabled = false,
+  reporter
 }) {
   const texts = WIDGET_TEXTS[language] ?? WIDGET_TEXTS.en;
   const t = {
@@ -1952,6 +1953,7 @@ function InnerLensWidget({
         performance: performance2 ?? void 0,
         sessionReplay: sessionReplayDataRef.current ?? void 0,
         pageContext: pageContext ?? void 0,
+        reporter,
         metadata: {
           repository,
           labels
@@ -2005,6 +2007,7 @@ function InnerLensWidget({
     captureUserActions,
     captureNavigation,
     captureSessionReplay,
+    reporter,
     onSuccess,
     onError
   ]);
@@ -2742,7 +2745,7 @@ var InnerLensCore = class {
         performance: this.performance ?? void 0,
         sessionReplay: sessionReplayBase64,
         pageContext: this.pageContext ?? void 0,
-        // Legacy: keep metadata for backwards compatibility
+        reporter: this.config.reporter,
         metadata: {
           repository: this.config.repository,
           labels: this.config.labels

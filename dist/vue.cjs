@@ -2201,7 +2201,7 @@ var InnerLensCore = class {
         performance: this.performance ?? void 0,
         sessionReplay: sessionReplayBase64,
         pageContext: this.pageContext ?? void 0,
-        // Legacy: keep metadata for backwards compatibility
+        reporter: this.config.reporter,
         metadata: {
           repository: this.config.repository,
           labels: this.config.labels
@@ -2364,6 +2364,10 @@ var InnerLensWidget = vue.defineComponent({
     disabled: {
       type: Boolean,
       default: false
+    },
+    reporter: {
+      type: Object,
+      default: void 0
     }
   },
   emits: ["success", "error", "open", "close"],
@@ -2385,6 +2389,7 @@ var InnerLensWidget = vue.defineComponent({
         language: props.language,
         hidden: props.hidden,
         disabled: props.disabled,
+        reporter: props.reporter,
         onSuccess: (url) => emit("success", url),
         onError: (error) => emit("error", error),
         onOpen: () => emit("open"),
