@@ -77,7 +77,10 @@ export function useInnerLens(config: InnerLensCoreConfig = {}) {
   const instance = ref<InnerLensCore | null>(null);
   const isOpen = ref(false);
 
-  onMounted(() => {
+  const createInstance = () => {
+    if (instance.value) {
+      instance.value.unmount();
+    }
     instance.value = new InnerLensCore({
       ...config,
       onOpen: () => {
@@ -90,12 +93,51 @@ export function useInnerLens(config: InnerLensCoreConfig = {}) {
       },
     });
     instance.value.mount();
+  };
+
+  onMounted(() => {
+    createInstance();
   });
 
   onUnmounted(() => {
     instance.value?.unmount();
     instance.value = null;
   });
+
+  watch(
+    () => [
+      config.endpoint,
+      config.repository,
+      config.hidden,
+      config.disabled,
+      config.language,
+      config.captureConsoleLogs,
+      config.maxLogEntries,
+      config.maskSensitiveData,
+      config.captureUserActions,
+      config.captureNavigation,
+      config.capturePerformance,
+      config.captureSessionReplay,
+      config.position,
+      config.buttonColor,
+      config.buttonSize,
+      config.buttonText,
+      config.dialogTitle,
+      config.dialogDescription,
+      config.submitText,
+      config.cancelText,
+      config.successMessage,
+      config.styles?.buttonColor,
+      config.styles?.buttonPosition,
+      config.styles?.buttonSize,
+      config.reporter?.name,
+      config.reporter?.email,
+      config.reporter?.id,
+    ],
+    () => {
+      createInstance();
+    }
+  );
 
   const open = () => {
     instance.value?.open();
