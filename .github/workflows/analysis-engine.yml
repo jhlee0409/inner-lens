@@ -119,9 +119,9 @@ jobs:
           echo '{"name":"inner-lens-analysis","private":true,"type":"module"}' > package.json
           npm install --no-save --prefer-offline \
             ai@~6.0.12 \
-            @ai-sdk/anthropic@~1.2.0 \
-            @ai-sdk/openai@~1.2.0 \
-            @ai-sdk/google@~1.2.0 \
+            @ai-sdk/anthropic@~3.0.0 \
+            @ai-sdk/openai@~3.0.0 \
+            @ai-sdk/google@~3.0.0 \
             @octokit/rest@~21.0.2 \
             zod@~3.25.76 \
             tsx@~4.19.0
