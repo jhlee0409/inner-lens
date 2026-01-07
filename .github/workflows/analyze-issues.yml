@@ -1,14 +1,15 @@
-# Trigger workflow for inner-lens AI Analysis
+# inner-lens AI Analysis - 사용자 템플릿과 동일한 형태로 테스트
 #
-# Two trigger modes:
-# 1. Automatic: When issue is created with 'inner-lens' label
-# 2. Manual: workflow_dispatch for re-analyzing existing issues
+# README.md의 템플릿과 동일하게 외부 참조 사용:
+#   uses: jhlee0409/inner-lens/.github/workflows/analysis-engine.yml@v1
+#
+# workflow_dispatch는 수동 테스트용으로 추가
 
 name: Analyze Issues
 
 on:
   issues:
-    types: [opened]  # Only on issue creation - single event, no duplicates
+    types: [opened]
 
   workflow_dispatch:
     inputs:
@@ -27,82 +28,18 @@ permissions:
   issues: write
 
 jobs:
-  check:
-    name: Check Conditions
-    runs-on: ubuntu-latest
-    outputs:
-      should_run: ${{ steps.check.outputs.result }}
-      issue_number: ${{ steps.check.outputs.issue_number }}
-    steps:
-      - name: Check if should analyze
-        id: check
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        with:
-          script: |
-            // Get issue number from event or input
-            const issueNumber = context.payload.issue?.number || ${{ inputs.issue_number || 0 }};
-
-            if (!issueNumber) {
-              console.log('❌ No issue number provided');
-              return 'skip';
-            }
-
-            // Fetch issue details
-            const { data: issue } = await github.rest.issues.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber
-            });
-
-            const labels = issue.labels.map(l => typeof l === 'string' ? l : l.name);
-
-            // For opened event: check if inner-lens label exists
-            if (context.eventName === 'issues') {
-              if (!labels.includes('inner-lens')) {
-                console.log('⏭️ SKIP: No inner-lens label');
-                return 'skip';
-              }
-            }
-
-            // Skip if already analyzed (unless manual trigger)
-            if (context.eventName !== 'workflow_dispatch') {
-              if (labels.includes('status:analyzed')) {
-                console.log('⏭️ SKIP: Already analyzed');
-                return 'skip';
-              }
-            }
-
-            // Check for existing analysis comment (skip for manual re-run)
-            if (context.eventName !== 'workflow_dispatch') {
-              const { data: comments } = await github.rest.issues.listComments({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                per_page: 100
-              });
-
-              if (comments.some(c => c.body?.includes('## 🔍 inner-lens Analysis'))) {
-                console.log('⏭️ SKIP: Analysis comment already exists');
-                return 'skip';
-              }
-            }
-
-            console.log(`✅ Ready to analyze issue #${issueNumber}`);
-            core.setOutput('issue_number', issueNumber);
-            return 'run';
-          result-encoding: string
-
+  # README 템플릿과 동일한 구조
   analyze:
-    name: Run Analysis
-    needs: check
-    if: needs.check.outputs.should_run == 'run'
-    uses: ./.github/workflows/analysis-engine.yml
+    # issues 이벤트: inner-lens 라벨 체크
+    # workflow_dispatch: 항상 실행
+    if: |
+      github.event_name == 'workflow_dispatch' || 
+      contains(github.event.issue.labels.*.name, 'inner-lens')
+    uses: jhlee0409/inner-lens/.github/workflows/analysis-engine.yml@v1
     with:
-      issue_number: ${{ needs.check.outputs.issue_number }}
+      issue_number: ${{ github.event.issue.number || inputs.issue_number }}
       provider: 'google'
       model: 'gemini-2.0-flash-lite'
-      max_files: 25
-      max_tokens: 4000
       language: 'ko'
     secrets:
       GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
