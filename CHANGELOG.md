@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 30 second fetch timeout to prevent infinite loading state
 - textarea maxlength attribute (10000 chars, matches server validation)
 - Print styles to hide widget when printing page
+- **(Analysis Engine)** web-tree-sitter AST-based code chunking for accurate bracket handling in strings/regex
+- **(Analysis Engine)** Key-name based masking detection for enhanced security
 
 ### Fixed
 - Prevent multiple widget instances from mounting
@@ -30,12 +32,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Vue component props now fully synced with React API
 - Vue `useInnerLens` hook now detects config changes
 - Hardcoded English error messages replaced with i18n texts
+- **(Analysis Engine)** Type annotations now skipped when counting brackets
+- **(Analysis Engine)** Proper tracking of both brackets `[]` and braces `{}` in code chunking
+- **(Analysis Engine)** `const` array/object pattern recognition for better context extraction
+- **(Workflow)** issue_number input type changed to string for job output compatibility
 
 ### Changed
 - Masking pattern ordering optimized (URL patterns processed first to prevent conflicts)
 - Minimum Node.js version bumped to 20 (from 18)
 - Remove misleading 'svelte' keyword (no native Svelte component)
 - Remove `./replay` export (internal use only, use `captureSessionReplay` prop)
+- **(Analysis Engine)** Default AI model changed to `gemini-2.5-flash`
 
 ## [0.3.4] - 2025-01-07
 
