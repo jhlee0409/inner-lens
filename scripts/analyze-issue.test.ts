@@ -3,7 +3,7 @@
  * Added as part of 2025 enhancement to improve analysis accuracy
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Since analyze-issue.ts exports are internal, we'll test the logic by importing
 // the functions we need to expose for testing
@@ -410,5 +410,266 @@ describe('Confidence Calibration', () => {
       expect(result.calibratedConfidence).toBeLessThanOrEqual(70);
       expect(result.penalties.length).toBeGreaterThan(0);
     });
+  });
+});
+
+/**
+ * Tests for Retry Logic and Error Extraction
+ * Testing the withRetry utility and extractErrorDetails helper
+ */
+describe('Error Extraction', () => {
+  // Re-implementing extractErrorDetails for testing (internal function)
+  function extractErrorDetails(error: Error): string | undefined {
+    const details: string[] = [];
+
+    if ('cause' in error && error.cause) {
+      const cause = error.cause as Error;
+      if (cause.name === 'ZodError' && 'issues' in cause) {
+        const issues = (cause as { issues: Array<{ path: (string | number)[]; message: string }> }).issues;
+        details.push('Zod validation failed:');
+        issues.slice(0, 3).forEach((issue) => {
+          details.push(`  - ${issue.path.join('.')}: ${issue.message}`);
+        });
+        if (issues.length > 3) {
+          details.push(`  ... and ${issues.length - 3} more issues`);
+        }
+      } else {
+        details.push(`Cause: ${cause.message || String(cause)}`);
+      }
+    }
+
+    if ('text' in error && typeof (error as { text?: string }).text === 'string') {
+      const text = (error as { text: string }).text;
+      if (text.length > 0) {
+        const preview = text.length > 200 ? text.slice(0, 200) + '...' : text;
+        details.push(`Raw model output: ${preview}`);
+      }
+    }
+
+    if ('finishReason' in error) {
+      details.push(`Finish reason: ${(error as { finishReason: string }).finishReason}`);
+    }
+
+    return details.length > 0 ? details.join('\n') : undefined;
+  }
+
+  it('should return undefined for plain Error', () => {
+    const error = new Error('Simple error');
+    expect(extractErrorDetails(error)).toBeUndefined();
+  });
+
+  it('should extract ZodError issues from cause', () => {
+    const zodError = {
+      name: 'ZodError',
+      message: 'Validation failed',
+      issues: [
+        { path: ['analyses', 0, 'confidence'], message: 'Expected number, received string' },
+        { path: ['severity'], message: 'Invalid enum value' },
+      ],
+    };
+    const error = new Error('Generation failed');
+    (error as Error & { cause: unknown }).cause = zodError;
+
+    const result = extractErrorDetails(error);
+    expect(result).toContain('Zod validation failed:');
+    expect(result).toContain('analyses.0.confidence: Expected number, received string');
+    expect(result).toContain('severity: Invalid enum value');
+  });
+
+  it('should truncate more than 3 Zod issues', () => {
+    const zodError = {
+      name: 'ZodError',
+      message: 'Validation failed',
+      issues: [
+        { path: ['field1'], message: 'Error 1' },
+        { path: ['field2'], message: 'Error 2' },
+        { path: ['field3'], message: 'Error 3' },
+        { path: ['field4'], message: 'Error 4' },
+        { path: ['field5'], message: 'Error 5' },
+      ],
+    };
+    const error = new Error('Generation failed');
+    (error as Error & { cause: unknown }).cause = zodError;
+
+    const result = extractErrorDetails(error);
+    expect(result).toContain('... and 2 more issues');
+    expect(result).not.toContain('field4');
+    expect(result).not.toContain('field5');
+  });
+
+  it('should extract generic cause message', () => {
+    const error = new Error('Outer error');
+    (error as Error & { cause: Error }).cause = new Error('Inner cause message');
+
+    const result = extractErrorDetails(error);
+    expect(result).toBe('Cause: Inner cause message');
+  });
+
+  it('should extract raw text from error', () => {
+    const error = new Error('Parse failed') as Error & { text: string };
+    error.text = 'Some raw model output that could not be parsed';
+
+    const result = extractErrorDetails(error);
+    expect(result).toContain('Raw model output:');
+    expect(result).toContain('Some raw model output');
+  });
+
+  it('should truncate long text to 200 chars', () => {
+    const error = new Error('Parse failed') as Error & { text: string };
+    error.text = 'A'.repeat(300);
+
+    const result = extractErrorDetails(error);
+    expect(result).toContain('...');
+    expect(result!.length).toBeLessThan(250);
+  });
+
+  it('should extract finishReason', () => {
+    const error = new Error('Model stopped') as Error & { finishReason: string };
+    error.finishReason = 'length';
+
+    const result = extractErrorDetails(error);
+    expect(result).toBe('Finish reason: length');
+  });
+
+  it('should combine multiple error details', () => {
+    const error = new Error('Complex error') as Error & { text: string; finishReason: string; cause: Error };
+    error.cause = new Error('Root cause');
+    error.text = 'Partial output';
+    error.finishReason = 'error';
+
+    const result = extractErrorDetails(error);
+    expect(result).toContain('Cause: Root cause');
+    expect(result).toContain('Raw model output: Partial output');
+    expect(result).toContain('Finish reason: error');
+  });
+});
+
+describe('Retry Logic', () => {
+  interface RetryError {
+    attempt: number;
+    error: Error;
+    waitTime?: number;
+  }
+
+  async function withRetry<T>(
+    fn: () => Promise<T>,
+    maxAttempts: number,
+    delayMs: number,
+    onRetry?: (attempt: number, error: Error, waitTime: number) => void
+  ): Promise<T> {
+    const errors: RetryError[] = [];
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        const errorObj = error instanceof Error ? error : new Error(String(error));
+        const waitTime = delayMs * Math.pow(2, attempt - 1);
+        errors.push({ attempt, error: errorObj, waitTime });
+
+        if (attempt < maxAttempts) {
+          onRetry?.(attempt, errorObj, waitTime);
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
+        }
+      }
+    }
+
+    throw errors[errors.length - 1]?.error;
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should succeed on first attempt', async () => {
+    const fn = vi.fn().mockResolvedValue('success');
+
+    const result = await withRetry(fn, 3, 1000);
+
+    expect(result).toBe('success');
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('should retry on failure and succeed', async () => {
+    const fn = vi.fn()
+      .mockRejectedValueOnce(new Error('First fail'))
+      .mockRejectedValueOnce(new Error('Second fail'))
+      .mockResolvedValue('success');
+
+    const promise = withRetry(fn, 3, 100);
+    await vi.runAllTimersAsync();
+    const result = await promise;
+
+    expect(result).toBe('success');
+    expect(fn).toHaveBeenCalledTimes(3);
+  });
+
+  it('should throw after all attempts exhausted', async () => {
+    const fn = vi.fn().mockRejectedValue(new Error('Always fails'));
+
+    let error: Error | undefined;
+    const promise = withRetry(fn, 3, 100).catch((e) => { error = e; });
+    await vi.runAllTimersAsync();
+    await promise;
+
+    expect(error?.message).toBe('Always fails');
+    expect(fn).toHaveBeenCalledTimes(3);
+  });
+
+  it('should use exponential backoff', async () => {
+    const fn = vi.fn()
+      .mockRejectedValueOnce(new Error('Fail 1'))
+      .mockRejectedValueOnce(new Error('Fail 2'))
+      .mockResolvedValue('success');
+
+    const waitTimes: number[] = [];
+    const onRetry = (_attempt: number, _error: Error, waitTime: number) => {
+      waitTimes.push(waitTime);
+    };
+
+    const promise = withRetry(fn, 3, 100, onRetry);
+    await vi.runAllTimersAsync();
+    await promise;
+
+    expect(waitTimes).toEqual([100, 200]);
+  });
+
+  it('should call onRetry callback on each retry', async () => {
+    const fn = vi.fn()
+      .mockRejectedValueOnce(new Error('Fail 1'))
+      .mockRejectedValueOnce(new Error('Fail 2'))
+      .mockResolvedValue('success');
+
+    const onRetry = vi.fn();
+
+    const promise = withRetry(fn, 3, 100, onRetry);
+    await vi.runAllTimersAsync();
+    await promise;
+
+    expect(onRetry).toHaveBeenCalledTimes(2);
+    expect(onRetry).toHaveBeenNthCalledWith(1, 1, expect.any(Error), 100);
+    expect(onRetry).toHaveBeenNthCalledWith(2, 2, expect.any(Error), 200);
+  });
+
+  it('should handle non-Error throws', async () => {
+    const fn = vi.fn().mockRejectedValue('string error');
+
+    let error: Error | undefined;
+    const promise = withRetry(fn, 2, 100).catch((e) => { error = e; });
+    await vi.runAllTimersAsync();
+    await promise;
+
+    expect(error?.message).toBe('string error');
+  });
+
+  it('should respect maxAttempts = 1 (no retries)', async () => {
+    const fn = vi.fn().mockRejectedValue(new Error('Fails'));
+
+    await expect(withRetry(fn, 1, 100)).rejects.toThrow('Fails');
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 });

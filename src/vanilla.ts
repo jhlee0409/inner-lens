@@ -43,14 +43,16 @@ declare global {
 
 // Auto-initialize if config is present on window
 if (typeof window !== 'undefined') {
-  // Make InnerLens available globally
-  import('./core/InnerLensCore').then(({ InnerLensCore }) => {
-    window.InnerLens = InnerLensCore;
+  import('./core/InnerLensCore')
+    .then(({ InnerLensCore }) => {
+      window.InnerLens = InnerLensCore;
 
-    // Auto-mount if config exists
-    if (window.innerLensConfig) {
-      const instance = new InnerLensCore(window.innerLensConfig);
-      instance.mount();
-    }
-  });
+      if (window.innerLensConfig) {
+        const instance = new InnerLensCore(window.innerLensConfig);
+        instance.mount();
+      }
+    })
+    .catch((err) => {
+      console.error('[inner-lens] Failed to load:', err);
+    });
 }
