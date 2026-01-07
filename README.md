@@ -352,7 +352,7 @@ inner-lens targets ES2022 and works with modern browsers:
 - Safari 15.4+
 - Edge 94+
 
-Node.js 18+ is required for server-side features.
+Node.js 20+ is required for server-side features.
 </details>
 
 ---

@@ -352,7 +352,7 @@ inner-lens는 ES2022를 타겟으로 하며 최신 브라우저에서 작동합�
 - Safari 15.4+
 - Edge 94+
 
-서버 사이드 기능은 Node.js 18+ 필요.
+서버 사이드 기능은 Node.js 20+ 필요.
 </details>
 
 ---
