@@ -149,13 +149,86 @@ If you must speculate (due to incomplete information):
 // User Prompt Template
 // ============================================
 
+import type { CorrelationResult } from '../lib/error-correlation.js';
+import type { ParsedBugReport } from '../lib/issue-parser.js';
+
+interface BugContextForPrompt {
+  pageRoute?: string;
+  timeOnPage?: number;
+  triggerAction?: string;
+  triggerConfidence?: number;
+  performance?: Array<{ metric: string; value: number; unit: string; status: string }>;
+  recentActions?: Array<{ timestamp: string; action: string; target: string }>;
+}
+
+function buildBugContextSection(
+  parsedReport?: ParsedBugReport,
+  correlation?: CorrelationResult
+): string {
+  if (!parsedReport && !correlation) return '';
+
+  const ctx: BugContextForPrompt = {};
+
+  if (parsedReport) {
+    ctx.pageRoute = parsedReport.pageContext.route;
+    ctx.timeOnPage = parsedReport.pageContext.timeOnPage;
+    ctx.recentActions = parsedReport.userActions.slice(-5).map(a => ({
+      timestamp: a.timestamp,
+      action: a.action,
+      target: a.target,
+    }));
+  }
+
+  if (correlation) {
+    const firstError = correlation.correlatedErrors[0];
+    if (firstError?.triggerAction) {
+      ctx.triggerAction = `${firstError.triggerAction.action} on ${firstError.triggerAction.target}`;
+      ctx.triggerConfidence = firstError.triggerConfidence;
+    }
+    ctx.performance = correlation.performanceStatus.map(p => ({
+      metric: p.metric,
+      value: p.value,
+      unit: p.unit,
+      status: p.status,
+    }));
+  }
+
+  const lines: string[] = ['## Bug Context (Structured Data)'];
+
+  if (ctx.pageRoute) lines.push(`- **Page Route:** ${ctx.pageRoute}`);
+  if (ctx.timeOnPage) lines.push(`- **Time on Page:** ${ctx.timeOnPage}s`);
+  if (ctx.triggerAction) {
+    lines.push(`- **Likely Trigger Action:** ${ctx.triggerAction} (confidence: ${ctx.triggerConfidence}%)`);
+  }
+
+  if (ctx.performance && ctx.performance.length > 0) {
+    const perfLine = ctx.performance
+      .map(p => `${p.metric}: ${p.value}${p.unit} (${p.status})`)
+      .join(', ');
+    lines.push(`- **Performance Metrics:** ${perfLine}`);
+  }
+
+  if (ctx.recentActions && ctx.recentActions.length > 0) {
+    lines.push(`- **Recent User Actions (last ${ctx.recentActions.length}):**`);
+    ctx.recentActions.forEach((a, i) => {
+      lines.push(`  ${i + 1}. [${a.timestamp}] ${a.action} on \`${a.target}\``);
+    });
+  }
+
+  return lines.join('\n');
+}
+
 function buildUserPrompt(
   title: string,
   body: string,
   codeContext: string,
   keywords: string[],
-  hypotheses?: string[]
+  hypotheses?: string[],
+  parsedReport?: ParsedBugReport,
+  correlation?: CorrelationResult
 ): string {
+  const bugContextSection = buildBugContextSection(parsedReport, correlation);
+
   let prompt = `Analyze this bug report using the Chain-of-Thought methodology:
 
 ## Bug Report
@@ -169,11 +242,11 @@ ${body}
 ### Extracted Keywords
 ${keywords.join(', ')}
 
+${bugContextSection ? `${bugContextSection}\n` : ''}
 ## Code Context
 ${codeContext || 'No relevant code files found in the repository.'}
 `;
 
-  // Include investigator hypotheses if available (L2)
   if (hypotheses && hypotheses.length > 0) {
     prompt += `
 ---
@@ -193,7 +266,8 @@ Please analyze this bug step-by-step following the methodology, then provide you
 IMPORTANT:
 - Include evidence chains with file:line references
 - Calibrate confidence based on evidence quality
-- Check for counter-evidence before concluding`;
+- Check for counter-evidence before concluding
+- Use the Bug Context (page route, trigger action, performance) to narrow down the issue`;
 
   return prompt;
 }
@@ -220,16 +294,16 @@ export const explainerAgent: Agent<ExplainerInput, ExplainerOutput> = {
         throw new Error('Explainer Agent requires a model to be configured');
       }
 
-      // Extract hypotheses from investigator if available
       const hypotheses = investigatorOutput?.data.hypotheses.map(h => h.summary);
 
-      // Build the user prompt
       const userPrompt = buildUserPrompt(
         issueContext.title,
         issueContext.body,
         finderOutput.data.codeContext,
         issueContext.keywords,
-        hypotheses
+        hypotheses,
+        issueContext.parsedReport,
+        issueContext.correlationResult
       );
 
       console.log('   🤖 Generating analysis with LLM...');

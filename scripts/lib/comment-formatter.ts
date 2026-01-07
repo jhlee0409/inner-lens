@@ -8,6 +8,8 @@
 import { getI18n } from './i18n';
 import type { OutputLanguage } from './i18n';
 import type { AIProvider } from './llm-rerank';
+import type { CorrelationResult, PerformanceStatus } from './error-correlation';
+import type { ParsedUserAction } from './issue-parser';
 
 // ============================================
 // Types
@@ -323,4 +325,90 @@ ${options.totalAnalyses && options.totalAnalyses > 1 ? `| ${t.analysis} | ${opti
 </details>
 
 *${t.generatedBy} [inner-lens](https://github.com/jhlee0409/inner-lens). ${t.verifyBeforeApplying}*`;
+}
+
+export interface BugContextOptions {
+  language: OutputLanguage;
+  pageRoute?: string;
+  timeOnPage?: number;
+  triggerAction?: ParsedUserAction;
+  triggerConfidence?: number;
+  performanceStatus?: PerformanceStatus[];
+  userActions?: ParsedUserAction[];
+  maxActionsToShow?: number;
+}
+
+export function formatBugContextSection(
+  correlation: CorrelationResult | undefined,
+  options: BugContextOptions
+): string {
+  if (!correlation) return '';
+
+  const t = getI18n(options.language);
+  const sections: string[] = [];
+
+  const pageRoute = options.pageRoute || 'N/A';
+  const timeOnPage = options.timeOnPage ? `${options.timeOnPage}s` : 'N/A';
+
+  const triggerAction = correlation.correlatedErrors[0]?.triggerAction || options.triggerAction;
+  const triggerConfidence = correlation.correlatedErrors[0]?.triggerConfidence || options.triggerConfidence || 0;
+
+  const perfStatus = options.performanceStatus || correlation.performanceStatus;
+  const actions = options.userActions || [];
+  const maxActions = options.maxActionsToShow || 5;
+
+  let headerLine = `**${t.page}:** \`${pageRoute}\` | **${t.timeOnPage}:** ${timeOnPage}`;
+
+  if (triggerAction && triggerConfidence > 30) {
+    const timeDiff = formatTimeDifference(triggerAction, correlation.correlatedErrors[0]?.errorTimestamp);
+    headerLine += `\n**${t.lastAction}:** ${triggerAction.action} on \`${triggerAction.target}\` (${timeDiff} ${t.beforeError})`;
+  }
+
+  if (perfStatus && perfStatus.length > 0) {
+    const perfLine = perfStatus
+      .map(p => `${p.metric}: ${p.value}${p.unit} ${p.emoji}`)
+      .join(' | ');
+    headerLine += `\n**${t.performance}:** ${perfLine}`;
+  }
+
+  sections.push(headerLine);
+
+  const actionsToShow = actions.slice(-maxActions);
+  if (actionsToShow.length > 0) {
+    const actionLines = actionsToShow.map((action, idx) => {
+      const time = formatTime(action.timestamp);
+      const isTrigger = triggerAction && action.timestamp === triggerAction.timestamp;
+      const marker = isTrigger ? ` ← **${t.trigger}**` : '';
+      return `${idx + 1}. [${time}] ${action.action} on \`${action.target}\`${marker}`;
+    });
+
+    const journeyTitle = t.lastNActions.replace('{n}', String(actionsToShow.length));
+    sections.push(`### 🛤️ ${t.userJourney} (${journeyTitle})\n${actionLines.join('\n')}`);
+  } else {
+    sections.push(`### 🛤️ ${t.userJourney}\n_${t.noActionsRecorded}_`);
+  }
+
+  return `### 📍 ${t.bugContext}\n\n${sections.join('\n\n')}`;
+}
+
+function formatTime(timestamp: string): string {
+  try {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('en-US', { hour12: false });
+  } catch {
+    return timestamp;
+  }
+}
+
+function formatTimeDifference(action: ParsedUserAction, errorTime: Date | null | undefined): string {
+  if (!errorTime) return '?s';
+
+  try {
+    const actionTime = new Date(action.timestamp);
+    const diffMs = errorTime.getTime() - actionTime.getTime();
+    const diffSec = Math.round(diffMs / 1000);
+    return `${diffSec}s`;
+  } catch {
+    return '?s';
+  }
 }

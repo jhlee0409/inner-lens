@@ -10,6 +10,8 @@
 
 import type { LanguageModelV1 } from 'ai';
 import { z } from 'zod';
+import type { ParsedBugReport } from '../lib/issue-parser.js';
+import type { CorrelationResult } from '../lib/error-correlation.js';
 
 // ============================================
 // Issue Context (Input from GitHub)
@@ -62,9 +64,6 @@ export interface CallGraphNode {
   lines: { start: number; end: number };
 }
 
-/**
- * Initial context extracted from GitHub issue
- */
 export interface IssueContext {
   title: string;
   body: string;
@@ -74,6 +73,8 @@ export interface IssueContext {
   keywords: string[];
   errorLocations: ErrorLocation[];
   errorMessages: string[];
+  parsedReport?: ParsedBugReport;
+  correlationResult?: CorrelationResult;
 }
 
 // ============================================

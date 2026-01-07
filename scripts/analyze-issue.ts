@@ -59,6 +59,17 @@ import {
   type VerificationContext,
   type AnalysisToVerify,
   type HallucinationCheckResult,
+  // Issue Parser
+  type ParsedBugReport,
+  parseBugReport,
+  extractSearchKeywords,
+  inferCategoryFromPerformance,
+  buildOptimizedContext,
+  isInnerLensBugReport,
+  // DOM Extractor
+  extractDOMContext,
+  formatDOMContextForLLM,
+  decompressSessionReplay,
 } from './lib/index.js';
 
 // ============================================
@@ -784,6 +795,30 @@ async function analyzeIssue(): Promise<void> {
   console.log('\n🔑 Step 2: Extracting context...');
 
   const issueText = `${issue.title} ${issue.body || ''}`;
+  const isStructuredReport = isInnerLensBugReport(maskedBody);
+
+  let parsedReport: ParsedBugReport | null = null;
+  let categoryHint: string | null = null;
+
+  if (isStructuredReport) {
+    console.log('   📋 Detected inner-lens structured bug report');
+    parsedReport = parseBugReport(maskedBody);
+
+    if (parsedReport.pageContext.route) {
+      console.log(`   📍 Page Route: ${parsedReport.pageContext.route}`);
+    }
+    if (parsedReport.userActions.length > 0) {
+      console.log(`   🖱️ User Actions: ${parsedReport.userActions.length} captured`);
+    }
+    if (parsedReport.sessionReplay.hasData) {
+      console.log(`   📹 Session Replay: ${parsedReport.sessionReplay.sizeKB}KB (excluded from LLM context)`);
+    }
+
+    categoryHint = inferCategoryFromPerformance(parsedReport.performance);
+    if (categoryHint) {
+      console.log(`   ⚡ Performance hint: likely ${categoryHint} issue`);
+    }
+  }
 
   // 2a. Extract error locations from stack traces
   const errorLocations = extractErrorLocations(issueText);
@@ -805,9 +840,15 @@ async function analyzeIssue(): Promise<void> {
     });
   }
 
-  // 2c. Extract general keywords
-  const keywords = extractKeywords(issueText);
-  console.log(`   🔤 Found ${keywords.length} keywords: ${keywords.slice(0, 5).join(', ')}...`);
+  // 2c. Extract general keywords + enhanced keywords from parsed report
+  let keywords = extractKeywords(issueText);
+  if (parsedReport) {
+    const enhancedKeywords = extractSearchKeywords(parsedReport);
+    keywords = [...new Set([...keywords, ...enhancedKeywords])];
+    console.log(`   🔤 Keywords enhanced: ${keywords.length} total (${enhancedKeywords.length} from structured data)`);
+  } else {
+    console.log(`   🔤 Found ${keywords.length} keywords: ${keywords.slice(0, 5).join(', ')}...`);
+  }
 
   // Step 3: Find relevant files using enhanced search
   console.log('\n📂 Step 3: Finding relevant files...');
@@ -893,7 +934,15 @@ async function analyzeIssue(): Promise<void> {
   console.log('\n🤖 Step 5: Generating AI analysis...');
   const model = getModel();
 
-  const userPrompt = USER_PROMPT_TEMPLATE(maskedTitle, maskedBody, codeContext, keywords);
+  const optimizedIssueBody = parsedReport
+    ? buildOptimizedContext(parsedReport)
+    : maskedBody;
+
+  if (parsedReport && parsedReport.sessionReplay.hasData) {
+    console.log(`   📊 Session replay data (${parsedReport.sessionReplay.sizeKB}KB) excluded from LLM context`);
+  }
+
+  const userPrompt = USER_PROMPT_TEMPLATE(maskedTitle, optimizedIssueBody, codeContext, keywords);
 
   // Single analysis generation function
   const generateAnalysis = async (): Promise<AnalysisResult> => {

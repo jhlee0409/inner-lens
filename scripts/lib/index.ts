@@ -87,3 +87,32 @@ export {
   applyHallucinationPenalty,
   formatHallucinationReport,
 } from './hallucination-check';
+
+// Issue Parser
+export {
+  type ParsedBugReport,
+  type ParsedEnvironment,
+  type ParsedPageContext,
+  type ParsedPerformance,
+  type ParsedUserAction,
+  type ParsedNavigation,
+  type ParsedConsoleLog,
+  type ParsedMetadata,
+  type ParsedSessionReplay,
+  parseBugReport,
+  extractSearchKeywords,
+  inferCategoryFromPerformance,
+  buildOptimizedContext,
+  isInnerLensBugReport,
+} from './issue-parser';
+
+// DOM Extractor
+export {
+  type DOMContext,
+  type SimplifiedElement,
+  type FormContext,
+  type FormInput,
+  extractDOMContext,
+  formatDOMContextForLLM,
+  decompressSessionReplay,
+} from './dom-extractor';
