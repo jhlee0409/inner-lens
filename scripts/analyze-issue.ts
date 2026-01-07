@@ -600,29 +600,78 @@ Please analyze this bug step-by-step following the methodology, then provide you
 // Retry Logic
 // ============================================
 
+interface RetryError {
+  attempt: number;
+  error: Error;
+  details?: string;
+}
+
+function extractErrorDetails(error: Error): string | undefined {
+  const details: string[] = [];
+
+  if ('cause' in error && error.cause) {
+    const cause = error.cause as Error;
+    if (cause.name === 'ZodError' && 'issues' in cause) {
+      const issues = (cause as { issues: Array<{ path: (string | number)[]; message: string }> }).issues;
+      details.push('Zod validation failed:');
+      issues.slice(0, 3).forEach((issue) => {
+        details.push(`  - ${issue.path.join('.')}: ${issue.message}`);
+      });
+      if (issues.length > 3) {
+        details.push(`  ... and ${issues.length - 3} more issues`);
+      }
+    } else {
+      details.push(`Cause: ${cause.message || String(cause)}`);
+    }
+  }
+
+  if ('text' in error && typeof (error as { text?: string }).text === 'string') {
+    const text = (error as { text: string }).text;
+    if (text.length > 0) {
+      const preview = text.length > 200 ? text.slice(0, 200) + '...' : text;
+      details.push(`Raw model output: ${preview}`);
+    }
+  }
+
+  if ('finishReason' in error) {
+    details.push(`Finish reason: ${(error as { finishReason: string }).finishReason}`);
+  }
+
+  return details.length > 0 ? details.join('\n') : undefined;
+}
+
 async function withRetry<T>(
   fn: () => Promise<T>,
   maxAttempts: number,
   delayMs: number
 ): Promise<T> {
-  let lastError: Error | undefined;
+  const errors: RetryError[] = [];
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await fn();
     } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      console.log(`⚠️ Attempt ${attempt}/${maxAttempts} failed: ${lastError.message}`);
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      const details = extractErrorDetails(errorObj);
+      errors.push({ attempt, error: errorObj, details });
 
       if (attempt < maxAttempts) {
-        const waitTime = delayMs * Math.pow(2, attempt - 1); // Exponential backoff
-        console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+        const waitTime = delayMs * Math.pow(2, attempt - 1);
+        process.stdout.write(`   ⚠️ Attempt ${attempt}/${maxAttempts} failed, retrying in ${waitTime}ms...\n`);
         await new Promise((resolve) => setTimeout(resolve, waitTime));
       }
     }
   }
 
-  throw lastError;
+  console.log(`\n   ❌ All ${maxAttempts} attempts failed:`);
+  errors.forEach(({ attempt, error, details }) => {
+    console.log(`      [Attempt ${attempt}] ${error.message}`);
+    if (details) {
+      details.split('\n').forEach(line => console.log(`         ${line}`));
+    }
+  });
+
+  throw errors[errors.length - 1]?.error;
 }
 
 // ============================================
@@ -889,7 +938,8 @@ async function analyzeIssue(): Promise<void> {
   relevantFiles = await rerankFilesWithLLM(
     relevantFiles,
     maskedTitle,
-    maskedBody
+    maskedBody,
+    config.provider
   );
   const afterRerank = relevantFiles.slice(0, 5).map(f => f.path);
 
