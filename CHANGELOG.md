@@ -13,9 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Browser compatibility FAQ in README
 - User-friendly network error messages (i18n for all languages)
 - `.nvmrc` file for consistent development environment
-- `submitError` and `timeoutError` i18n messages for all 5 languages
+- `submitError`, `timeoutError`, `repositoryNotConfigured` i18n messages for all 5 languages
 - 30 second fetch timeout to prevent infinite loading state
 - textarea maxlength attribute (10000 chars, matches server validation)
+- Print styles to hide widget when printing page
 
 ### Fixed
 - Memory leak in log-capture module
@@ -23,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Quality improvements from feedback loop
 - Vue component props now fully synced with React API
 - Vue `useInnerLens` hook now detects config changes
-- Hardcoded English error message replaced with i18n text
+- Hardcoded English error messages replaced with i18n texts
 
 ### Changed
 - Minimum Node.js version bumped to 20 (from 18)
