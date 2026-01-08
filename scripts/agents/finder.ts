@@ -25,6 +25,8 @@ import type {
   CodeChunk,
   ErrorLocation,
   CallGraphNode,
+  ExtractedIntent,
+  InferredFile,
 } from './types.js';
 
 // Import analysis utilities
@@ -651,6 +653,194 @@ function buildLineContext(
 }
 
 // ============================================
+// Intent Extraction (Language-Agnostic)
+// ============================================
+
+function getProjectFileTree(baseDir: string, maxDepth = 4, maxFiles = 200): string {
+  const files: string[] = [];
+  const ignoreDirs = ['node_modules', '.git', 'dist', 'build', '.next', 'coverage', '__pycache__', 'vendor', '.cache'];
+  const relevantExtensions = ['.ts', '.tsx', '.js', '.jsx', '.vue', '.svelte', '.py', '.go', '.rs', '.java', '.kt'];
+
+  function walk(dir: string, depth: number, prefix: string): void {
+    if (depth > maxDepth || files.length >= maxFiles) return;
+
+    try {
+      const items = fs.readdirSync(dir, { withFileTypes: true })
+        .filter(item => !item.name.startsWith('.') && !ignoreDirs.includes(item.name))
+        .sort((a, b) => {
+          if (a.isDirectory() && !b.isDirectory()) return -1;
+          if (!a.isDirectory() && b.isDirectory()) return 1;
+          return a.name.localeCompare(b.name);
+        });
+
+      for (const item of items) {
+        if (files.length >= maxFiles) return;
+
+        const relativePath = path.join(prefix, item.name);
+        if (item.isDirectory()) {
+          files.push(`${relativePath}/`);
+          walk(path.join(dir, item.name), depth + 1, relativePath);
+        } else if (relevantExtensions.some(ext => item.name.endsWith(ext))) {
+          files.push(relativePath);
+        }
+      }
+    } catch {
+      // skip unreadable directories
+    }
+  }
+
+  walk(baseDir, 0, '');
+  return files.join('\n');
+}
+
+async function extractIntentWithLLM(
+  title: string,
+  body: string,
+  config?: AgentConfig
+): Promise<ExtractedIntent | null> {
+  if (!config?.model) return null;
+
+  const prompt = `Analyze this bug report and extract the user's intent. The report may be in ANY language - you must understand it regardless of language.
+
+## Bug Report
+**Title:** ${title}
+**Description:**
+${body.slice(0, 3000)}
+
+## Task
+Extract the following information. ALWAYS respond in English for code-searchable terms.
+
+Output a JSON object with these fields:
+- userAction: What the user was trying to do (in English, e.g., "click capture button", "submit form")
+- expectedBehavior: What they expected to happen (in English)
+- actualBehavior: What actually happened (in English)
+- inferredFeatures: Array of feature/component names that might be involved (in English, use common programming terms like "CaptureButton", "ScreenshotHandler", "onClick handler")
+- inferredFileTypes: Array of file types to search (e.g., "button component", "capture utility", "page component", "click handler")
+- uiElements: Array of UI elements mentioned or implied (e.g., "button", "form", "modal", "dialog")
+- errorPatterns: Array of any error patterns detected, even if vague (e.g., "no response", "silent failure", "nothing happens")
+- pageContext: The page/route context if mentioned (e.g., "/shortform", "/settings")
+- confidence: Your confidence in this extraction (0-100)
+
+IMPORTANT:
+- Translate non-English descriptions to understand intent
+- Convert user's terms to likely code equivalents (e.g., "캡쳐버튼" -> "CaptureButton", "capture button")
+- Be creative in inferring what code components might be involved
+- Output ONLY valid JSON, no markdown`;
+
+  try {
+    const { text } = await generateText({
+      model: config.model,
+      prompt,
+      maxTokens: 1000,
+      temperature: 0.2,
+    });
+
+    let cleanText = text.trim();
+    if (cleanText.startsWith('```')) {
+      cleanText = cleanText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    }
+    return JSON.parse(cleanText) as ExtractedIntent;
+  } catch (error) {
+    console.log(`   ⚠️ Intent extraction failed: ${error instanceof Error ? error.message : 'unknown'}`);
+    return null;
+  }
+}
+
+async function inferFilesWithLLM(
+  intent: ExtractedIntent,
+  fileTree: string,
+  config?: AgentConfig
+): Promise<InferredFile[]> {
+  if (!config?.model) return [];
+
+  const prompt = `Given this extracted intent and project file structure, identify the most relevant files to investigate.
+
+## User Intent
+- Action: ${intent.userAction}
+- Expected: ${intent.expectedBehavior}
+- Actual: ${intent.actualBehavior}
+- Inferred Features: ${intent.inferredFeatures.join(', ')}
+- Inferred File Types: ${intent.inferredFileTypes.join(', ')}
+- UI Elements: ${intent.uiElements.join(', ')}
+- Page Context: ${intent.pageContext || 'unknown'}
+
+## Project Files
+${fileTree}
+
+## Task
+Identify files that are most likely related to this bug. Consider:
+1. Files matching inferred feature names (e.g., "Capture" in name for capture-related bugs)
+2. Files in directories matching the page context (e.g., /shortform/ for shortform page bugs)
+3. Component files for mentioned UI elements (e.g., Button.tsx for button issues)
+4. Handler/hook files for the functionality (e.g., useCapture.ts, handleClick.ts)
+5. Page files for route-related issues
+
+Output a JSON array of objects with:
+- path: The file path from the list above
+- reason: Why this file is relevant (brief)
+- relevanceScore: 0-100 score
+
+Return top 15 most relevant files, ordered by relevanceScore descending.
+Output ONLY valid JSON array, no markdown.`;
+
+  try {
+    const { text } = await generateText({
+      model: config.model,
+      prompt,
+      maxTokens: 1500,
+      temperature: 0.2,
+    });
+
+    let cleanText = text.trim();
+    if (cleanText.startsWith('```')) {
+      cleanText = cleanText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    }
+    return JSON.parse(cleanText) as InferredFile[];
+  } catch (error) {
+    console.log(`   ⚠️ File inference failed: ${error instanceof Error ? error.message : 'unknown'}`);
+    return [];
+  }
+}
+
+function mergeInferredWithDiscovered(
+  inferredFiles: InferredFile[],
+  discoveredFiles: FileInfo[],
+  baseDir: string
+): FileInfo[] {
+  const fileMap = new Map<string, FileInfo>();
+
+  for (const file of discoveredFiles) {
+    fileMap.set(file.path, file);
+  }
+
+  for (const inferred of inferredFiles) {
+    const fullPath = path.join(baseDir, inferred.path);
+    const existing = fileMap.get(fullPath);
+
+    if (existing) {
+      existing.relevanceScore += inferred.relevanceScore;
+      existing.matchedKeywords.push(`llm-inferred:${inferred.reason.slice(0, 30)}`);
+    } else {
+      try {
+        const stats = fs.statSync(fullPath);
+        fileMap.set(fullPath, {
+          path: fullPath,
+          size: stats.size,
+          relevanceScore: inferred.relevanceScore * 2,
+          pathScore: 0,
+          contentScore: 0,
+          matchedKeywords: [`llm-inferred:${inferred.reason.slice(0, 30)}`],
+        });
+      } catch {
+        // file doesn't exist, skip
+      }
+    }
+  }
+
+  return Array.from(fileMap.values()).sort((a, b) => b.relevanceScore - a.relevanceScore);
+}
+
+// ============================================
 // LLM Re-ranking
 // ============================================
 
@@ -801,7 +991,7 @@ IMPORTANT: Output ONLY the JSON array, no markdown code blocks or explanation.`;
 
 export const finderAgent: Agent<FinderInput, FinderOutput> = {
   name: 'finder',
-  description: 'Finds relevant files, builds import graph and code chunks, optionally with call graph (L2)',
+  description: 'Intent-first file discovery with LLM-powered semantic search',
   requiredLevel: 1,
 
   async execute(input: FinderInput, config?: AgentConfig): Promise<FinderOutput> {
@@ -810,21 +1000,52 @@ export const finderAgent: Agent<FinderInput, FinderOutput> = {
     try {
       const { issueContext, level, baseDir, maxFiles } = input;
 
-      console.log(`\n🔍 Finder Agent (Level ${level}) starting...`);
+      console.log(`\n🔍 Finder Agent (Level ${level}) - Intent-First Mode`);
 
-      // Step 1: Find relevant files
-      console.log('   📂 Finding relevant files...');
+      let extractedIntent: ExtractedIntent | null = null;
+      let inferredFiles: InferredFile[] = [];
+
+      if (config?.model) {
+        console.log('   🧠 Step 1: Extracting user intent with LLM...');
+        extractedIntent = await extractIntentWithLLM(
+          issueContext.title,
+          issueContext.body,
+          config
+        );
+
+        if (extractedIntent) {
+          console.log(`   ✅ Intent extracted (confidence: ${extractedIntent.confidence}%)`);
+          console.log(`      Action: ${extractedIntent.userAction}`);
+          console.log(`      Features: ${extractedIntent.inferredFeatures.slice(0, 5).join(', ')}`);
+
+          console.log('   🗂️  Step 2: LLM-based file inference...');
+          const fileTree = getProjectFileTree(baseDir);
+          inferredFiles = await inferFilesWithLLM(extractedIntent, fileTree, config);
+          console.log(`   ✅ Inferred ${inferredFiles.length} relevant files`);
+        }
+      }
+
+      console.log('   📂 Step 3: Pattern-based file discovery (fallback/complement)...');
+      const allKeywords = extractedIntent
+        ? [...issueContext.keywords, ...extractedIntent.inferredFeatures, ...extractedIntent.uiElements]
+        : issueContext.keywords;
+
       let relevantFiles = findRelevantFiles(
         baseDir,
-        issueContext.keywords,
+        allKeywords,
         issueContext.errorLocations,
         issueContext.errorMessages,
         maxFiles
       );
-      console.log(`   Found ${relevantFiles.length} relevant files`);
+      console.log(`   Found ${relevantFiles.length} files via pattern matching`);
 
-      // Step 2: Build import graph
-      console.log('   🔗 Building import graph...');
+      if (inferredFiles.length > 0) {
+        console.log('   🔀 Step 4: Merging LLM-inferred with pattern-discovered files...');
+        relevantFiles = mergeInferredWithDiscovered(inferredFiles, relevantFiles, baseDir);
+        console.log(`   Merged total: ${relevantFiles.length} unique files`);
+      }
+
+      console.log('   🔗 Step 5: Building import graph...');
       const importGraph = buildImportGraph(relevantFiles, baseDir);
       console.log(`   Parsed imports from ${importGraph.size} files`);
 
@@ -837,9 +1058,8 @@ export const finderAgent: Agent<FinderInput, FinderOutput> = {
         }
       }
 
-      // Step 3: LLM re-ranking (optional)
-      if (config?.model) {
-        console.log('   🎯 LLM re-ranking candidates...');
+      if (config?.model && !extractedIntent) {
+        console.log('   🎯 Step 6: LLM re-ranking (fallback)...');
         relevantFiles = await rerankFilesWithLLM(
           relevantFiles,
           issueContext.title,
@@ -848,12 +1068,15 @@ export const finderAgent: Agent<FinderInput, FinderOutput> = {
         );
       }
 
-      // Step 4: Extract code chunks
-      console.log('   📦 Extracting code chunks...');
+      console.log('   📦 Step 7: Extracting code chunks...');
+      const contextKeywords = extractedIntent
+        ? [...issueContext.keywords, ...extractedIntent.inferredFeatures]
+        : issueContext.keywords;
+
       const { context: chunkedContext, chunks: codeChunks } = buildChunkedContext(
         relevantFiles,
         issueContext.errorLocations,
-        issueContext.keywords
+        contextKeywords
       );
 
       let codeContext: string;
@@ -865,14 +1088,12 @@ export const finderAgent: Agent<FinderInput, FinderOutput> = {
         codeContext = buildLineContext(relevantFiles, issueContext.errorLocations);
       }
 
-      // Step 5: Build call graph (L2 only)
       let callGraph: Map<string, CallGraphNode> | undefined;
       if (level === 2) {
-        console.log('   📊 Building call graph (L2)...');
+        console.log('   📊 Step 8: Building call graph (L2)...');
         callGraph = buildCallGraph(codeChunks);
         console.log(`   Built call graph with ${callGraph.size} nodes`);
 
-        // Find call chains for error functions
         for (const loc of issueContext.errorLocations.slice(0, 3)) {
           if (loc.functionName) {
             const chains = findCallChain(callGraph, loc.functionName);
@@ -891,6 +1112,8 @@ export const finderAgent: Agent<FinderInput, FinderOutput> = {
         success: true,
         duration,
         data: {
+          extractedIntent: extractedIntent ?? undefined,
+          inferredFiles: inferredFiles.length > 0 ? inferredFiles : undefined,
           relevantFiles,
           importGraph,
           codeChunks,
@@ -914,6 +1137,13 @@ export const finderAgent: Agent<FinderInput, FinderOutput> = {
       };
     }
   },
+};
+
+export {
+  extractIntentWithLLM,
+  inferFilesWithLLM,
+  getProjectFileTree,
+  mergeInferredWithDiscovered,
 };
 
 export default finderAgent;

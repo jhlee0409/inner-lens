@@ -143,7 +143,17 @@ If counter-evidence exists, mention it and explain why your conclusion is still 
 If you must speculate (due to incomplete information):
 - Prefix with "⚠️ Speculative:" or similar marker
 - Explain what additional information would confirm/deny the speculation
-- Lower confidence score accordingly`;
+- Lower confidence score accordingly
+
+### Rule 6: Use Extracted Intent (CRITICAL for Non-English Reports)
+When "Extracted User Intent" section is provided:
+- This is the LLM-translated understanding of what the user meant
+- Use "inferredFeatures" to identify which code components to examine
+- Use "expectedBehavior" vs "actualBehavior" to understand the bug
+- The original description might be in ANY language - rely on the extracted intent for understanding
+- "Inferred Features" maps user's terms to likely code equivalents (e.g., "캡쳐버튼" → "CaptureButton")
+- ALWAYS search for and analyze code related to the inferred features
+- If the bug description is vague but intent is clear, prioritize intent-based analysis`;
 
 // ============================================
 // User Prompt Template
@@ -218,6 +228,24 @@ function buildBugContextSection(
   return lines.join('\n');
 }
 
+import type { ExtractedIntent } from './types.js';
+
+function buildIntentSection(intent?: ExtractedIntent): string {
+  if (!intent) return '';
+
+  return `## Extracted User Intent (LLM-analyzed, language-agnostic)
+- **User Action:** ${intent.userAction}
+- **Expected Behavior:** ${intent.expectedBehavior}
+- **Actual Behavior:** ${intent.actualBehavior}
+- **Inferred Features:** ${intent.inferredFeatures.join(', ')}
+- **UI Elements:** ${intent.uiElements.join(', ')}
+- **Error Patterns:** ${intent.errorPatterns.join(', ') || 'None explicit'}
+- **Page Context:** ${intent.pageContext || 'Unknown'}
+- **Intent Extraction Confidence:** ${intent.confidence}%
+
+`;
+}
+
 function buildUserPrompt(
   title: string,
   body: string,
@@ -225,9 +253,11 @@ function buildUserPrompt(
   keywords: string[],
   hypotheses?: string[],
   parsedReport?: ParsedBugReport,
-  correlation?: CorrelationResult
+  correlation?: CorrelationResult,
+  extractedIntent?: ExtractedIntent
 ): string {
   const bugContextSection = buildBugContextSection(parsedReport, correlation);
+  const intentSection = buildIntentSection(extractedIntent);
 
   let prompt = `Analyze this bug report using the Chain-of-Thought methodology:
 
@@ -242,7 +272,7 @@ ${body}
 ### Extracted Keywords
 ${keywords.join(', ')}
 
-${bugContextSection ? `${bugContextSection}\n` : ''}
+${intentSection}${bugContextSection ? `${bugContextSection}\n` : ''}
 ## Code Context
 ${codeContext || 'No relevant code files found in the repository.'}
 `;
@@ -303,7 +333,8 @@ export const explainerAgent: Agent<ExplainerInput, ExplainerOutput> = {
         issueContext.keywords,
         hypotheses,
         issueContext.parsedReport,
-        issueContext.correlationResult
+        issueContext.correlationResult,
+        finderOutput.data.extractedIntent
       );
 
       console.log('   🤖 Generating analysis with LLM...');

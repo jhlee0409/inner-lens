@@ -72,6 +72,14 @@ import {
   decompressSessionReplay,
 } from './lib/index.js';
 
+import {
+  extractIntentWithLLM,
+  inferFilesWithLLM,
+  getProjectFileTree,
+  mergeInferredWithDiscovered,
+} from './agents/finder.js';
+import type { ExtractedIntent, InferredFile } from './agents/types.js';
+
 // ============================================
 // Type Definitions (imported from ./lib/index.js)
 // ============================================
@@ -427,6 +435,16 @@ If you must speculate (due to incomplete information):
 - Explain what additional information would confirm/deny the speculation
 - Lower confidence score accordingly
 
+### Rule 6: Use Extracted User Intent (CRITICAL for Non-English Reports)
+If an "Extracted User Intent" section is provided in the bug report:
+- This section contains LLM-translated understanding of what the user meant
+- Use "Inferred Features/Components" to identify which code to examine
+- Use "Expected Behavior" vs "Actual Behavior" to understand the bug
+- The original description might be in ANY language - rely on extracted intent
+- "Inferred Features" maps user's terms to code equivalents (e.g., "캡쳐버튼" → "CaptureButton")
+- ALWAYS search for code matching inferred features in the Code Context
+- If intent is clear but description is vague, prioritize intent-based analysis
+
 ## MULTIPLE ROOT CAUSES (analyses array)
 
 The output schema supports multiple root cause analyses. Use this when:
@@ -575,8 +593,24 @@ const USER_PROMPT_TEMPLATE = (
   title: string,
   body: string,
   codeContext: string,
-  keywords: string[]
-) => `Analyze this bug report using the Chain-of-Thought methodology:
+  keywords: string[],
+  extractedIntent?: ExtractedIntent | null
+) => {
+  const intentSection = extractedIntent ? `
+## Extracted User Intent (LLM-analyzed from potentially non-English report)
+- **User Action:** ${extractedIntent.userAction}
+- **Expected Behavior:** ${extractedIntent.expectedBehavior}
+- **Actual Behavior:** ${extractedIntent.actualBehavior}
+- **Inferred Features/Components:** ${extractedIntent.inferredFeatures.join(', ')}
+- **UI Elements Involved:** ${extractedIntent.uiElements.join(', ')}
+- **Error Patterns:** ${extractedIntent.errorPatterns.join(', ') || 'None explicit'}
+- **Page Context:** ${extractedIntent.pageContext || 'Unknown'}
+
+**IMPORTANT**: Use the "Inferred Features/Components" above to search for related code in the Code Context.
+The original description may be in any language - rely on this extracted intent for understanding.
+` : '';
+
+  return `Analyze this bug report using the Chain-of-Thought methodology:
 
 ## Bug Report
 
@@ -585,7 +619,7 @@ ${title}
 
 ### Description
 ${body}
-
+${intentSection}
 ### Extracted Keywords
 ${keywords.join(', ')}
 
@@ -595,6 +629,7 @@ ${codeContext || 'No relevant code files found in the repository.'}
 ---
 
 Please analyze this bug step-by-step following the methodology, then provide your structured analysis.`;
+};
 
 // ============================================
 // Retry Logic
@@ -899,10 +934,46 @@ async function analyzeIssue(): Promise<void> {
     console.log(`   🔤 Found ${keywords.length} keywords: ${keywords.slice(0, 5).join(', ')}...`);
   }
 
+  console.log('\n🧠 Step 2.5: Extracting user intent with LLM...');
+  let extractedIntent: ExtractedIntent | null = null;
+  let inferredFiles: InferredFile[] = [];
+
+  const intentModel = getModel();
+  extractedIntent = await extractIntentWithLLM(maskedTitle, maskedBody, { model: intentModel });
+
+  if (extractedIntent) {
+    console.log(`   ✅ Intent extracted (confidence: ${extractedIntent.confidence}%)`);
+    console.log(`      Action: ${extractedIntent.userAction}`);
+    console.log(`      Expected: ${extractedIntent.expectedBehavior}`);
+    console.log(`      Actual: ${extractedIntent.actualBehavior}`);
+    console.log(`      Inferred Features: ${extractedIntent.inferredFeatures.slice(0, 5).join(', ')}`);
+
+    keywords = [...new Set([...keywords, ...extractedIntent.inferredFeatures, ...extractedIntent.uiElements])];
+    console.log(`   🔤 Keywords enhanced with intent: ${keywords.length} total`);
+
+    console.log('\n🗂️  Step 2.6: LLM-based file inference...');
+    const fileTree = getProjectFileTree('.');
+    inferredFiles = await inferFilesWithLLM(extractedIntent, fileTree, { model: intentModel });
+    if (inferredFiles.length > 0) {
+      console.log(`   ✅ Inferred ${inferredFiles.length} relevant files:`);
+      inferredFiles.slice(0, 5).forEach((f, i) => {
+        console.log(`      ${i + 1}. ${f.path} (score: ${f.relevanceScore}) - ${f.reason.slice(0, 50)}`);
+      });
+    }
+  } else {
+    console.log('   ⚠️ Intent extraction failed, falling back to pattern matching');
+  }
+
   // Step 3: Find relevant files using enhanced search
   console.log('\n📂 Step 3: Finding relevant files...');
   let relevantFiles = findRelevantFiles('.', keywords, errorLocations, errorMessages);
-  console.log(`   Found ${relevantFiles.length} relevant files`);
+  console.log(`   Found ${relevantFiles.length} relevant files (pattern-based)`);
+
+  if (inferredFiles.length > 0) {
+    console.log('   🔀 Merging LLM-inferred files with pattern-discovered files...');
+    relevantFiles = mergeInferredWithDiscovered(inferredFiles, relevantFiles, '.');
+    console.log(`   Merged total: ${relevantFiles.length} unique files`);
+  }
 
   if (relevantFiles.length > 0) {
     console.log('   Top 5 by relevance:');
@@ -990,7 +1061,7 @@ async function analyzeIssue(): Promise<void> {
     console.log(`   📊 Session replay data (${parsedReport.sessionReplay.sizeKB}KB) excluded from LLM context`);
   }
 
-  const userPrompt = USER_PROMPT_TEMPLATE(maskedTitle, optimizedIssueBody, codeContext, keywords);
+  const userPrompt = USER_PROMPT_TEMPLATE(maskedTitle, optimizedIssueBody, codeContext, keywords, extractedIntent);
 
   // Single analysis generation function
   const generateAnalysis = async (): Promise<AnalysisResult> => {

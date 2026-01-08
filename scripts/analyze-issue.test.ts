@@ -673,3 +673,187 @@ describe('Retry Logic', () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('Intent Data Flow', () => {
+  interface ExtractedIntent {
+    userAction: string;
+    expectedBehavior: string;
+    actualBehavior: string;
+    inferredFeatures: string[];
+    inferredFileTypes: string[];
+    uiElements: string[];
+    errorPatterns: string[];
+    pageContext?: string;
+    confidence: number;
+  }
+
+  const USER_PROMPT_TEMPLATE = (
+    title: string,
+    body: string,
+    codeContext: string,
+    keywords: string[],
+    extractedIntent?: ExtractedIntent | null
+  ) => {
+    const intentSection = extractedIntent ? `
+## Extracted User Intent (LLM-analyzed from potentially non-English report)
+- **User Action:** ${extractedIntent.userAction}
+- **Expected Behavior:** ${extractedIntent.expectedBehavior}
+- **Actual Behavior:** ${extractedIntent.actualBehavior}
+- **Inferred Features/Components:** ${extractedIntent.inferredFeatures.join(', ')}
+- **UI Elements Involved:** ${extractedIntent.uiElements.join(', ')}
+- **Error Patterns:** ${extractedIntent.errorPatterns.join(', ') || 'None explicit'}
+- **Page Context:** ${extractedIntent.pageContext || 'Unknown'}
+
+**IMPORTANT**: Use the "Inferred Features/Components" above to search for related code in the Code Context.
+The original description may be in any language - rely on this extracted intent for understanding.
+` : '';
+
+    return `Analyze this bug report using the Chain-of-Thought methodology:
+
+## Bug Report
+
+### Title
+${title}
+
+### Description
+${body}
+${intentSection}
+### Extracted Keywords
+${keywords.join(', ')}
+
+## Code Context
+${codeContext || 'No relevant code files found in the repository.'}
+
+---
+
+Please analyze this bug step-by-step following the methodology, then provide your structured analysis.`;
+  };
+
+  it('should include extractedIntent in prompt when provided', () => {
+    const intent: ExtractedIntent = {
+      userAction: 'click capture button',
+      expectedBehavior: 'screenshot should be taken',
+      actualBehavior: 'nothing happens',
+      inferredFeatures: ['CaptureButton', 'ScreenshotHandler', 'onClick'],
+      inferredFileTypes: ['component', 'handler'],
+      uiElements: ['button'],
+      errorPatterns: ['silent failure', 'no response'],
+      pageContext: '/shortform',
+      confidence: 85,
+    };
+
+    const prompt = USER_PROMPT_TEMPLATE(
+      '캡쳐버튼 클릭시 아무런 동작을 안합니다',
+      '숏폼 페이지에서 캡쳐버튼 클릭해도 아무 반응이 없습니다',
+      '// some code context',
+      ['shortform'],
+      intent
+    );
+
+    expect(prompt).toContain('click capture button');
+    expect(prompt).toContain('screenshot should be taken');
+    expect(prompt).toContain('nothing happens');
+    expect(prompt).toContain('CaptureButton');
+    expect(prompt).toContain('ScreenshotHandler');
+    expect(prompt).toContain('/shortform');
+    expect(prompt).toContain('silent failure');
+    expect(prompt).toContain('Extracted User Intent');
+  });
+
+  it('should NOT include intent section when extractedIntent is null', () => {
+    const prompt = USER_PROMPT_TEMPLATE(
+      'Test title',
+      'Test body',
+      '// code',
+      ['keyword'],
+      null
+    );
+
+    expect(prompt).not.toContain('Extracted User Intent');
+    expect(prompt).not.toContain('User Action:');
+  });
+
+  it('should NOT include intent section when extractedIntent is undefined', () => {
+    const prompt = USER_PROMPT_TEMPLATE(
+      'Test title',
+      'Test body',
+      '// code',
+      ['keyword'],
+      undefined
+    );
+
+    expect(prompt).not.toContain('Extracted User Intent');
+  });
+
+  it('should handle empty arrays in extractedIntent', () => {
+    const intent: ExtractedIntent = {
+      userAction: 'click button',
+      expectedBehavior: 'should work',
+      actualBehavior: 'does not work',
+      inferredFeatures: [],
+      inferredFileTypes: [],
+      uiElements: [],
+      errorPatterns: [],
+      confidence: 50,
+    };
+
+    const prompt = USER_PROMPT_TEMPLATE('Title', 'Body', 'Code', [], intent);
+
+    expect(prompt).toContain('Extracted User Intent');
+    expect(prompt).toContain('click button');
+    expect(prompt).toContain('None explicit');
+    expect(prompt).toContain('Unknown');
+  });
+
+  it('should merge inferredFeatures into keywords correctly', () => {
+    const originalKeywords = ['shortform', 'page'];
+    const extractedIntent: ExtractedIntent = {
+      userAction: 'click capture',
+      expectedBehavior: 'capture',
+      actualBehavior: 'nothing',
+      inferredFeatures: ['CaptureButton', 'ScreenshotHandler'],
+      inferredFileTypes: ['component'],
+      uiElements: ['button', 'dialog'],
+      errorPatterns: [],
+      confidence: 80,
+    };
+
+    const mergedKeywords = [...new Set([
+      ...originalKeywords,
+      ...extractedIntent.inferredFeatures,
+      ...extractedIntent.uiElements
+    ])];
+
+    expect(mergedKeywords).toContain('shortform');
+    expect(mergedKeywords).toContain('page');
+    expect(mergedKeywords).toContain('CaptureButton');
+    expect(mergedKeywords).toContain('ScreenshotHandler');
+    expect(mergedKeywords).toContain('button');
+    expect(mergedKeywords).toContain('dialog');
+    expect(mergedKeywords.length).toBe(6);
+  });
+
+  it('should deduplicate keywords when merging', () => {
+    const originalKeywords = ['button', 'capture'];
+    const extractedIntent: ExtractedIntent = {
+      userAction: 'click',
+      expectedBehavior: 'work',
+      actualBehavior: 'fail',
+      inferredFeatures: ['button', 'CaptureButton'],
+      inferredFileTypes: [],
+      uiElements: ['button'],
+      errorPatterns: [],
+      confidence: 70,
+    };
+
+    const mergedKeywords = [...new Set([
+      ...originalKeywords,
+      ...extractedIntent.inferredFeatures,
+      ...extractedIntent.uiElements
+    ])];
+
+    expect(mergedKeywords.filter(k => k === 'button').length).toBe(1);
+    expect(mergedKeywords).toContain('capture');
+    expect(mergedKeywords).toContain('CaptureButton');
+  });
+});

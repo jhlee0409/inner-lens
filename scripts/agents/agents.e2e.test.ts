@@ -31,7 +31,14 @@ import {
   determineLevel,
 } from './orchestrator.js';
 
-import { finderAgent } from './finder.js';
+import { 
+  finderAgent,
+  extractIntentWithLLM,
+  inferFilesWithLLM,
+  getProjectFileTree,
+  mergeInferredWithDiscovered,
+} from './finder.js';
+import type { ExtractedIntent, InferredFile } from './types.js';
 
 // ============================================
 // Test Fixtures: Bug Report Scenarios
@@ -160,6 +167,34 @@ Maybe the chart component? We render ~1000 data points.
     expectedLevel: 2,
     expectedCategory: 'performance',
     expectedSeverity: 'medium',
+  },
+
+  koreanBugReport: {
+    title: '숏폼 페이지에서 캡쳐버튼 클릭시 아무런 동작을 안합니다',
+    body: `
+## Bug Report
+캡쳐버튼 클릭시 아무런 동작을 안합니다
+
+### Environment
+| Field | Value |
+|-------|-------|
+| URL | http://localhost:3000/shortform/youtube_xxx |
+| User Agent | Mozilla/5.0 Chrome/120 |
+
+### Page Context
+Route: /shortform/youtube_xxx
+Title: VISKIT AI
+
+### User Actions (5 events)
+[2026-01-08T01:19:14.482Z] CLICK on button[aria-label="버그 제보"] > svg
+[2026-01-08T01:19:17.068Z] CLICK on div#timeline-player-container > div.relative
+    `,
+    expectedLevel: 2,
+    expectedCategory: 'ui_ux',
+    expectedIntent: {
+      userAction: 'click capture button',
+      inferredFeatures: ['CaptureButton', 'Capture', 'Screenshot', 'onClick'],
+    },
   },
 };
 
@@ -796,5 +831,121 @@ describe('Edge Cases', () => {
     const locations = extractErrorLocations(mixedStackTrace);
 
     expect(locations.length).toBe(3);
+  });
+});
+
+describe('Intent-First Architecture', () => {
+  describe('getProjectFileTree', () => {
+    it('should return file tree as string', () => {
+      const tree = getProjectFileTree('.');
+      
+      expect(typeof tree).toBe('string');
+      expect(tree.length).toBeGreaterThan(0);
+      expect(tree).toContain('.ts');
+    });
+
+    it('should exclude node_modules and dist', () => {
+      const tree = getProjectFileTree('.');
+      
+      expect(tree).not.toContain('node_modules/');
+      expect(tree).not.toContain('dist/');
+    });
+  });
+
+  describe('mergeInferredWithDiscovered', () => {
+    it('should merge inferred files with discovered files', () => {
+      const inferredFiles: InferredFile[] = [
+        { path: 'src/components/Button.tsx', reason: 'button component', relevanceScore: 80 },
+        { path: 'src/utils/capture.ts', reason: 'capture utility', relevanceScore: 90 },
+      ];
+      
+      const discoveredFiles: FileInfo[] = [
+        { path: 'src/components/Button.tsx', size: 100, relevanceScore: 50, pathScore: 30, contentScore: 20, matchedKeywords: ['button'] },
+        { path: 'src/index.ts', size: 50, relevanceScore: 10, pathScore: 10, contentScore: 0, matchedKeywords: [] },
+      ];
+
+      const merged = mergeInferredWithDiscovered(inferredFiles, discoveredFiles, '.');
+      
+      expect(merged.length).toBeGreaterThanOrEqual(2);
+      const buttonFile = merged.find(f => f.path.includes('Button.tsx'));
+      expect(buttonFile).toBeDefined();
+      expect(buttonFile!.relevanceScore).toBeGreaterThan(50);
+    });
+
+    it('should boost score for files found by both methods', () => {
+      const inferredFiles: InferredFile[] = [
+        { path: 'src/test.ts', reason: 'test file', relevanceScore: 70 },
+      ];
+      
+      const discoveredFiles: FileInfo[] = [
+        { path: 'src/test.ts', size: 100, relevanceScore: 30, pathScore: 20, contentScore: 10, matchedKeywords: ['test'] },
+      ];
+
+      const merged = mergeInferredWithDiscovered(inferredFiles, discoveredFiles, '.');
+      const testFile = merged.find(f => f.path.includes('test.ts'));
+      
+      expect(testFile!.relevanceScore).toBeGreaterThan(30);
+      expect(testFile!.matchedKeywords).toContain('test');
+    });
+  });
+
+  describe('extractIntentWithLLM', () => {
+    it('should return null when no model is provided', async () => {
+      const result = await extractIntentWithLLM('title', 'body', undefined);
+      expect(result).toBeNull();
+    });
+
+    it('should return null when model is not in config', async () => {
+      const result = await extractIntentWithLLM('title', 'body', {});
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('inferFilesWithLLM', () => {
+    it('should return empty array when no model is provided', async () => {
+      const intent: ExtractedIntent = {
+        userAction: 'click button',
+        expectedBehavior: 'should capture',
+        actualBehavior: 'nothing happens',
+        inferredFeatures: ['CaptureButton'],
+        inferredFileTypes: ['component'],
+        uiElements: ['button'],
+        errorPatterns: ['no response'],
+        confidence: 80,
+      };
+      
+      const result = await inferFilesWithLLM(intent, 'src/\nindex.ts', undefined);
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('Korean Bug Report Handling', () => {
+    it('should extract context from Korean bug report', () => {
+      const scenario = BUG_REPORT_SCENARIOS.koreanBugReport;
+      const context = buildIssueContext(
+        scenario.title,
+        scenario.body,
+        1,
+        'owner',
+        'repo'
+      );
+
+      expect(context.title).toBe(scenario.title);
+      expect(context.body).toBe(scenario.body);
+    });
+
+    it('should determine level for Korean bug report', () => {
+      const scenario = BUG_REPORT_SCENARIOS.koreanBugReport;
+      const context = buildIssueContext(
+        scenario.title,
+        scenario.body,
+        1,
+        'owner',
+        'repo'
+      );
+
+      const level = determineLevel(context);
+      expect([1, 2]).toContain(level);
+    });
   });
 });

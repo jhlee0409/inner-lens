@@ -141,6 +141,24 @@ export interface Agent<TInput extends AgentInput = AgentInput, TOutput extends A
 // Finder Agent Types
 // ============================================
 
+export interface ExtractedIntent {
+  userAction: string;
+  expectedBehavior: string;
+  actualBehavior: string;
+  inferredFeatures: string[];
+  inferredFileTypes: string[];
+  uiElements: string[];
+  errorPatterns: string[];
+  pageContext?: string;
+  confidence: number;
+}
+
+export interface InferredFile {
+  path: string;
+  reason: string;
+  relevanceScore: number;
+}
+
 export interface FinderInput extends AgentInput {
   baseDir: string;
   maxFiles: number;
@@ -149,10 +167,12 @@ export interface FinderInput extends AgentInput {
 export interface FinderOutput extends AgentOutput {
   agentName: 'finder';
   data: {
+    extractedIntent?: ExtractedIntent;
+    inferredFiles?: InferredFile[];
     relevantFiles: FileInfo[];
     importGraph: Map<string, string[]>;
     codeChunks: CodeChunk[];
-    callGraph?: Map<string, CallGraphNode>; // L2 only
+    callGraph?: Map<string, CallGraphNode>;
     codeContext: string;
   };
 }
