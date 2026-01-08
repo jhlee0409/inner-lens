@@ -1,90 +1,43 @@
-/**
- * inner-lens Analysis Engine v2
- * Enhanced with 2025 best practices:
- * - Chain-of-Thought reasoning
- * - Structured JSON output
- * - Context-aware file selection
- * - Rate limiting with retry
- * - Improved security
- */
-
-import { generateText, generateObject } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { openai } from '@ai-sdk/openai';
 import { google } from '@ai-sdk/google';
 import { Octokit } from '@octokit/rest';
 import { z } from 'zod';
-import * as fs from 'fs';
-import * as path from 'path';
 import { maskSensitiveData } from '../src/utils/masking.js';
 import {
-  // i18n
   type OutputLanguage,
-  type I18nStrings,
   LANGUAGE_NAMES,
-  I18N,
-  getI18n,
   getOutputLanguage,
-  // File Discovery
-  type FileInfo,
   type ErrorLocation,
-  type SearchContext,
   extractErrorLocations,
   extractErrorMessages,
   extractKeywords,
-  searchFileContent,
-  calculatePathRelevance,
-  findRelevantFiles,
-  buildImportGraph,
-  expandFilesWithImports,
-  // Code Chunking
-  buildChunkedContextAsync,
-  buildCodeContext,
-  // Confidence Calibration
   type ConfidenceCalibrationResult,
   calibrateConfidence,
-  // LLM Re-ranking
   type AIProvider,
-  rerankFilesWithLLM,
-  // Comment Formatting
   type FormatOptions,
   DEFAULT_MODELS,
   formatInvalidReportComment,
   formatNonBugReportComment,
   formatRootCauseComment,
-  // Hallucination Check
   checkForHallucinations,
   applyHallucinationPenalty,
   formatHallucinationReport,
   type VerificationContext,
   type AnalysisToVerify,
   type HallucinationCheckResult,
-  // Issue Parser
   type ParsedBugReport,
   parseBugReport,
   extractSearchKeywords,
   inferCategoryFromPerformance,
-  buildOptimizedContext,
   isInnerLensBugReport,
-  // DOM Extractor
-  extractDOMContext,
-  formatDOMContextForLLM,
-  decompressSessionReplay,
 } from './lib/index.js';
-
-import {
-  extractIntentWithLLM,
-  inferFilesWithLLM,
-  getProjectFileTree,
-  mergeInferredWithDiscovered,
-} from './agents/finder.js';
-import type { ExtractedIntent, InferredFile } from './agents/types.js';
 import {
   runP5Analysis,
   getPipelineMode,
   type PipelineConfig,
-  type LegacyAnalysisResult,
 } from './lib/pipeline-adapter.js';
+import type { OrchestratorResult, ExtractedIntent } from './agents/types.js';
 
 // ============================================
 // Type Definitions (imported from ./lib/index.js)
@@ -312,6 +265,55 @@ function calibrateAllAnalyses(
     },
     calibrationReports,
     hallucinationReports,
+  };
+}
+
+function convertP5ToLocalFormat(orchestratorResult: OrchestratorResult): AnalysisResult {
+  const analysis = orchestratorResult.analysis;
+  
+  let reportType: AnalysisResult['reportType'] = 'bug';
+  if (!analysis.isValidReport) {
+    reportType = 'needs_info';
+  } else if (analysis.category === 'invalid_report') {
+    reportType = 'not_a_bug';
+  } else if (analysis.category === 'unknown' && analysis.confidence < 50) {
+    reportType = 'cannot_verify';
+  }
+
+  return {
+    isValidReport: analysis.isValidReport,
+    invalidReason: analysis.isValidReport ? undefined : 'Insufficient information for analysis',
+    reportType,
+    analyses: [{
+      severity: analysis.severity,
+      category: analysis.category,
+      codeVerification: {
+        bugExistsInCode: analysis.isValidReport && analysis.confidence >= 70,
+        evidence: analysis.rootCause.evidenceChain?.join('\n') || analysis.rootCause.explanation,
+      },
+      rootCause: {
+        summary: analysis.rootCause.summary,
+        explanation: analysis.rootCause.explanation,
+        affectedFiles: analysis.rootCause.affectedFiles,
+      },
+      suggestedFix: {
+        steps: analysis.suggestedFix.steps,
+        codeChanges: analysis.suggestedFix.codeChanges.map(c => ({
+          file: c.file,
+          description: c.description,
+          before: c.before,
+          after: c.after,
+        })),
+      },
+      prevention: analysis.prevention,
+      confidence: analysis.confidence,
+      additionalContext: analysis.additionalContext,
+      selfValidation: analysis.selfValidation ?? {
+        counterEvidence: [],
+        assumptions: [],
+        confidenceJustification: 'Inferred from analysis confidence',
+      },
+    }],
   };
 }
 
@@ -1002,7 +1004,7 @@ async function analyzeIssue(): Promise<void> {
     };
 
     try {
-      const { result: p5Analysis, orchestratorResult } = await runP5Analysis(
+      const orchestratorResult = await runP5Analysis(
         maskedTitle,
         maskedBody,
         config.issueNumber,
@@ -1017,19 +1019,19 @@ async function analyzeIssue(): Promise<void> {
       console.log(`      Duration: ${orchestratorResult.totalDuration}ms`);
       console.log(`      Confidence: ${orchestratorResult.analysis.confidence}%`);
 
-      // Apply confidence calibration and hallucination check
+      const localAnalysis = convertP5ToLocalFormat(orchestratorResult);
+
       console.log('\n🔍 Step 5: Applying confidence calibration and hallucination check...');
       const codeContext = orchestratorResult.agentResults.finder?.data.codeContext;
       const relevantFilePaths = orchestratorResult.agentResults.finder?.data.relevantFiles.map(f => f.path);
       
       const { result: calibratedAnalysis, calibrationReports, hallucinationReports } = calibrateAllAnalyses(
-        p5Analysis as unknown as AnalysisResult,
+        localAnalysis,
         errorLocations,
         codeContext,
         relevantFilePaths
       );
 
-      // Log calibration results
       for (const report of calibrationReports) {
         if (report.wasCalibrated) {
           console.log(`   📊 Confidence calibrated: ${report.originalConfidence}% → ${report.calibratedConfidence}%`);
@@ -1041,7 +1043,7 @@ async function analyzeIssue(): Promise<void> {
       }
 
       const filesAnalyzed = orchestratorResult.agentResults.finder?.data.relevantFiles.length ?? 0;
-      await postP5AnalysisComments(octokit, calibratedAnalysis as LegacyAnalysisResult, filesAnalyzed, config);
+      await postP5AnalysisComments(octokit, calibratedAnalysis, filesAnalyzed, config);
 
       console.log('\n✅ P5 Analysis complete!');
       console.log(`🔗 https://github.com/${config.owner}/${config.repo}/issues/${config.issueNumber}`);
@@ -1060,7 +1062,7 @@ async function analyzeIssue(): Promise<void> {
 
 async function postP5AnalysisComments(
   octokit: Octokit,
-  analysis: LegacyAnalysisResult,
+  analysis: AnalysisResult,
   filesAnalyzed: number,
   cfg: AnalysisConfig
 ): Promise<void> {
@@ -1128,7 +1130,7 @@ async function postP5AnalysisComments(
 
 async function addAnalysisLabels(
   octokit: Octokit,
-  analysis: LegacyAnalysisResult,
+  analysis: AnalysisResult,
   cfg: AnalysisConfig
 ): Promise<void> {
   const labelsToAdd: string[] = ['status:analyzed'];

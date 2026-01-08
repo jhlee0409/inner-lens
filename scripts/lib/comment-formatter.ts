@@ -26,7 +26,7 @@ export interface FormatOptions {
 
 /**
  * Minimal interface for RootCauseAnalysis needed for formatting
- * Compatible with Zod-inferred RootCauseAnalysis type
+ * Compatible with both P5 AnalysisResult and legacy types
  */
 export interface RootCauseAnalysisForFormat {
   confidence: number;
@@ -36,6 +36,7 @@ export interface RootCauseAnalysisForFormat {
     summary: string;
     explanation: string;
     affectedFiles: string[];
+    evidenceChain?: string[];
   };
   suggestedFix: {
     steps: string[];
@@ -48,7 +49,8 @@ export interface RootCauseAnalysisForFormat {
   };
   prevention: string[];
   additionalContext?: string;
-  codeVerification: {
+  // Optional for P5 compatibility - derived from confidence when not present
+  codeVerification?: {
     bugExistsInCode: boolean;
     evidence: string;
     alternativeExplanation?: string;

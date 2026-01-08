@@ -7,24 +7,16 @@ describe('analyze-issue.ts Intent Flow Static Analysis', () => {
   const analyzeIssueCode = fs.readFileSync(analyzeIssuePath, 'utf-8');
 
   describe('Import Verification', () => {
-    it('should import extractIntentWithLLM from finder', () => {
-      expect(analyzeIssueCode).toMatch(/import\s*{[^}]*extractIntentWithLLM[^}]*}\s*from\s*['"]\.\/agents\/finder/);
-    });
-
-    it('should import inferFilesWithLLM from finder', () => {
-      expect(analyzeIssueCode).toMatch(/import\s*{[^}]*inferFilesWithLLM[^}]*}\s*from\s*['"]\.\/agents\/finder/);
-    });
-
-    it('should import getProjectFileTree from finder', () => {
-      expect(analyzeIssueCode).toMatch(/import\s*{[^}]*getProjectFileTree[^}]*}\s*from\s*['"]\.\/agents\/finder/);
-    });
-
-    it('should import mergeInferredWithDiscovered from finder', () => {
-      expect(analyzeIssueCode).toMatch(/import\s*{[^}]*mergeInferredWithDiscovered[^}]*}\s*from\s*['"]\.\/agents\/finder/);
-    });
-
     it('should import ExtractedIntent type', () => {
       expect(analyzeIssueCode).toMatch(/import\s*.*ExtractedIntent.*from\s*['"]\.\/agents\/types/);
+    });
+
+    it('should import runP5Analysis from pipeline-adapter', () => {
+      expect(analyzeIssueCode).toMatch(/import\s*{[^}]*runP5Analysis[^}]*}\s*from\s*['"]\.\/lib\/pipeline-adapter/);
+    });
+
+    it('should import OrchestratorResult type', () => {
+      expect(analyzeIssueCode).toMatch(/import\s*.*OrchestratorResult.*from\s*['"]\.\/agents\/types/);
     });
   });
 
