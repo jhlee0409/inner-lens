@@ -528,6 +528,52 @@ npm run typecheck && npm run sync:check && npm run test && npm run build
 
 ---
 
+### npm publish 체크리스트 (BLOCKING)
+
+**버전 배포 시 반드시 모든 항목 완료:**
+
+```bash
+# 1️⃣ 검증
+npm run typecheck && npm run sync:check && npm run test && npm run build
+
+# 2️⃣ CHANGELOG.md 업데이트
+# - 새 버전 섹션 추가 (최상단)
+# - Added/Changed/Fixed 분류
+
+# 3️⃣ 버전 bump
+npm version patch  # 0.4.0 → 0.4.1 (버그 수정, 내부 변경)
+npm version minor  # 0.4.0 → 0.5.0 (새 기능)
+npm version major  # 0.4.0 → 1.0.0 (Breaking changes)
+
+# 4️⃣ 빌드 재확인
+npm run build
+
+# 5️⃣ 커밋 & 푸시
+git add -A && git commit -m "chore: bump version to X.Y.Z" && git push origin main
+
+# 6️⃣ 태그 생성 & 푸시
+git tag vX.Y.Z
+git tag -f v1  # v1 태그 업데이트 (워크플로우에서 참조)
+git push origin vX.Y.Z
+git push origin v1 --force
+
+# 7️⃣ GitHub 릴리즈 생성
+gh release create vX.Y.Z --title "vX.Y.Z" --notes "CHANGELOG 내용"
+
+# 8️⃣ npm publish
+npm publish
+```
+
+| 항목 | 필수 여부 | 설명 |
+|------|:--------:|------|
+| CHANGELOG.md | ✅ | 변경 내역 기록 |
+| 버전 태그 (vX.Y.Z) | ✅ | 버전 추적 |
+| v1 태그 업데이트 | ✅ | 워크플로우 참조용 |
+| GitHub 릴리즈 | ✅ | 릴리즈 노트 공개 |
+| README 업데이트 | 조건부 | 사용자 대면 변경 시만 |
+
+---
+
 ## 코드 규칙
 
 ### ✅ 필수
