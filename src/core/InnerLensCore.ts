@@ -213,6 +213,13 @@ export interface InnerLensCoreConfig {
   };
 
   container?: HTMLElement;
+
+  /**
+   * Git branch name for the deployed environment
+   * Used by analysis engine to checkout the correct code version
+   * @example 'main', 'dev', 'staging'
+   */
+  branch?: string;
 }
 
 type SubmissionState = 'idle' | 'submitting' | 'success' | 'error';
@@ -912,10 +919,9 @@ export class InnerLensCore {
         url: typeof window !== 'undefined' ? window.location.href : '',
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
         timestamp: Date.now(),
-        // Centralized mode: send owner/repo directly
         owner: owner || undefined,
         repo: repo || undefined,
-        // Extended context
+        branch: this.config.branch || undefined,
         userActions: this.userActions.length > 0 ? this.userActions : undefined,
         navigations: this.navigations.length > 0 ? this.navigations : undefined,
         performance: this.performance ?? undefined,

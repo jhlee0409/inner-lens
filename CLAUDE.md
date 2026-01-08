@@ -129,6 +129,7 @@ inner-lens/
 │   ├── vue.ts                    # Vue 엔트리포인트
 │   ├── vanilla.ts                # Vanilla JS 엔트리포인트
 │   ├── replay.ts                 # Session replay 엔트리포인트
+│   ├── build.ts                  # Git 브랜치/환경 감지 유틸리티 ⭐
 │   ├── cli.ts                    # CLI (npx inner-lens init)
 │   └── create.ts                 # create-inner-lens 래퍼
 │
@@ -823,6 +824,13 @@ import {
   handleBugReport,
   maskSensitiveData,
 } from 'inner-lens/server';
+
+// 빌드 유틸리티 (브랜치 트래킹)
+import { 
+  getGitBranch,
+  getGitCommit,
+  getDeploymentInfo,
+} from 'inner-lens/build';
 ```
 
 ---

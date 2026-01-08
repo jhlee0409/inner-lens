@@ -115,6 +115,7 @@ export const BugReportSchema = z.object({
   timestamp: z.number(),
   owner: z.string().optional(),
   repo: z.string().optional(),
+  branch: z.string().optional(),
   metadata: z
     .object({
       repository: z.string().optional(),
@@ -263,12 +264,18 @@ export async function createGitHubIssue(
       ].filter(Boolean).join(' | ')
     : null;
 
-  // Create issue body with structured format
   let issueBody = `## Bug Report
 
 ### Description
 ${maskSensitiveData(payload.description)}
 `;
+
+  if (payload.branch) {
+    issueBody += `
+### Branch
+**${payload.branch}**
+`;
+  }
 
   if (formattedReporter) {
     issueBody += `

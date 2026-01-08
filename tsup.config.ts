@@ -99,6 +99,20 @@ export default defineConfig([
     target: 'node18',
     noExternal: ['zod', '@octokit/rest'],
   },
+  // Build utilities (for git branch injection)
+  {
+    entry: {
+      build: 'src/build.ts',
+    },
+    format: ['esm', 'cjs'],
+    dts: true,
+    splitting: false,
+    sourcemap: true,
+    clean: false,
+    treeshake: true,
+    minify: false,
+    target: 'node18',
+  },
   // Session Replay build (uses user's rrweb)
   {
     entry: {

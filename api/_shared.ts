@@ -118,6 +118,7 @@ export interface HostedBugReportPayload {
   userAgent?: string;
   timestamp?: number;
   metadata?: Record<string, unknown>;
+  branch?: string;
   // Extended context
   userActions?: UserAction[];
   navigations?: NavigationEntry[];
@@ -534,6 +535,7 @@ export const HostedBugReportPayloadSchema = z.object({
   userAgent: z.string().optional(),
   timestamp: z.number().optional(),
   metadata: z.record(z.unknown()).optional(),
+  branch: z.string().optional(),
   userActions: z.array(UserActionSchema).optional(),
   navigations: z.array(NavigationEntrySchema).optional(),
   performance: PerformanceSummarySchema.optional(),
@@ -620,6 +622,10 @@ export function formatIssueBody(payload: HostedBugReportPayload): string {
     : null;
 
   let body = `## Bug Report\n\n${maskedDescription}\n`;
+
+  if (payload.branch) {
+    body += `\n---\n\n### Branch\n\n**${payload.branch}**\n`;
+  }
 
   if (formattedReporter) {
     body += `\n---\n\n### Reporter\n\n${formattedReporter}\n`;

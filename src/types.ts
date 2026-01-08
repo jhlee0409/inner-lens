@@ -184,6 +184,13 @@ export interface InnerLensConfig {
   repository?: string;
 
   /**
+   * Git branch name for the deployed environment
+   * Used by analysis engine to checkout the correct code version
+   * @example 'main', 'dev', 'staging'
+   */
+  branch?: string;
+
+  /**
    * Custom labels to add to created issues
    * @default ['inner-lens']
    */
@@ -530,6 +537,8 @@ export interface BugReportPayload {
   // Centralized mode fields (for inner-lens API)
   owner?: string;
   repo?: string;
+  // Git branch for analysis engine to checkout correct code
+  branch?: string;
   // Extended context
   userActions?: UserAction[];
   navigations?: NavigationEntry[];
@@ -613,6 +622,9 @@ export interface HostedBugReportPayload {
   userAgent?: string;
   timestamp?: number;
   metadata?: Record<string, unknown>;
+
+  // Git branch for analysis engine
+  branch?: string;
 
   // Extended context (user actions, navigation, performance)
   userActions?: UserAction[];

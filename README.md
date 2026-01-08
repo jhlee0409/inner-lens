@@ -209,6 +209,86 @@ jobs:
 | OpenAI | gpt-4o | `OPENAI_API_KEY` |
 | Google | gemini-2.5-flash | `GOOGLE_GENERATIVE_AI_API_KEY` |
 
+### Workflow Options
+
+| Option | Required | Type | Default | Description |
+|--------|:--------:|------|---------|-------------|
+| `provider` | No | `string` | `anthropic` | AI provider (`anthropic`, `openai`, `google`) |
+| `model` | No | `string` | - | Custom model name (e.g., `claude-sonnet-4-20250514`) |
+| `language` | No | `string` | `en` | Analysis output language (`en`, `ko`, `ja`, `zh`, `es`, `de`, `fr`, `pt`) |
+| `max_files` | No | `number` | `25` | Maximum files to analyze (5-50) |
+| `max_tokens` | No | `number` | `4000` | Maximum tokens for AI response (1000-8000) |
+| `node_version` | No | `string` | `20` | Node.js version |
+
+**Secrets** (required based on provider):
+
+| Secret | Required |
+|--------|----------|
+| `ANTHROPIC_API_KEY` | When `provider: 'anthropic'` |
+| `OPENAI_API_KEY` | When `provider: 'openai'` |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | When `provider: 'google'` |
+
+<details>
+<summary><b>Example with all options</b></summary>
+
+```yaml
+jobs:
+  analyze:
+    if: contains(github.event.issue.labels.*.name, 'inner-lens')
+    uses: jhlee0409/inner-lens/.github/workflows/analysis-engine.yml@v1
+    with:
+      provider: 'anthropic'
+      model: 'claude-sonnet-4-20250514'
+      language: 'ko'
+      max_files: 30
+      max_tokens: 6000
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+```
+
+</details>
+
+---
+
+## Branch Tracking
+
+When QA tests on non-main branches (e.g., `dev`, `staging`), the AI analysis engine needs to checkout the correct branch. Enable branch tracking by injecting the git branch at build time:
+
+**Next.js:**
+```js
+// next.config.js
+const { getGitBranch } = require('inner-lens/build');
+
+module.exports = {
+  env: {
+    NEXT_PUBLIC_GIT_BRANCH: getGitBranch(),
+  },
+};
+```
+
+**Vite:**
+```js
+// vite.config.js
+import { getGitBranch } from 'inner-lens/build';
+
+export default {
+  define: {
+    'import.meta.env.VITE_GIT_BRANCH': JSON.stringify(getGitBranch()),
+  },
+};
+```
+
+Then pass the branch to the widget:
+
+```tsx
+<InnerLensWidget 
+  repository="owner/repo" 
+  branch={process.env.NEXT_PUBLIC_GIT_BRANCH}
+/>
+```
+
+The `getGitBranch()` utility auto-detects branch from CI/CD environment variables (Vercel, Netlify, AWS Amplify, Cloudflare Pages, Render, Railway, GitHub Actions, Heroku).
+
 ---
 
 ## Session Replay
@@ -237,6 +317,7 @@ npm install rrweb@2.0.0-alpha.17
 |--------|------|---------|-------------|
 | `repository` | `string` | - | GitHub repo (`owner/repo`) |
 | `endpoint` | `string` | Hosted API | Custom backend URL |
+| `branch` | `string` | - | Git branch for AI analysis |
 | `language` | `string` | `en` | UI language (`en`, `ko`, `ja`, `zh`, `es`) |
 | `position` | `string` | `bottom-right` | Button position |
 | `buttonColor` | `string` | `#6366f1` | Button color |
