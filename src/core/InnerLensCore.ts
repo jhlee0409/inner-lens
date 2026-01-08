@@ -374,10 +374,10 @@ export class InnerLensCore {
       });
     }
 
-    // Initialize user action capture
     if (this.config.captureUserActions) {
       initUserActionCapture({
         maskSensitiveData: this.config.maskSensitiveData,
+        ignoreSelectors: ['[data-inner-lens]', '#inner-lens-widget'],
       });
     }
 
