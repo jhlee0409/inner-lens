@@ -1017,8 +1017,31 @@ async function analyzeIssue(): Promise<void> {
       console.log(`      Duration: ${orchestratorResult.totalDuration}ms`);
       console.log(`      Confidence: ${orchestratorResult.analysis.confidence}%`);
 
+      // Apply confidence calibration and hallucination check
+      console.log('\n🔍 Step 5: Applying confidence calibration and hallucination check...');
+      const codeContext = orchestratorResult.agentResults.finder?.data.codeContext;
+      const relevantFilePaths = orchestratorResult.agentResults.finder?.data.relevantFiles.map(f => f.path);
+      
+      const { result: calibratedAnalysis, calibrationReports, hallucinationReports } = calibrateAllAnalyses(
+        p5Analysis as unknown as AnalysisResult,
+        errorLocations,
+        codeContext,
+        relevantFilePaths
+      );
+
+      // Log calibration results
+      for (const report of calibrationReports) {
+        if (report.wasCalibrated) {
+          console.log(`   📊 Confidence calibrated: ${report.originalConfidence}% → ${report.calibratedConfidence}%`);
+          report.penalties.forEach(p => console.log(`      - ${p}`));
+        }
+      }
+      for (const report of hallucinationReports) {
+        console.log(`   🔍 Hallucination check: ${report.summary}`);
+      }
+
       const filesAnalyzed = orchestratorResult.agentResults.finder?.data.relevantFiles.length ?? 0;
-      await postP5AnalysisComments(octokit, p5Analysis, filesAnalyzed, config);
+      await postP5AnalysisComments(octokit, calibratedAnalysis as LegacyAnalysisResult, filesAnalyzed, config);
 
       console.log('\n✅ P5 Analysis complete!');
       console.log(`🔗 https://github.com/${config.owner}/${config.repo}/issues/${config.issueNumber}`);

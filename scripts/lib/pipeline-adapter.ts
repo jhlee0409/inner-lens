@@ -48,6 +48,12 @@ export interface LegacyRootCauseAnalysis {
   prevention: string[];
   confidence: number;
   additionalContext?: string;
+  selfValidation?: {
+    counterEvidence: string[];
+    assumptions: string[];
+    confidenceJustification: string;
+    alternativeHypotheses?: string[];
+  };
 }
 
 export interface LegacyAnalysisResult {
@@ -123,6 +129,7 @@ export function convertP5ToLegacy(result: OrchestratorResult): LegacyAnalysisRes
     prevention: analysis.prevention,
     confidence: analysis.confidence,
     additionalContext: buildAdditionalContext(result),
+    selfValidation: analysis.selfValidation,
   };
 
   return {
