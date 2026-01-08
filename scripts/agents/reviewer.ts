@@ -21,6 +21,7 @@ import type {
   ReviewResult,
   AnalysisResult,
 } from './types.js';
+import { type OutputLanguage, getI18n } from '../lib/i18n.js';
 
 // ============================================
 // Review Schema
@@ -152,39 +153,38 @@ Review this analysis:
 // Apply Review to Analysis
 // ============================================
 
-function applyReview(analysis: AnalysisResult, review: ReviewResult): AnalysisResult {
-  // Calculate new confidence
+function applyReview(analysis: AnalysisResult, review: ReviewResult, language: OutputLanguage = 'en'): AnalysisResult {
+  const t = getI18n(language);
+
   let newConfidence = analysis.confidence + review.confidenceAdjustment;
   newConfidence = Math.max(0, Math.min(100, newConfidence));
 
-  // Build additional context from review
   const reviewNotes: string[] = [];
 
   if (!review.approved) {
-    reviewNotes.push('⚠️ **Review Status:** Issues found during review');
+    reviewNotes.push(`⚠️ **${t.reviewStatus}:** ${t.issuesFoundDuringReview}`);
   } else {
-    reviewNotes.push('✅ **Review Status:** Analysis approved');
+    reviewNotes.push(`✅ **${t.reviewStatus}:** ${t.analysisApproved}`);
   }
 
   if (review.issues.length > 0) {
-    reviewNotes.push(`\n**Issues Found:**\n${review.issues.map(i => `- ${i}`).join('\n')}`);
+    reviewNotes.push(`\n**${t.issuesFound}:**\n${review.issues.map(i => `- ${i}`).join('\n')}`);
   }
 
   if (review.suggestions.length > 0) {
-    reviewNotes.push(`\n**Reviewer Suggestions:**\n${review.suggestions.map(s => `- ${s}`).join('\n')}`);
+    reviewNotes.push(`\n**${t.reviewerSuggestions}:**\n${review.suggestions.map(s => `- ${s}`).join('\n')}`);
   }
 
   if (review.verifiedClaims && review.verifiedClaims.length > 0) {
-    reviewNotes.push(`\n**Verified Claims:**\n${review.verifiedClaims.map(c => `✓ ${c}`).join('\n')}`);
+    reviewNotes.push(`\n**${t.verifiedClaimsLabel}:**\n${review.verifiedClaims.map(c => `✓ ${c}`).join('\n')}`);
   }
 
   if (review.counterEvidence && review.counterEvidence.length > 0) {
-    reviewNotes.push(`\n**Counter-Evidence:**\n${review.counterEvidence.map(c => `⚠️ ${c}`).join('\n')}`);
+    reviewNotes.push(`\n**${t.counterEvidence}:**\n${review.counterEvidence.map(c => `⚠️ ${c}`).join('\n')}`);
   }
 
-  // Merge with existing additional context
   const existingContext = analysis.additionalContext || '';
-  const newContext = `${existingContext}\n\n---\n\n## Reviewer Notes\n\n${reviewNotes.join('\n')}`;
+  const newContext = `${existingContext}\n\n---\n\n## ${t.reviewerNotesTitle}\n\n${reviewNotes.join('\n')}`;
 
   return {
     ...analysis,
@@ -257,8 +257,7 @@ export const reviewerAgent: Agent<ReviewerInput, ReviewerOutput> = {
         maxOutputTokens: 1500,
       });
 
-      // Apply review to get final analysis
-      const finalAnalysis = applyReview(analysis, review);
+      const finalAnalysis = applyReview(analysis, review, config.language);
 
       console.log(`   ✅ Review complete`);
       console.log(`      Approved: ${review.approved}`);

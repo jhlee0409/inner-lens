@@ -13,6 +13,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { type OutputLanguage, getI18n } from './i18n.js';
 
 // ============================================
 // Types
@@ -599,18 +600,31 @@ export function applyHallucinationPenalty(
 /**
  * Format hallucination check results for display
  */
-export function formatHallucinationReport(result: HallucinationCheckResult): string {
+export function formatHallucinationReport(result: HallucinationCheckResult, language: OutputLanguage = 'en'): string {
+  const t = getI18n(language);
   const lines: string[] = [];
 
-  lines.push('## 🔍 Hallucination Check Report');
+  const criticalFails = result.checks.filter(c => !c.verified && c.severity === 'critical').length;
+  const warningFails = result.checks.filter(c => !c.verified && c.severity === 'warning').length;
+  const failedChecks = result.checks.filter(c => !c.verified);
+
+  let statusText: string;
+  if (failedChecks.length === 0) {
+    statusText = `✅ ${t.allClaimsVerified}`;
+  } else if (criticalFails > 0) {
+    statusText = `🔴 ${criticalFails} ${t.criticalHallucinationsDetected}`;
+  } else {
+    statusText = `⚠️ ${warningFails} ${t.unverifiedClaims}`;
+  }
+
+  lines.push(`## 🔍 ${t.hallucinationCheckReport}`);
   lines.push('');
-  lines.push(`**Status:** ${result.summary}`);
-  lines.push(`**Verification Score:** ${result.score}/100`);
+  lines.push(`**Status:** ${statusText}`);
+  lines.push(`**${t.verificationScore}:** ${result.score}/100`);
   lines.push('');
 
-  const failedChecks = result.checks.filter(c => !c.verified);
   if (failedChecks.length > 0) {
-    lines.push('### ❌ Failed Verifications');
+    lines.push(`### ❌ ${t.failedVerifications}`);
     lines.push('');
     for (const check of failedChecks) {
       const icon = check.severity === 'critical' ? '🔴' : '⚠️';
@@ -623,7 +637,7 @@ export function formatHallucinationReport(result: HallucinationCheckResult): str
   const passedChecks = result.checks.filter(c => c.verified);
   if (passedChecks.length > 0) {
     lines.push('<details>');
-    lines.push(`<summary>✅ Passed Verifications (${passedChecks.length})</summary>`);
+    lines.push(`<summary>✅ ${t.passedVerifications} (${passedChecks.length})</summary>`);
     lines.push('');
     for (const check of passedChecks) {
       lines.push(`- **${check.type}**: \`${check.claim}\``);

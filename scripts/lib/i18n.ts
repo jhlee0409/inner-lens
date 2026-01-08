@@ -99,6 +99,33 @@ export interface I18nStrings {
   configurationIssue: string;
   invalidReport: string;
   unknown: string;
+  analysisLevel: string;
+  fast: string;
+  thorough: string;
+  totalDuration: string;
+  agentsUsed: string;
+  reviewerIssues: string;
+  reviewerSuggestions: string;
+  alternativeHypotheses: string;
+  hallucinationCheckReport: string;
+  verificationScore: string;
+  failedVerifications: string;
+  passedVerifications: string;
+  allClaimsVerified: string;
+  criticalHallucinationsDetected: string;
+  unverifiedClaims: string;
+  confidenceCalibration: string;
+  originalConfidence: string;
+  adjustedConfidence: string;
+  wellDocumentedHypotheses: string;
+  unverifiedReferences: string;
+  reviewStatus: string;
+  issuesFoundDuringReview: string;
+  analysisApproved: string;
+  issuesFound: string;
+  verifiedClaimsLabel: string;
+  counterEvidence: string;
+  reviewerNotesTitle: string;
 }
 
 const I18N_EN: I18nStrings = {
@@ -179,6 +206,33 @@ const I18N_EN: I18nStrings = {
   configurationIssue: 'Configuration Issue',
   invalidReport: 'Invalid Report',
   unknown: 'Unknown',
+  analysisLevel: 'Analysis Level',
+  fast: 'Fast',
+  thorough: 'Thorough',
+  totalDuration: 'Total Duration',
+  agentsUsed: 'Agents Used',
+  reviewerIssues: 'Reviewer Issues',
+  reviewerSuggestions: 'Reviewer Suggestions',
+  alternativeHypotheses: 'Alternative Hypotheses',
+  hallucinationCheckReport: 'Hallucination Check Report',
+  verificationScore: 'Verification Score',
+  failedVerifications: 'Failed Verifications',
+  passedVerifications: 'Passed Verifications',
+  allClaimsVerified: 'All claims verified against code context',
+  criticalHallucinationsDetected: 'critical hallucination(s) detected: LLM referenced non-existent code',
+  unverifiedClaims: 'unverified claim(s): Some references could not be confirmed',
+  confidenceCalibration: 'Confidence Calibration',
+  originalConfidence: 'Original',
+  adjustedConfidence: 'Adjusted',
+  wellDocumentedHypotheses: 'Well-documented alternative hypotheses',
+  unverifiedReferences: 'unverified reference(s)',
+  reviewStatus: 'Review Status',
+  issuesFoundDuringReview: 'Issues found during review',
+  analysisApproved: 'Analysis approved',
+  issuesFound: 'Issues Found',
+  verifiedClaimsLabel: 'Verified Claims',
+  counterEvidence: 'Counter-Evidence',
+  reviewerNotesTitle: 'Reviewer Notes',
 };
 
 const I18N_KO: I18nStrings = {
@@ -259,6 +313,33 @@ const I18N_KO: I18nStrings = {
   configurationIssue: '설정 이슈',
   invalidReport: '유효하지 않은 리포트',
   unknown: '알 수 없음',
+  analysisLevel: '분석 레벨',
+  fast: '빠름',
+  thorough: '심층',
+  totalDuration: '총 소요 시간',
+  agentsUsed: '사용된 에이전트',
+  reviewerIssues: '리뷰어 이슈',
+  reviewerSuggestions: '리뷰어 제안',
+  alternativeHypotheses: '대안 가설',
+  hallucinationCheckReport: '환각 검사 리포트',
+  verificationScore: '검증 점수',
+  failedVerifications: '실패한 검증',
+  passedVerifications: '통과한 검증',
+  allClaimsVerified: '모든 주장이 코드 컨텍스트에서 검증됨',
+  criticalHallucinationsDetected: '개의 치명적 환각 감지: LLM이 존재하지 않는 코드를 참조함',
+  unverifiedClaims: '개의 미검증 주장: 일부 참조를 확인할 수 없음',
+  confidenceCalibration: '신뢰도 보정',
+  originalConfidence: '원본',
+  adjustedConfidence: '조정됨',
+  wellDocumentedHypotheses: '잘 문서화된 대안 가설',
+  unverifiedReferences: '개의 미검증 참조',
+  reviewStatus: '리뷰 상태',
+  issuesFoundDuringReview: '리뷰 중 발견된 이슈',
+  analysisApproved: '분석 승인됨',
+  issuesFound: '발견된 이슈',
+  verifiedClaimsLabel: '검증된 주장',
+  counterEvidence: '반증',
+  reviewerNotesTitle: '리뷰어 노트',
 };
 
 const I18N_JA: I18nStrings = {
@@ -339,6 +420,33 @@ const I18N_JA: I18nStrings = {
   configurationIssue: '設定問題',
   invalidReport: '無効なレポート',
   unknown: '不明',
+  analysisLevel: '分析レベル',
+  fast: '高速',
+  thorough: '詳細',
+  totalDuration: '合計時間',
+  agentsUsed: '使用エージェント',
+  reviewerIssues: 'レビュアー問題',
+  reviewerSuggestions: 'レビュアー提案',
+  alternativeHypotheses: '代替仮説',
+  hallucinationCheckReport: 'ハルシネーションチェックレポート',
+  verificationScore: '検証スコア',
+  failedVerifications: '失敗した検証',
+  passedVerifications: '成功した検証',
+  allClaimsVerified: 'すべての主張がコードコンテキストで検証済み',
+  criticalHallucinationsDetected: '件の重大なハルシネーション検出: LLMが存在しないコードを参照',
+  unverifiedClaims: '件の未検証の主張: 一部の参照を確認できません',
+  confidenceCalibration: '信頼度調整',
+  originalConfidence: '元の値',
+  adjustedConfidence: '調整後',
+  wellDocumentedHypotheses: '十分に文書化された代替仮説',
+  unverifiedReferences: '件の未検証参照',
+  reviewStatus: 'レビューステータス',
+  issuesFoundDuringReview: 'レビュー中に発見された問題',
+  analysisApproved: '分析承認済み',
+  issuesFound: '発見された問題',
+  verifiedClaimsLabel: '検証済みの主張',
+  counterEvidence: '反証',
+  reviewerNotesTitle: 'レビュアーノート',
 };
 
 const I18N_ZH: I18nStrings = {
@@ -419,6 +527,33 @@ const I18N_ZH: I18nStrings = {
   configurationIssue: '配置问题',
   invalidReport: '无效报告',
   unknown: '未知',
+  analysisLevel: '分析级别',
+  fast: '快速',
+  thorough: '深入',
+  totalDuration: '总耗时',
+  agentsUsed: '使用的代理',
+  reviewerIssues: '审查问题',
+  reviewerSuggestions: '审查建议',
+  alternativeHypotheses: '替代假设',
+  hallucinationCheckReport: '幻觉检查报告',
+  verificationScore: '验证分数',
+  failedVerifications: '验证失败',
+  passedVerifications: '验证通过',
+  allClaimsVerified: '所有声明已根据代码上下文验证',
+  criticalHallucinationsDetected: '个严重幻觉：LLM引用了不存在的代码',
+  unverifiedClaims: '个未验证声明：部分引用无法确认',
+  confidenceCalibration: '置信度校准',
+  originalConfidence: '原始',
+  adjustedConfidence: '调整后',
+  wellDocumentedHypotheses: '文档完善的替代假设',
+  unverifiedReferences: '个未验证引用',
+  reviewStatus: '审查状态',
+  issuesFoundDuringReview: '审查中发现的问题',
+  analysisApproved: '分析已批准',
+  issuesFound: '发现的问题',
+  verifiedClaimsLabel: '已验证的声明',
+  counterEvidence: '反证',
+  reviewerNotesTitle: '审查者笔记',
 };
 
 const I18N_ES: I18nStrings = {
@@ -499,6 +634,33 @@ const I18N_ES: I18nStrings = {
   configurationIssue: 'Problema de Configuración',
   invalidReport: 'Reporte Inválido',
   unknown: 'Desconocido',
+  analysisLevel: 'Nivel de Análisis',
+  fast: 'Rápido',
+  thorough: 'Exhaustivo',
+  totalDuration: 'Duración Total',
+  agentsUsed: 'Agentes Usados',
+  reviewerIssues: 'Problemas del Revisor',
+  reviewerSuggestions: 'Sugerencias del Revisor',
+  alternativeHypotheses: 'Hipótesis Alternativas',
+  hallucinationCheckReport: 'Informe de Verificación de Alucinaciones',
+  verificationScore: 'Puntuación de Verificación',
+  failedVerifications: 'Verificaciones Fallidas',
+  passedVerifications: 'Verificaciones Exitosas',
+  allClaimsVerified: 'Todas las afirmaciones verificadas contra el contexto del código',
+  criticalHallucinationsDetected: 'alucinación(es) crítica(s) detectada(s): LLM referenció código inexistente',
+  unverifiedClaims: 'afirmación(es) sin verificar: Algunas referencias no pudieron confirmarse',
+  confidenceCalibration: 'Calibración de Confianza',
+  originalConfidence: 'Original',
+  adjustedConfidence: 'Ajustado',
+  wellDocumentedHypotheses: 'Hipótesis alternativas bien documentadas',
+  unverifiedReferences: 'referencia(s) sin verificar',
+  reviewStatus: 'Estado de Revisión',
+  issuesFoundDuringReview: 'Problemas encontrados durante la revisión',
+  analysisApproved: 'Análisis aprobado',
+  issuesFound: 'Problemas Encontrados',
+  verifiedClaimsLabel: 'Afirmaciones Verificadas',
+  counterEvidence: 'Contra-Evidencia',
+  reviewerNotesTitle: 'Notas del Revisor',
 };
 
 const I18N_DE: I18nStrings = {
@@ -579,6 +741,33 @@ const I18N_DE: I18nStrings = {
   configurationIssue: 'Konfigurationsproblem',
   invalidReport: 'Ungültiger Bericht',
   unknown: 'Unbekannt',
+  analysisLevel: 'Analyseebene',
+  fast: 'Schnell',
+  thorough: 'Gründlich',
+  totalDuration: 'Gesamtdauer',
+  agentsUsed: 'Verwendete Agenten',
+  reviewerIssues: 'Reviewer-Probleme',
+  reviewerSuggestions: 'Reviewer-Vorschläge',
+  alternativeHypotheses: 'Alternative Hypothesen',
+  hallucinationCheckReport: 'Halluzinationsprüfbericht',
+  verificationScore: 'Verifizierungspunktzahl',
+  failedVerifications: 'Fehlgeschlagene Verifizierungen',
+  passedVerifications: 'Erfolgreiche Verifizierungen',
+  allClaimsVerified: 'Alle Behauptungen gegen Code-Kontext verifiziert',
+  criticalHallucinationsDetected: 'kritische Halluzination(en) erkannt: LLM referenzierte nicht existierenden Code',
+  unverifiedClaims: 'unverifizierte Behauptung(en): Einige Referenzen konnten nicht bestätigt werden',
+  confidenceCalibration: 'Konfidenz-Kalibrierung',
+  originalConfidence: 'Original',
+  adjustedConfidence: 'Angepasst',
+  wellDocumentedHypotheses: 'Gut dokumentierte alternative Hypothesen',
+  unverifiedReferences: 'unverifizierte Referenz(en)',
+  reviewStatus: 'Review-Status',
+  issuesFoundDuringReview: 'Während der Überprüfung gefundene Probleme',
+  analysisApproved: 'Analyse genehmigt',
+  issuesFound: 'Gefundene Probleme',
+  verifiedClaimsLabel: 'Verifizierte Behauptungen',
+  counterEvidence: 'Gegen-Evidenz',
+  reviewerNotesTitle: 'Reviewer-Notizen',
 };
 
 const I18N_FR: I18nStrings = {
@@ -659,6 +848,33 @@ const I18N_FR: I18nStrings = {
   configurationIssue: 'Problème de Configuration',
   invalidReport: 'Rapport Invalide',
   unknown: 'Inconnu',
+  analysisLevel: 'Niveau d\'Analyse',
+  fast: 'Rapide',
+  thorough: 'Approfondi',
+  totalDuration: 'Durée Totale',
+  agentsUsed: 'Agents Utilisés',
+  reviewerIssues: 'Problèmes du Réviseur',
+  reviewerSuggestions: 'Suggestions du Réviseur',
+  alternativeHypotheses: 'Hypothèses Alternatives',
+  hallucinationCheckReport: 'Rapport de Vérification des Hallucinations',
+  verificationScore: 'Score de Vérification',
+  failedVerifications: 'Vérifications Échouées',
+  passedVerifications: 'Vérifications Réussies',
+  allClaimsVerified: 'Toutes les affirmations vérifiées contre le contexte du code',
+  criticalHallucinationsDetected: 'hallucination(s) critique(s) détectée(s) : LLM a référencé du code inexistant',
+  unverifiedClaims: 'affirmation(s) non vérifiée(s) : Certaines références n\'ont pas pu être confirmées',
+  confidenceCalibration: 'Calibration de la Confiance',
+  originalConfidence: 'Original',
+  adjustedConfidence: 'Ajusté',
+  wellDocumentedHypotheses: 'Hypothèses alternatives bien documentées',
+  unverifiedReferences: 'référence(s) non vérifiée(s)',
+  reviewStatus: 'Statut de la Révision',
+  issuesFoundDuringReview: 'Problèmes trouvés pendant la révision',
+  analysisApproved: 'Analyse approuvée',
+  issuesFound: 'Problèmes Trouvés',
+  verifiedClaimsLabel: 'Affirmations Vérifiées',
+  counterEvidence: 'Contre-Preuve',
+  reviewerNotesTitle: 'Notes du Réviseur',
 };
 
 const I18N_PT: I18nStrings = {
@@ -739,6 +955,33 @@ const I18N_PT: I18nStrings = {
   configurationIssue: 'Problema de Configuração',
   invalidReport: 'Relatório Inválido',
   unknown: 'Desconhecido',
+  analysisLevel: 'Nível de Análise',
+  fast: 'Rápido',
+  thorough: 'Detalhado',
+  totalDuration: 'Duração Total',
+  agentsUsed: 'Agentes Utilizados',
+  reviewerIssues: 'Problemas do Revisor',
+  reviewerSuggestions: 'Sugestões do Revisor',
+  alternativeHypotheses: 'Hipóteses Alternativas',
+  hallucinationCheckReport: 'Relatório de Verificação de Alucinações',
+  verificationScore: 'Pontuação de Verificação',
+  failedVerifications: 'Verificações Falhadas',
+  passedVerifications: 'Verificações Bem-sucedidas',
+  allClaimsVerified: 'Todas as afirmações verificadas contra o contexto do código',
+  criticalHallucinationsDetected: 'alucinação(ões) crítica(s) detectada(s): LLM referenciou código inexistente',
+  unverifiedClaims: 'afirmação(ões) não verificada(s): Algumas referências não puderam ser confirmadas',
+  confidenceCalibration: 'Calibração de Confiança',
+  originalConfidence: 'Original',
+  adjustedConfidence: 'Ajustado',
+  wellDocumentedHypotheses: 'Hipóteses alternativas bem documentadas',
+  unverifiedReferences: 'referência(s) não verificada(s)',
+  reviewStatus: 'Status da Revisão',
+  issuesFoundDuringReview: 'Problemas encontrados durante a revisão',
+  analysisApproved: 'Análise aprovada',
+  issuesFound: 'Problemas Encontrados',
+  verifiedClaimsLabel: 'Afirmações Verificadas',
+  counterEvidence: 'Contra-Evidência',
+  reviewerNotesTitle: 'Notas do Revisor',
 };
 
 export const I18N: Record<OutputLanguage, I18nStrings> = {

@@ -6,6 +6,7 @@
  */
 
 import type { ErrorLocation } from './file-discovery';
+import { type OutputLanguage, getI18n } from './i18n.js';
 
 // ============================================
 // Types
@@ -391,21 +392,21 @@ export function calibrateConfidence(
  */
 export function calibrateAllAnalyses<T extends AnalysisResultForCalibration>(
   result: T,
-  errorLocations: ErrorLocation[]
+  errorLocations: ErrorLocation[],
+  language: OutputLanguage = 'en'
 ): { result: T; calibrationReports: ConfidenceCalibrationResult[] } {
+  const t = getI18n(language);
   const calibrationReports: ConfidenceCalibrationResult[] = [];
 
   const calibratedAnalyses = result.analyses.map(analysis => {
     const calibration = calibrateConfidence(analysis, errorLocations);
     calibrationReports.push(calibration);
 
-    // Return analysis with calibrated confidence
     return {
       ...analysis,
       confidence: calibration.calibratedConfidence,
-      // Add calibration note to additionalContext if calibrated
       additionalContext: calibration.wasCalibrated
-        ? `${analysis.additionalContext || ''}\n\n📊 **Confidence Calibration:** Original ${calibration.originalConfidence}% → Adjusted ${calibration.calibratedConfidence}%${calibration.penalties.length > 0 ? `\n- ${calibration.penalties.join('\n- ')}` : ''}`
+        ? `${analysis.additionalContext || ''}\n\n📊 **${t.confidenceCalibration}:** ${t.originalConfidence} ${calibration.originalConfidence}% → ${t.adjustedConfidence} ${calibration.calibratedConfidence}%${calibration.penalties.length > 0 ? `\n- ${calibration.penalties.join('\n- ')}` : ''}`
         : analysis.additionalContext,
     };
   });

@@ -1,6 +1,6 @@
 import type { LanguageModel } from 'ai';
 import type { OrchestratorResult, OrchestratorConfig } from '../agents/types.js';
-import type { OutputLanguage } from './i18n.js';
+import { type OutputLanguage, getI18n } from './i18n.js';
 import { runAnalysis, buildIssueContext } from '../agents/orchestrator.js';
 import type { ParsedBugReport } from './issue-parser.js';
 import { analyzeCorrelation } from './error-correlation.js';
@@ -26,24 +26,26 @@ export interface PipelineConfig {
   verbose?: boolean;
 }
 
-export function buildAdditionalContext(result: OrchestratorResult): string {
+export function buildAdditionalContext(result: OrchestratorResult, language: OutputLanguage = 'en'): string {
+  const t = getI18n(language);
   const parts: string[] = [];
 
-  parts.push(`📊 **Analysis Level:** ${result.level === 1 ? 'Fast (L1)' : 'Thorough (L2)'}`);
-  parts.push(`⏱️ **Total Duration:** ${result.totalDuration}ms`);
+  const levelLabel = result.level === 1 ? `${t.fast} (L1)` : `${t.thorough} (L2)`;
+  parts.push(`📊 **${t.analysisLevel}:** ${levelLabel}`);
+  parts.push(`⏱️ **${t.totalDuration}:** ${result.totalDuration}ms`);
 
   const agents = Object.entries(result.agentResults)
     .filter(([, v]) => v !== undefined)
     .map(([name, output]) => `${name}: ${output?.duration}ms`);
-  parts.push(`🤖 **Agents Used:** ${agents.join(' → ')}`);
+  parts.push(`🤖 **${t.agentsUsed}:** ${agents.join(' → ')}`);
 
   if (result.agentResults.reviewer?.success) {
     const review = result.agentResults.reviewer.data.review;
     if (review.issues.length > 0) {
-      parts.push(`\n⚠️ **Reviewer Issues:**\n${review.issues.map(i => `- ${i}`).join('\n')}`);
+      parts.push(`\n⚠️ **${t.reviewerIssues}:**\n${review.issues.map(i => `- ${i}`).join('\n')}`);
     }
     if (review.suggestions.length > 0) {
-      parts.push(`\n💡 **Reviewer Suggestions:**\n${review.suggestions.map(s => `- ${s}`).join('\n')}`);
+      parts.push(`\n💡 **${t.reviewerSuggestions}:**\n${review.suggestions.map(s => `- ${s}`).join('\n')}`);
     }
   }
 
@@ -51,7 +53,7 @@ export function buildAdditionalContext(result: OrchestratorResult): string {
     const hypotheses = result.agentResults.investigator.data.hypotheses;
     if (hypotheses.length > 1) {
       const alternatives = hypotheses.slice(1).map(h => `- [${h.likelihood}%] ${h.summary}`);
-      parts.push(`\n🔍 **Alternative Hypotheses:**\n${alternatives.join('\n')}`);
+      parts.push(`\n🔍 **${t.alternativeHypotheses}:**\n${alternatives.join('\n')}`);
     }
   }
 

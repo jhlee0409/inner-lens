@@ -8,6 +8,7 @@ import {
   type OutputLanguage,
   LANGUAGE_NAMES,
   getOutputLanguage,
+  getI18n,
   type ErrorLocation,
   extractErrorLocations,
   extractErrorMessages,
@@ -185,11 +186,13 @@ function calibrateAllAnalyses(
   errorLocations: ErrorLocation[],
   codeContext?: string,
   relevantFiles?: string[],
+  language: OutputLanguage = 'en',
 ): {
   result: AnalysisResult;
   calibrationReports: ConfidenceCalibrationResult[];
   hallucinationReports: HallucinationCheckResult[];
 } {
+  const t = getI18n(language);
   const calibrationReports: ConfidenceCalibrationResult[] = [];
   const hallucinationReports: HallucinationCheckResult[] = [];
 
@@ -237,16 +240,14 @@ function calibrateAllAnalyses(
       additionalContextParts.push(analysis.additionalContext);
     }
 
-    // Add calibration note if calibrated
     if (calibration.wasCalibrated) {
       additionalContextParts.push(
-        `📊 **Confidence Calibration:** Original ${calibration.originalConfidence}% → Adjusted ${calibration.calibratedConfidence}%${calibration.penalties.length > 0 ? `\n- ${calibration.penalties.join('\n- ')}` : ''}`
+        `📊 **${t.confidenceCalibration}:** ${t.originalConfidence} ${calibration.originalConfidence}% → ${t.adjustedConfidence} ${calibration.calibratedConfidence}%${calibration.penalties.length > 0 ? `\n- ${calibration.penalties.join('\n- ')}` : ''}`
       );
     }
 
-    // Add hallucination verification note if performed
     if (hallucinationResult) {
-      additionalContextParts.push(formatHallucinationReport(hallucinationResult));
+      additionalContextParts.push(formatHallucinationReport(hallucinationResult, language));
     }
 
     // Return analysis with fully calibrated confidence
@@ -269,7 +270,7 @@ function calibrateAllAnalyses(
   };
 }
 
-function convertP5ToLocalFormat(orchestratorResult: OrchestratorResult): AnalysisResult {
+function convertP5ToLocalFormat(orchestratorResult: OrchestratorResult, language: OutputLanguage = 'en'): AnalysisResult {
   const analysis = orchestratorResult.analysis;
   
   let reportType: AnalysisResult['reportType'] = 'bug';
@@ -308,7 +309,7 @@ function convertP5ToLocalFormat(orchestratorResult: OrchestratorResult): Analysi
       },
       prevention: analysis.prevention,
       confidence: analysis.confidence,
-      additionalContext: [analysis.additionalContext, buildAdditionalContext(orchestratorResult)].filter(Boolean).join('\n\n'),
+      additionalContext: [analysis.additionalContext, buildAdditionalContext(orchestratorResult, language)].filter(Boolean).join('\n\n'),
       selfValidation: analysis.selfValidation ?? {
         counterEvidence: [],
         assumptions: [],
@@ -1023,7 +1024,7 @@ async function analyzeIssue(): Promise<void> {
       console.log(`      Duration: ${orchestratorResult.totalDuration}ms`);
       console.log(`      Confidence: ${orchestratorResult.analysis.confidence}%`);
 
-      const localAnalysis = convertP5ToLocalFormat(orchestratorResult);
+      const localAnalysis = convertP5ToLocalFormat(orchestratorResult, config.language);
 
       console.log('\n🔍 Step 5: Applying confidence calibration and hallucination check...');
       const codeContext = orchestratorResult.agentResults.finder?.data.codeContext;
@@ -1033,7 +1034,8 @@ async function analyzeIssue(): Promise<void> {
         localAnalysis,
         errorLocations,
         codeContext,
-        relevantFilePaths
+        relevantFilePaths,
+        config.language
       );
 
       for (const report of calibrationReports) {
