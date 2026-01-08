@@ -197,42 +197,61 @@ Output ONLY valid JSON array, no markdown.`;
   }
 }
 
+interface MergeOptions {
+  complementThreshold?: number;
+  maxComplementFiles?: number;
+}
+
 function mergeInferredWithDiscovered(
   inferredFiles: InferredFile[],
   discoveredFiles: FileInfo[],
-  baseDir: string
+  baseDir: string,
+  options: MergeOptions = {}
 ): FileInfo[] {
-  const fileMap = new Map<string, FileInfo>();
-
-  for (const file of discoveredFiles) {
-    fileMap.set(file.path, file);
-  }
+  const { complementThreshold = 50, maxComplementFiles = 5 } = options;
+  const result: FileInfo[] = [];
+  const inferredPaths = new Set<string>();
 
   for (const inferred of inferredFiles) {
     const fullPath = path.join(baseDir, inferred.path);
-    const existing = fileMap.get(fullPath);
 
-    if (existing) {
-      existing.relevanceScore += inferred.relevanceScore;
-      existing.matchedKeywords.push(`llm-inferred:${inferred.reason.slice(0, 30)}`);
-    } else {
-      try {
-        const stats = fs.statSync(fullPath);
-        fileMap.set(fullPath, {
-          path: fullPath,
-          size: stats.size,
-          relevanceScore: inferred.relevanceScore * 2,
-          pathScore: 0,
-          contentScore: 0,
-          matchedKeywords: [`llm-inferred:${inferred.reason.slice(0, 30)}`],
-        });
-      } catch {
-        // file doesn't exist, skip
+    try {
+      const stats = fs.statSync(fullPath);
+      inferredPaths.add(fullPath);
+
+      const existing = discoveredFiles.find(f => f.path === fullPath);
+      const mergedKeywords = [`llm-inferred:${inferred.reason.slice(0, 30)}`];
+      if (existing) {
+        mergedKeywords.push(...existing.matchedKeywords);
       }
+
+      result.push({
+        path: fullPath,
+        size: stats.size,
+        relevanceScore: inferred.relevanceScore,
+        pathScore: existing?.pathScore ?? 0,
+        contentScore: existing?.contentScore ?? 0,
+        matchedKeywords: mergedKeywords,
+      });
+    } catch {
+      // file doesn't exist, skip
     }
   }
 
-  return Array.from(fileMap.values()).sort((a, b) => b.relevanceScore - a.relevanceScore);
+  let complementCount = 0;
+  for (const discovered of discoveredFiles) {
+    if (complementCount >= maxComplementFiles) break;
+    if (inferredPaths.has(discovered.path)) continue;
+    if (discovered.relevanceScore < complementThreshold) continue;
+
+    result.push({
+      ...discovered,
+      matchedKeywords: [...discovered.matchedKeywords, 'pattern-complement'],
+    });
+    complementCount++;
+  }
+
+  return result;
 }
 
 // ============================================
@@ -420,26 +439,47 @@ export const finderAgent: Agent<FinderInput, FinderOutput> = {
         }
       }
 
-      console.log('   📂 Step 3: Pattern-based file discovery (fallback/complement)...');
-      const allKeywords = extractedIntent
-        ? [...issueContext.keywords, ...extractedIntent.inferredFeatures, ...extractedIntent.uiElements]
-        : issueContext.keywords;
-
-      let relevantFiles = findRelevantFiles(
-        baseDir,
-        allKeywords,
-        issueContext.errorLocations,
-        issueContext.errorMessages,
-        undefined,
-        undefined,
-        maxFiles
-      );
-      console.log(`   Found ${relevantFiles.length} files via pattern matching`);
+      let relevantFiles: FileInfo[];
 
       if (inferredFiles.length > 0) {
-        console.log('   🔀 Step 4: Merging LLM-inferred with pattern-discovered files...');
-        relevantFiles = mergeInferredWithDiscovered(inferredFiles, relevantFiles, baseDir);
-        console.log(`   Merged total: ${relevantFiles.length} unique files`);
+        console.log('   📂 Step 3: Pattern-based search (complement mode)...');
+        const allKeywords = [...issueContext.keywords, ...extractedIntent!.inferredFeatures, ...extractedIntent!.uiElements];
+
+        const patternFiles = findRelevantFiles(
+          baseDir,
+          allKeywords,
+          issueContext.errorLocations,
+          issueContext.errorMessages,
+          undefined,
+          undefined,
+          maxFiles
+        );
+        console.log(`   Found ${patternFiles.length} pattern candidates (for complement)`);
+
+        console.log('   🔀 Step 4: LLM-primary merge (complement threshold=50, max=5)...');
+        relevantFiles = mergeInferredWithDiscovered(inferredFiles, patternFiles, baseDir, {
+          complementThreshold: 50,
+          maxComplementFiles: 5,
+        });
+        const llmCount = inferredFiles.length;
+        const complementCount = relevantFiles.length - llmCount;
+        console.log(`   Result: ${llmCount} LLM files + ${complementCount} pattern complement`);
+      } else {
+        console.log('   📂 Step 3: Pattern-based file discovery (full fallback)...');
+        const allKeywords = extractedIntent
+          ? [...issueContext.keywords, ...extractedIntent.inferredFeatures, ...extractedIntent.uiElements]
+          : issueContext.keywords;
+
+        relevantFiles = findRelevantFiles(
+          baseDir,
+          allKeywords,
+          issueContext.errorLocations,
+          issueContext.errorMessages,
+          undefined,
+          undefined,
+          maxFiles
+        );
+        console.log(`   Found ${relevantFiles.length} files via pattern matching`);
       }
 
       console.log('   🔗 Step 5: Building import graph...');

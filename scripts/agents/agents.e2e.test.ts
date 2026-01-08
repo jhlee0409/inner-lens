@@ -853,39 +853,82 @@ describe('Intent-First Architecture', () => {
   });
 
   describe('mergeInferredWithDiscovered', () => {
-    it('should merge inferred files with discovered files', () => {
+    it('should prioritize LLM-inferred files and preserve their order', () => {
       const inferredFiles: InferredFile[] = [
-        { path: 'src/components/Button.tsx', reason: 'button component', relevanceScore: 80 },
-        { path: 'src/utils/capture.ts', reason: 'capture utility', relevanceScore: 90 },
+        { path: 'src/types.ts', reason: 'type definitions', relevanceScore: 80 },
+        { path: 'src/utils/masking.ts', reason: 'masking utility', relevanceScore: 90 },
       ];
       
       const discoveredFiles: FileInfo[] = [
-        { path: 'src/components/Button.tsx', size: 100, relevanceScore: 50, pathScore: 30, contentScore: 20, matchedKeywords: ['button'] },
-        { path: 'src/index.ts', size: 50, relevanceScore: 10, pathScore: 10, contentScore: 0, matchedKeywords: [] },
+        { path: 'src/types.ts', size: 100, relevanceScore: 50, pathScore: 30, contentScore: 20, matchedKeywords: ['types'] },
+        { path: 'src/server.ts', size: 50, relevanceScore: 60, pathScore: 10, contentScore: 50, matchedKeywords: ['server'] },
       ];
 
       const merged = mergeInferredWithDiscovered(inferredFiles, discoveredFiles, '.');
       
-      expect(merged.length).toBeGreaterThanOrEqual(2);
-      const buttonFile = merged.find(f => f.path.includes('Button.tsx'));
-      expect(buttonFile).toBeDefined();
-      expect(buttonFile!.relevanceScore).toBeGreaterThan(50);
+      expect(merged.length).toBe(3);
+      expect(merged[0]!.path).toContain('types.ts');
+      expect(merged[0]!.relevanceScore).toBe(80);
+      expect(merged[1]!.path).toContain('masking.ts');
+      expect(merged[1]!.relevanceScore).toBe(90);
+      expect(merged[2]!.matchedKeywords).toContain('pattern-complement');
     });
 
-    it('should boost score for files found by both methods', () => {
+    it('should merge matchedKeywords for duplicate files without adding scores', () => {
       const inferredFiles: InferredFile[] = [
-        { path: 'src/test.ts', reason: 'test file', relevanceScore: 70 },
+        { path: 'src/types.ts', reason: 'type file', relevanceScore: 70 },
       ];
       
       const discoveredFiles: FileInfo[] = [
-        { path: 'src/test.ts', size: 100, relevanceScore: 30, pathScore: 20, contentScore: 10, matchedKeywords: ['test'] },
+        { path: 'src/types.ts', size: 100, relevanceScore: 30, pathScore: 20, contentScore: 10, matchedKeywords: ['test'] },
       ];
 
       const merged = mergeInferredWithDiscovered(inferredFiles, discoveredFiles, '.');
-      const testFile = merged.find(f => f.path.includes('test.ts'));
+      const testFile = merged.find(f => f.path.includes('types.ts'));
       
-      expect(testFile!.relevanceScore).toBeGreaterThan(30);
+      expect(testFile!.relevanceScore).toBe(70);
       expect(testFile!.matchedKeywords).toContain('test');
+      expect(testFile!.matchedKeywords.some(k => k.startsWith('llm-inferred:'))).toBe(true);
+    });
+
+    it('should only add complement files above threshold', () => {
+      const inferredFiles: InferredFile[] = [
+        { path: 'src/types.ts', reason: 'main file', relevanceScore: 80 },
+      ];
+      
+      const discoveredFiles: FileInfo[] = [
+        { path: 'src/server.ts', size: 100, relevanceScore: 60, pathScore: 30, contentScore: 30, matchedKeywords: ['high'] },
+        { path: 'src/vanilla.ts', size: 100, relevanceScore: 40, pathScore: 20, contentScore: 20, matchedKeywords: ['low'] },
+      ];
+
+      const merged = mergeInferredWithDiscovered(inferredFiles, discoveredFiles, '.', {
+        complementThreshold: 50,
+        maxComplementFiles: 5,
+      });
+      
+      expect(merged.length).toBe(2);
+      expect(merged.some(f => f.path.includes('server.ts'))).toBe(true);
+      expect(merged.some(f => f.path.includes('vanilla.ts'))).toBe(false);
+    });
+
+    it('should respect maxComplementFiles limit', () => {
+      const inferredFiles: InferredFile[] = [
+        { path: 'src/types.ts', reason: 'main file', relevanceScore: 80 },
+      ];
+      
+      const discoveredFiles: FileInfo[] = [
+        { path: 'src/server.ts', size: 100, relevanceScore: 70, pathScore: 30, contentScore: 40, matchedKeywords: [] },
+        { path: 'src/core.ts', size: 100, relevanceScore: 65, pathScore: 30, contentScore: 35, matchedKeywords: [] },
+        { path: 'src/react.ts', size: 100, relevanceScore: 60, pathScore: 30, contentScore: 30, matchedKeywords: [] },
+      ];
+
+      const merged = mergeInferredWithDiscovered(inferredFiles, discoveredFiles, '.', {
+        complementThreshold: 50,
+        maxComplementFiles: 2,
+      });
+      
+      expect(merged.length).toBe(3);
+      expect(merged.filter(f => f.matchedKeywords.includes('pattern-complement')).length).toBe(2);
     });
   });
 
