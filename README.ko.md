@@ -209,6 +209,86 @@ jobs:
 | OpenAI | gpt-4o | `OPENAI_API_KEY` |
 | Google | gemini-2.5-flash | `GOOGLE_GENERATIVE_AI_API_KEY` |
 
+### 워크플로우 옵션
+
+| 옵션 | 필수 | 타입 | 기본값 | 설명 |
+|------|:----:|------|--------|------|
+| `provider` | 아니요 | `string` | `anthropic` | AI 제공자 (`anthropic`, `openai`, `google`) |
+| `model` | 아니요 | `string` | - | 커스텀 모델 이름 (예: `claude-sonnet-4-20250514`) |
+| `language` | 아니요 | `string` | `en` | 분석 출력 언어 (`en`, `ko`, `ja`, `zh`, `es`, `de`, `fr`, `pt`) |
+| `max_files` | 아니요 | `number` | `25` | 분석할 최대 파일 수 (5-50) |
+| `max_tokens` | 아니요 | `number` | `4000` | AI 응답 최대 토큰 수 (1000-8000) |
+| `node_version` | 아니요 | `string` | `20` | Node.js 버전 |
+
+**시크릿** (provider에 따라 필수):
+
+| 시크릿 | 필수 조건 |
+|--------|----------|
+| `ANTHROPIC_API_KEY` | `provider: 'anthropic'` 일 때 |
+| `OPENAI_API_KEY` | `provider: 'openai'` 일 때 |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | `provider: 'google'` 일 때 |
+
+<details>
+<summary><b>전체 옵션 예시</b></summary>
+
+```yaml
+jobs:
+  analyze:
+    if: contains(github.event.issue.labels.*.name, 'inner-lens')
+    uses: jhlee0409/inner-lens/.github/workflows/analysis-engine.yml@v1
+    with:
+      provider: 'anthropic'
+      model: 'claude-sonnet-4-20250514'
+      language: 'ko'
+      max_files: 30
+      max_tokens: 6000
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+```
+
+</details>
+
+---
+
+## 브랜치 트래킹
+
+QA가 main이 아닌 브랜치(예: `dev`, `staging`)에서 테스트할 때, AI 분석 엔진이 올바른 브랜치를 checkout해야 합니다. 빌드 시 git 브랜치를 주입하여 브랜치 트래킹을 활성화하세요:
+
+**Next.js:**
+```js
+// next.config.js
+const { getGitBranch } = require('inner-lens/build');
+
+module.exports = {
+  env: {
+    NEXT_PUBLIC_GIT_BRANCH: getGitBranch(),
+  },
+};
+```
+
+**Vite:**
+```js
+// vite.config.js
+import { getGitBranch } from 'inner-lens/build';
+
+export default {
+  define: {
+    'import.meta.env.VITE_GIT_BRANCH': JSON.stringify(getGitBranch()),
+  },
+};
+```
+
+그런 다음 위젯에 브랜치를 전달합니다:
+
+```tsx
+<InnerLensWidget 
+  repository="owner/repo" 
+  branch={process.env.NEXT_PUBLIC_GIT_BRANCH}
+/>
+```
+
+`getGitBranch()` 유틸리티는 CI/CD 환경변수(Vercel, Netlify, AWS Amplify, Cloudflare Pages, Render, Railway, GitHub Actions, Heroku)에서 브랜치를 자동 감지합니다.
+
 ---
 
 ## 세션 리플레이
@@ -237,6 +317,7 @@ npm install rrweb@2.0.0-alpha.17
 |------|------|--------|------|
 | `repository` | `string` | - | GitHub 저장소 (`owner/repo`) |
 | `endpoint` | `string` | Hosted API | 커스텀 백엔드 URL |
+| `branch` | `string` | - | AI 분석용 Git 브랜치 |
 | `language` | `string` | `en` | UI 언어 (`en`, `ko`, `ja`, `zh`, `es`) |
 | `position` | `string` | `bottom-right` | 버튼 위치 |
 | `buttonColor` | `string` | `#6366f1` | 버튼 색상 |
