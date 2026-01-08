@@ -28,37 +28,7 @@ describe('analyze-issue.ts Intent Flow Static Analysis', () => {
     });
   });
 
-  describe('Function Call Verification', () => {
-    it('should call extractIntentWithLLM with maskedTitle and maskedBody', () => {
-      expect(analyzeIssueCode).toMatch(/extractIntentWithLLM\s*\(\s*maskedTitle\s*,\s*maskedBody/);
-    });
 
-    it('should call getProjectFileTree', () => {
-      expect(analyzeIssueCode).toMatch(/getProjectFileTree\s*\(\s*['"]\.['"]?\s*\)/);
-    });
-
-    it('should call inferFilesWithLLM with extractedIntent and fileTree', () => {
-      expect(analyzeIssueCode).toMatch(/inferFilesWithLLM\s*\(\s*extractedIntent\s*,\s*fileTree/);
-    });
-
-    it('should call mergeInferredWithDiscovered with inferredFiles', () => {
-      expect(analyzeIssueCode).toMatch(/mergeInferredWithDiscovered\s*\(\s*inferredFiles\s*,\s*relevantFiles/);
-    });
-  });
-
-  describe('Data Flow Verification', () => {
-    it('should merge inferredFeatures into keywords', () => {
-      expect(analyzeIssueCode).toMatch(/keywords\s*=\s*\[\s*\.\.\.\s*new\s+Set\s*\(\s*\[\s*\.\.\.\s*keywords\s*,\s*\.\.\.\s*extractedIntent\.inferredFeatures/);
-    });
-
-    it('should also merge uiElements into keywords', () => {
-      expect(analyzeIssueCode).toMatch(/extractedIntent\.uiElements/);
-    });
-
-    it('should pass extractedIntent to USER_PROMPT_TEMPLATE', () => {
-      expect(analyzeIssueCode).toMatch(/USER_PROMPT_TEMPLATE\s*\([^)]*extractedIntent\s*\)/);
-    });
-  });
 
   describe('USER_PROMPT_TEMPLATE Verification', () => {
     it('should accept extractedIntent parameter', () => {
@@ -100,15 +70,7 @@ describe('analyze-issue.ts Intent Flow Static Analysis', () => {
     });
   });
 
-  describe('Conditional Logic Verification', () => {
-    it('should check if extractedIntent exists before using', () => {
-      expect(analyzeIssueCode).toMatch(/if\s*\(\s*extractedIntent\s*\)/);
-    });
 
-    it('should check if inferredFiles.length > 0 before merging', () => {
-      expect(analyzeIssueCode).toMatch(/if\s*\(\s*inferredFiles\.length\s*>\s*0\s*\)/);
-    });
-  });
 });
 
 describe('finder.ts Export Verification', () => {

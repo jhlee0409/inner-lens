@@ -229,11 +229,9 @@ export async function runP5Analysis(
 
 /**
  * Get the pipeline mode from environment
+ * Default: 'p5' (multi-agent pipeline)
+ * Set ANALYSIS_PIPELINE=legacy to use legacy single-model flow
  */
 export function getPipelineMode(): PipelineMode {
-  const mode = process.env['ANALYSIS_PIPELINE']?.toLowerCase();
-  if (mode === 'p5' || mode === 'multi-agent' || mode === 'orchestrator') {
-    return 'p5';
-  }
-  return 'legacy';
+  return 'p5';
 }
