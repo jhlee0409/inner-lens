@@ -79,6 +79,12 @@ import {
   mergeInferredWithDiscovered,
 } from './agents/finder.js';
 import type { ExtractedIntent, InferredFile } from './agents/types.js';
+import {
+  runP5Analysis,
+  getPipelineMode,
+  type PipelineConfig,
+  type LegacyAnalysisResult,
+} from './lib/pipeline-adapter.js';
 
 // ============================================
 // Type Definitions (imported from ./lib/index.js)
@@ -132,6 +138,13 @@ const RootCauseAnalysisSchema = z.object({
   prevention: z.array(z.string()).describe('How to prevent similar issues in the future'),
   confidence: z.number().min(0).max(100).describe('Confidence level of this analysis (0-100)'),
   additionalContext: z.string().optional().describe('Any additional context or caveats'),
+  // Self-validation fields (2025 enhancement for accuracy)
+  selfValidation: z.object({
+    counterEvidence: z.array(z.string()).describe('What evidence would DISPROVE this hypothesis? List at least 1-2 items.'),
+    assumptions: z.array(z.string()).describe('What assumptions are you making? List any that might be wrong.'),
+    confidenceJustification: z.string().describe('Why did you choose this confidence level? Cite specific evidence.'),
+    alternativeHypotheses: z.array(z.string()).optional().describe('What other explanations were considered and rejected?'),
+  }).describe('Self-validation: explicitly validate your own analysis before finalizing'),
 });
 
 const AnalysisResultSchema = z.object({
@@ -514,6 +527,38 @@ Your response will be automatically verified against:
 4. Symbol existence in provided code
 
 Failed verifications will cap your confidence at 30% and flag the analysis.
+
+## SELF-VALIDATION (MANDATORY - FILL ALL FIELDS)
+
+You MUST complete the selfValidation section for EVERY analysis. This prevents overconfident or hallucinated conclusions.
+
+### Required Fields:
+
+1. **counterEvidence** (array, min 1 item):
+   - What evidence would DISPROVE your hypothesis?
+   - Example: "If the error only occurs in production, it might be environment-specific rather than a code bug"
+   - Example: "If other users don't report this issue, it could be user-specific configuration"
+
+2. **assumptions** (array, min 1 item):
+   - What are you assuming that might be wrong?
+   - Example: "Assuming the stack trace is accurate and not truncated"
+   - Example: "Assuming this is the only place where this error could originate"
+
+3. **confidenceJustification** (string, REQUIRED):
+   - WHY did you choose this confidence level?
+   - MUST cite specific evidence from the code context
+   - Example: "90% confidence because stack trace directly points to line 42, and the null check is clearly missing"
+   - Example: "50% confidence because the described behavior could have multiple causes and I only see one of them"
+
+4. **alternativeHypotheses** (optional array):
+   - What other explanations did you consider and reject?
+   - Include why you rejected them
+
+### Confidence Level Guidelines (with selfValidation):
+- **90-100%**: Stack trace + code evidence + no counter-evidence
+- **70-89%**: Strong evidence + some assumptions + minor counter-evidence
+- **50-69%**: Reasonable hypothesis + multiple assumptions + significant counter-evidence
+- **Below 50%**: Speculative + many assumptions + strong counter-evidence possible
 
 ## EXTENDED CONTEXT DATA USAGE
 
@@ -934,11 +979,66 @@ async function analyzeIssue(): Promise<void> {
     console.log(`   🔤 Found ${keywords.length} keywords: ${keywords.slice(0, 5).join(', ')}...`);
   }
 
+  // ============================================
+  // Pipeline Mode Check (P5 vs Legacy)
+  // ============================================
+  const pipelineMode = getPipelineMode();
+  console.log(`\n🔧 Pipeline Mode: ${pipelineMode.toUpperCase()}`);
+
+  if (pipelineMode === 'p5') {
+    // Use P5 Multi-Agent Pipeline
+    console.log('\n═══════════════════════════════════════════════');
+    console.log('   🤖 Using P5 Multi-Agent Analysis Pipeline');
+    console.log('═══════════════════════════════════════════════');
+
+    const model = getModel();
+    const p5Config: PipelineConfig = {
+      mode: 'p5',
+      model: model as unknown as import('ai').LanguageModel,
+      maxFiles: config.maxFiles,
+      maxTokens: config.maxTokens,
+      language: config.language,
+      verbose: true,
+    };
+
+    try {
+      const { result: p5Analysis, orchestratorResult } = await runP5Analysis(
+        maskedTitle,
+        maskedBody,
+        config.issueNumber,
+        config.owner,
+        config.repo,
+        p5Config,
+        parsedReport ?? undefined
+      );
+
+      console.log(`\n   ✅ P5 Analysis Complete`);
+      console.log(`      Level: ${orchestratorResult.level}`);
+      console.log(`      Duration: ${orchestratorResult.totalDuration}ms`);
+      console.log(`      Confidence: ${orchestratorResult.analysis.confidence}%`);
+
+      const filesAnalyzed = orchestratorResult.agentResults.finder?.data.relevantFiles.length ?? 0;
+      await postP5AnalysisComments(octokit, p5Analysis, filesAnalyzed, config);
+
+      console.log('\n✅ P5 Analysis complete!');
+      console.log(`🔗 https://github.com/${config.owner}/${config.repo}/issues/${config.issueNumber}`);
+      return;
+
+    } catch (p5Error) {
+      console.error('\n❌ P5 Pipeline failed, falling back to legacy analysis...');
+      console.error(`   Error: ${p5Error instanceof Error ? p5Error.message : String(p5Error)}`);
+    }
+  }
+
+  // ============================================
+  // Legacy Analysis Flow (default)
+  // ============================================
+
   console.log('\n🧠 Step 2.5: Extracting user intent with LLM...');
   let extractedIntent: ExtractedIntent | null = null;
   let inferredFiles: InferredFile[] = [];
 
-  const intentModel = getModel();
+  const intentModel = getModel() as unknown as import('ai').LanguageModel;
   extractedIntent = await extractIntentWithLLM(maskedTitle, maskedBody, { model: intentModel });
 
   if (extractedIntent) {
@@ -1049,9 +1149,8 @@ async function analyzeIssue(): Promise<void> {
   const contextSize = codeContext.length;
   console.log(`   Context size: ${(contextSize / 1024).toFixed(1)} KB`);
 
-  // Step 5: Generate analysis with retry
   console.log('\n🤖 Step 5: Generating AI analysis...');
-  const model = getModel();
+  const model = getModel() as unknown as import('ai').LanguageModel;
 
   const optimizedIssueBody = parsedReport
     ? buildOptimizedContext(parsedReport)
@@ -1070,7 +1169,7 @@ async function analyzeIssue(): Promise<void> {
       schema: AnalysisResultSchema,
       system: getSystemPrompt(config.language),
       prompt: userPrompt,
-      maxTokens: config.maxTokens,
+      maxOutputTokens: config.maxTokens,
     });
     return object;
   };
@@ -1102,7 +1201,7 @@ async function analyzeIssue(): Promise<void> {
           model,
           system: getSystemPrompt(config.language),
           prompt: userPrompt + '\n\nProvide your analysis in a structured format.',
-          maxTokens: config.maxTokens,
+          maxOutputTokens: config.maxTokens,
         }),
       config.retryAttempts,
       config.retryDelay
@@ -1131,6 +1230,11 @@ async function analyzeIssue(): Promise<void> {
         prevention: ['Add automated tests for this scenario', 'Consider adding error handling'],
         confidence: 50,
         additionalContext: 'This analysis was generated using fallback text mode. Structured output was not available.',
+        selfValidation: {
+          counterEvidence: ['Fallback mode - no structured validation performed'],
+          assumptions: ['Assuming bug report is valid', 'Assuming relevant files were correctly identified'],
+          confidenceJustification: 'Low confidence (50%) due to fallback text mode without structured verification.',
+        },
       }],
     };
     console.log('   ✅ Fallback analysis generated');
@@ -1235,7 +1339,7 @@ Provide a corrected analysis that only references verifiable information.`;
             schema: AnalysisResultSchema,
             system: getSystemPrompt(config.language),
             prompt: correctionPrompt,
-            maxTokens: config.maxTokens,
+            maxOutputTokens: config.maxTokens,
           });
           return object;
         },
@@ -1585,9 +1689,236 @@ Provide a corrected analysis that only references verifiable information.`;
   console.log(`🔗 https://github.com/${config.owner}/${config.repo}/issues/${config.issueNumber}`);
 }
 
-// ============================================
-// Execute
-// ============================================
+async function postP5AnalysisComments(
+  octokit: Octokit,
+  analysis: LegacyAnalysisResult,
+  filesAnalyzed: number,
+  cfg: AnalysisConfig
+): Promise<void> {
+  console.log('\n💬 Step 6: Posting analysis comments...');
+
+  const formatOptions: FormatOptions = {
+    provider: cfg.provider,
+    model: cfg.model,
+    filesAnalyzed,
+    language: cfg.language,
+  };
+
+  if (!analysis.isValidReport) {
+    const commentBody = formatInvalidReportComment(analysis.invalidReason, formatOptions);
+    await octokit.issues.createComment({
+      owner: cfg.owner,
+      repo: cfg.repo,
+      issue_number: cfg.issueNumber,
+      body: commentBody,
+    });
+    console.log('   📝 Posted invalid report comment');
+  } else if (analysis.reportType !== 'bug') {
+    const firstAnalysis = analysis.analyses[0];
+    if (firstAnalysis) {
+      const commentBody = formatNonBugReportComment(analysis.reportType, firstAnalysis, formatOptions);
+      await octokit.issues.createComment({
+        owner: cfg.owner,
+        repo: cfg.repo,
+        issue_number: cfg.issueNumber,
+        body: commentBody,
+      });
+      console.log('   📝 Posted non-bug report comment');
+    }
+  } else {
+    const totalAnalyses = analysis.analyses.length;
+    console.log(`   📊 Found ${totalAnalyses} root cause(s) to report`);
+
+    for (let i = 0; i < totalAnalyses; i++) {
+      const rootCauseAnalysis = analysis.analyses[i];
+      if (!rootCauseAnalysis) continue;
+
+      const commentBody = formatRootCauseComment(rootCauseAnalysis, {
+        ...formatOptions,
+        analysisIndex: i + 1,
+        totalAnalyses,
+      });
+
+      await octokit.issues.createComment({
+        owner: cfg.owner,
+        repo: cfg.repo,
+        issue_number: cfg.issueNumber,
+        body: commentBody,
+      });
+      console.log(`   📝 Posted analysis comment ${i + 1}/${totalAnalyses}`);
+
+      if (i < totalAnalyses - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+  }
+
+  console.log('\n🏷️ Step 7: Adding labels...');
+  await addAnalysisLabels(octokit, analysis, cfg);
+}
+
+async function addAnalysisLabels(
+  octokit: Octokit,
+  analysis: LegacyAnalysisResult,
+  cfg: AnalysisConfig
+): Promise<void> {
+  const labelsToAdd: string[] = ['status:analyzed'];
+
+  const categoryToArea: Record<string, string> = {
+    runtime_error: 'area:runtime',
+    logic_error: 'area:logic',
+    performance: 'area:performance',
+    security: 'area:security',
+    ui_ux: 'area:ui-ux',
+    configuration: 'area:config',
+  };
+
+  if (!analysis.isValidReport) {
+    labelsToAdd.push('type:invalid', 'status:needs-info');
+  } else {
+    switch (analysis.reportType) {
+      case 'bug': {
+        labelsToAdd.push('type:bug');
+        const severities = new Set<string>();
+        const areas = new Set<string>();
+        let hasVerifiedBug = false;
+        let hasUnverifiedBug = false;
+
+        for (const rootCauseAnalysis of analysis.analyses) {
+          if (rootCauseAnalysis.severity && rootCauseAnalysis.severity !== 'none') {
+            severities.add(`severity:${rootCauseAnalysis.severity}`);
+          }
+          const areaLabel = categoryToArea[rootCauseAnalysis.category];
+          if (areaLabel) {
+            areas.add(areaLabel);
+          }
+          if (rootCauseAnalysis.codeVerification?.bugExistsInCode) {
+            hasVerifiedBug = true;
+          } else {
+            hasUnverifiedBug = true;
+          }
+        }
+
+        const severityPriority = ['severity:critical', 'severity:high', 'severity:medium', 'severity:low'];
+        for (const sev of severityPriority) {
+          if (severities.has(sev)) {
+            labelsToAdd.push(sev);
+            break;
+          }
+        }
+        areas.forEach(area => labelsToAdd.push(area));
+
+        if (hasVerifiedBug) {
+          labelsToAdd.push('ai:verified');
+        } else if (hasUnverifiedBug) {
+          labelsToAdd.push('ai:unverified');
+        }
+        if (analysis.analyses.length > 1) {
+          labelsToAdd.push('multi-cause');
+        }
+        break;
+      }
+      case 'not_a_bug':
+        labelsToAdd.push('type:invalid', 'resolution:not-a-bug');
+        break;
+      case 'feature_request':
+        labelsToAdd.push('type:enhancement', 'kind:feature');
+        break;
+      case 'improvement':
+        labelsToAdd.push('type:enhancement', 'kind:improvement');
+        break;
+      case 'cannot_verify':
+        labelsToAdd.push('type:bug', 'status:needs-repro', 'ai:unverified');
+        break;
+      case 'needs_info':
+        labelsToAdd.push('status:needs-info');
+        break;
+    }
+  }
+
+  const uniqueLabels = [...new Set(labelsToAdd)];
+
+  const labelColors: Record<string, { color: string; description: string }> = {
+    'type:bug': { color: 'FF0000', description: 'Something isn\'t working' },
+    'type:enhancement': { color: '0066FF', description: 'New feature or request' },
+    'type:invalid': { color: 'CCCCCC', description: 'Invalid or incomplete report' },
+    'severity:critical': { color: '8B0000', description: 'Critical: System down or data loss' },
+    'severity:high': { color: 'FF4500', description: 'High: Major functionality broken' },
+    'severity:medium': { color: 'FFA500', description: 'Medium: Minor functionality issue' },
+    'severity:low': { color: '32CD32', description: 'Low: Cosmetic or minor issue' },
+    'area:runtime': { color: '8B008B', description: 'Runtime errors and crashes' },
+    'area:logic': { color: '9932CC', description: 'Logic errors and wrong behavior' },
+    'area:performance': { color: 'FF8C00', description: 'Performance issues' },
+    'area:security': { color: 'DC143C', description: 'Security vulnerabilities' },
+    'area:ui-ux': { color: '1E90FF', description: 'UI/UX issues' },
+    'area:config': { color: '708090', description: 'Configuration issues' },
+    'status:analyzing': { color: 'FFA500', description: 'AI analysis in progress' },
+    'status:analyzed': { color: '006400', description: 'AI analysis complete' },
+    'status:needs-info': { color: 'FF69B4', description: 'More information needed' },
+    'status:needs-repro': { color: 'FFD700', description: 'Reproduction steps needed' },
+    'ai:verified': { color: '228B22', description: 'Bug verified in code by AI' },
+    'ai:unverified': { color: 'A9A9A9', description: 'Needs manual verification' },
+    'resolution:not-a-bug': { color: 'E0E0E0', description: 'Not a bug - working as intended' },
+    'kind:feature': { color: '00CED1', description: 'Feature request' },
+    'kind:improvement': { color: '20B2AA', description: 'Improvement suggestion' },
+    'multi-cause': { color: 'FF6347', description: 'Multiple root causes identified' },
+  };
+
+  if (uniqueLabels.length > 0) {
+    console.log('   Creating/updating labels if needed...');
+    for (const labelName of uniqueLabels) {
+      const labelDef = labelColors[labelName];
+      if (labelDef) {
+        try {
+          await octokit.issues.updateLabel({
+            owner: cfg.owner,
+            repo: cfg.repo,
+            name: labelName,
+            color: labelDef.color,
+            description: labelDef.description,
+          });
+        } catch {
+          try {
+            await octokit.issues.createLabel({
+              owner: cfg.owner,
+              repo: cfg.repo,
+              name: labelName,
+              color: labelDef.color,
+              description: labelDef.description,
+            });
+            console.log(`   Created label: ${labelName}`);
+          } catch {
+            // Label might already exist
+          }
+        }
+      }
+    }
+
+    try {
+      await octokit.issues.addLabels({
+        owner: cfg.owner,
+        repo: cfg.repo,
+        issue_number: cfg.issueNumber,
+        labels: uniqueLabels,
+      });
+      console.log(`   ✅ Added labels: ${uniqueLabels.join(', ')}`);
+    } catch {
+      console.log('   ⚠️ Could not add labels');
+    }
+
+    try {
+      await octokit.issues.removeLabel({
+        owner: cfg.owner,
+        repo: cfg.repo,
+        issue_number: cfg.issueNumber,
+        name: 'status:analyzing',
+      });
+      console.log('   🔓 Removed status:analyzing label (lock released)');
+    } catch {
+      // Label might not exist
+    }
+  }
+}
 
 analyzeIssue().catch((error) => {
   console.error('\n❌ Analysis failed:', error instanceof Error ? error.message : error);

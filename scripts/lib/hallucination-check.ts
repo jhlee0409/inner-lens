@@ -168,12 +168,12 @@ function normalizeCode(code: string): string {
 }
 
 /**
- * Check if a code citation appears in the context
+ * Check if a code citation appears in the context with strict matching
  */
-function findCodeInContext(citation: string, context: string): boolean {
-  // Direct substring match
+function findCodeInContext(citation: string, context: string): { found: boolean; matchType: 'exact' | 'normalized' | 'partial' | 'none' } {
+  // Direct substring match (best)
   if (context.includes(citation)) {
-    return true;
+    return { found: true, matchType: 'exact' };
   }
 
   // Normalized match (handles whitespace differences)
@@ -181,27 +181,27 @@ function findCodeInContext(citation: string, context: string): boolean {
   const normalizedContext = normalizeCode(context);
 
   if (normalizedContext.includes(normalizedCitation)) {
-    return true;
+    return { found: true, matchType: 'normalized' };
   }
 
-  // Partial match - at least 70% of tokens should match
-  const citationTokens = normalizedCitation.split(/\s+/);
+  // Stricter partial match - require 85% token match (increased from 70%)
+  const citationTokens = normalizedCitation.split(/\s+/).filter(t => t.length > 2);
   if (citationTokens.length >= 3) {
     let matchCount = 0;
     for (const token of citationTokens) {
-      if (token.length > 2 && normalizedContext.includes(token)) {
+      if (normalizedContext.includes(token)) {
         matchCount++;
       }
     }
-    return matchCount / citationTokens.length >= 0.7;
+    const matchRatio = matchCount / citationTokens.length;
+    if (matchRatio >= 0.85) {
+      return { found: true, matchType: 'partial' };
+    }
   }
 
-  return false;
+  return { found: false, matchType: 'none' };
 }
 
-/**
- * Verify that code citations in evidence actually appear in context
- */
 export function verifyCodeCitations(
   evidence: string,
   context: VerificationContext
@@ -210,13 +210,10 @@ export function verifyCodeCitations(
   const citations = extractCodeCitations(evidence);
 
   for (const citation of citations) {
-    const found = findCodeInContext(citation, context.codeContext);
+    const result = findCodeInContext(citation, context.codeContext);
+    const displayCitation = citation.length > 80 ? citation.substring(0, 80) + '...' : citation;
 
-    if (!found) {
-      // Truncate long citations for display
-      const displayCitation =
-        citation.length > 80 ? citation.substring(0, 80) + '...' : citation;
-
+    if (!result.found) {
       checks.push({
         type: 'code_citation',
         claim: displayCitation,
@@ -224,12 +221,20 @@ export function verifyCodeCitations(
         details: `Code snippet not found in provided context - possible hallucination`,
         severity: 'critical',
       });
+    } else if (result.matchType === 'partial') {
+      checks.push({
+        type: 'code_citation',
+        claim: displayCitation,
+        verified: true,
+        details: `Code found via partial match (85%+ tokens) - verify manually`,
+        severity: 'warning',
+      });
     } else {
       checks.push({
         type: 'code_citation',
         claim: citation.substring(0, 50) + (citation.length > 50 ? '...' : ''),
         verified: true,
-        details: `Code found in context`,
+        details: `Code found in context (${result.matchType} match)`,
         severity: 'info',
       });
     }
@@ -271,9 +276,6 @@ function extractLineReferences(text: string): Array<{ file: string; line: number
   return references;
 }
 
-/**
- * Verify that line references point to valid locations
- */
 export function verifyLineReferences(
   explanation: string,
   evidence: string,
@@ -283,14 +285,12 @@ export function verifyLineReferences(
   const allText = explanation + '\n' + evidence;
   const references = extractLineReferences(allText);
 
-  // Deduplicate references
   const uniqueRefs = references.filter(
     (ref, idx, arr) =>
       arr.findIndex(r => r.file === ref.file && r.line === ref.line) === idx
   );
 
   for (const ref of uniqueRefs) {
-    // Find the actual file
     const matchingFile = context.relevantFiles.find(f => f.endsWith(ref.file) || f.includes(ref.file));
 
     if (!matchingFile) {
@@ -304,7 +304,6 @@ export function verifyLineReferences(
       continue;
     }
 
-    // Check if line number is valid
     try {
       const content = fs.readFileSync(matchingFile, 'utf-8');
       const lines = content.split('\n');
@@ -318,13 +317,32 @@ export function verifyLineReferences(
           severity: 'critical',
         });
       } else {
-        checks.push({
-          type: 'line_reference',
-          claim: `${ref.file}:${ref.line}`,
-          verified: true,
-          details: `Valid line reference`,
-          severity: 'info',
-        });
+        const actualLineContent = lines[ref.line - 1]?.trim() || '';
+        const lineContextWindow = lines.slice(Math.max(0, ref.line - 3), ref.line + 2).join(' ');
+        
+        const contentMentionedInExplanation = checkLineContentMentioned(
+          actualLineContent,
+          lineContextWindow,
+          allText
+        );
+
+        if (contentMentionedInExplanation) {
+          checks.push({
+            type: 'line_reference',
+            claim: `${ref.file}:${ref.line}`,
+            verified: true,
+            details: `Line content matches explanation: "${actualLineContent.substring(0, 60)}..."`,
+            severity: 'info',
+          });
+        } else {
+          checks.push({
+            type: 'line_reference',
+            claim: `${ref.file}:${ref.line}`,
+            verified: true,
+            details: `Line exists but content not mentioned in explanation. Actual: "${actualLineContent.substring(0, 60)}..."`,
+            severity: 'warning',
+          });
+        }
       }
     } catch {
       checks.push({
@@ -338,6 +356,38 @@ export function verifyLineReferences(
   }
 
   return checks;
+}
+
+function checkLineContentMentioned(
+  lineContent: string,
+  contextWindow: string,
+  explanationText: string
+): boolean {
+  const normalizedExplanation = explanationText.toLowerCase();
+  const normalizedLine = lineContent.toLowerCase().trim();
+  const normalizedContext = contextWindow.toLowerCase();
+  
+  if (normalizedLine.length < 5) return true;
+  
+  if (normalizedExplanation.includes(normalizedLine)) return true;
+  
+  const significantTokens = normalizedLine
+    .split(/[\s\(\)\{\}\[\];,=<>]+/)
+    .filter(t => t.length > 3 && !/^(const|let|var|function|return|if|else|for|while|import|export|from|async|await)$/.test(t));
+  
+  if (significantTokens.length === 0) return true;
+  
+  const matchedTokens = significantTokens.filter(t => normalizedExplanation.includes(t));
+  const matchRatio = matchedTokens.length / significantTokens.length;
+  
+  if (matchRatio >= 0.5) return true;
+  
+  const contextTokens = normalizedContext
+    .split(/[\s\(\)\{\}\[\];,=<>]+/)
+    .filter(t => t.length > 4);
+  const contextMatches = contextTokens.filter(t => normalizedExplanation.includes(t));
+  
+  return contextMatches.length >= 3;
 }
 
 // ============================================

@@ -357,6 +357,16 @@ export interface InnerLensConfig {
 }
 
 /**
+ * Log entry source type for categorization
+ */
+export type LogEntryType =
+  | 'console'
+  | 'runtime'
+  | 'resource'
+  | 'network'
+  | 'promise_rejection';
+
+/**
  * Captured log entry
  */
 export interface LogEntry {
@@ -364,6 +374,7 @@ export interface LogEntry {
   message: string;
   timestamp: number;
   stack?: string;
+  type?: LogEntryType;
 }
 
 // ============================================

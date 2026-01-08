@@ -8,7 +8,7 @@
  * Assembly-Line Pattern: Each agent processes and passes results to the next
  */
 
-import type { LanguageModelV1 } from 'ai';
+import type { LanguageModel } from 'ai';
 import { z } from 'zod';
 import type { ParsedBugReport } from '../lib/issue-parser.js';
 import type { CorrelationResult } from '../lib/error-correlation.js';
@@ -121,7 +121,7 @@ export interface AgentOutput {
  * Agent execution configuration
  */
 export interface AgentConfig {
-  model?: LanguageModelV1;
+  model?: LanguageModel;
   maxRetries?: number;
   timeout?: number;
 }
@@ -249,6 +249,12 @@ export const AnalysisResultSchema = z.object({
   prevention: z.array(z.string()).describe('How to prevent similar issues'),
   confidence: z.number().min(0).max(100).describe('Confidence level (0-100)'),
   additionalContext: z.string().optional().describe('Additional notes or caveats'),
+  selfValidation: z.object({
+    counterEvidence: z.array(z.string()).describe('What evidence would DISPROVE this hypothesis?'),
+    assumptions: z.array(z.string()).describe('What assumptions are you making that might be wrong?'),
+    confidenceJustification: z.string().describe('Why did you choose this confidence level? Cite specific evidence.'),
+    alternativeHypotheses: z.array(z.string()).optional().describe('Other explanations considered and rejected'),
+  }).optional().describe('Self-validation to prevent overconfident or hallucinated conclusions'),
 });
 
 export type AnalysisResult = z.infer<typeof AnalysisResultSchema>;
@@ -271,9 +277,11 @@ export interface ExplainerOutput extends AgentOutput {
 
 export interface ReviewResult {
   approved: boolean;
-  confidenceAdjustment: number; // -50 to +20
+  confidenceAdjustment: number;
   issues: string[];
   suggestions: string[];
+  verifiedClaims?: string[];
+  counterEvidence?: string[];
 }
 
 export interface ReviewerInput extends AgentInput {
@@ -296,10 +304,10 @@ export interface ReviewerOutput extends AgentOutput {
 
 export interface OrchestratorConfig {
   // Model selection per agent
-  finderModel?: LanguageModelV1;
-  investigatorModel?: LanguageModelV1;
-  explainerModel?: LanguageModelV1;
-  reviewerModel?: LanguageModelV1;
+  finderModel?: LanguageModel;
+  investigatorModel?: LanguageModel;
+  explainerModel?: LanguageModel;
+  reviewerModel?: LanguageModel;
 
   // Behavior settings
   analysisLevel?: 'auto' | 1 | 2;

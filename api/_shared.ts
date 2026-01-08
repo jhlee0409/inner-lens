@@ -13,11 +13,19 @@ import { z } from 'zod';
 // Types
 // ============================================
 
+export type LogEntryType =
+  | 'console'
+  | 'runtime'
+  | 'resource'
+  | 'network'
+  | 'promise_rejection';
+
 export interface LogEntry {
   level: 'error' | 'warn' | 'info' | 'log';
   message: string;
   timestamp: number;
   stack?: string;
+  type?: LogEntryType;
 }
 
 // User Action Types
@@ -508,6 +516,7 @@ const LogEntrySchema = z.object({
   message: z.string(),
   timestamp: z.number(),
   stack: z.string().optional(),
+  type: z.enum(['console', 'runtime', 'resource', 'network', 'promise_rejection']).optional(),
 });
 
 const ReporterSchema = z.object({

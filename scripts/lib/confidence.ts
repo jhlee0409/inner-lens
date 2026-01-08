@@ -27,6 +27,16 @@ export type FileRole =
   | 'unknown'; // Cannot determine
 
 /**
+ * Self-validation data from LLM analysis
+ */
+export interface SelfValidation {
+  counterEvidence: string[];
+  assumptions: string[];
+  confidenceJustification: string;
+  alternativeHypotheses?: string[];
+}
+
+/**
  * Minimal interface for analysis calibration
  * Compatible with RootCauseAnalysis from Zod schema
  */
@@ -42,6 +52,7 @@ export interface AnalysisForCalibration {
     bugExistsInCode: boolean;
     evidence: string;
   };
+  selfValidation?: SelfValidation;
 }
 
 /**
@@ -293,6 +304,75 @@ export function calibrateConfidence(
   ) {
     calibrated -= 15;
     penalties.push('Insufficient code verification evidence (-15%)');
+  }
+
+  // 6. Self-validation based calibration (2025 enhancement)
+  if (analysis.selfValidation) {
+    const sv = analysis.selfValidation;
+
+    // 6a. If LLM listed significant counter-evidence but still claims high confidence, penalize
+    if (sv.counterEvidence.length >= 2 && calibrated > 75) {
+      calibrated -= 15;
+      penalties.push('Multiple counter-evidence items listed but confidence >75% (-15%)');
+    }
+
+    // 6b. If many assumptions but high confidence, penalize
+    if (sv.assumptions.length >= 3 && calibrated > 70) {
+      calibrated -= 10;
+      penalties.push('Many assumptions (3+) with high confidence (-10%)');
+    }
+
+    // 6c. Check if confidence justification is generic/weak
+    const weakJustifications = [
+      'seems likely',
+      'probably',
+      'based on the description',
+      'user reported',
+      'appears to be',
+      'looks like',
+      'should be',
+    ];
+    const justificationLower = sv.confidenceJustification.toLowerCase();
+    if (weakJustifications.some(w => justificationLower.includes(w)) &&
+        !justificationLower.includes('line') &&
+        !justificationLower.includes('stack trace')) {
+      calibrated = Math.min(calibrated, 65);
+      penalties.push('Weak confidence justification without code evidence (capped at 65%)');
+    }
+
+    // 6d. Reward well-documented alternative hypotheses (minor boost, max +5)
+    if (sv.alternativeHypotheses && sv.alternativeHypotheses.length >= 2 && calibrated < 95) {
+      calibrated = Math.min(calibrated + 5, 95);
+      penalties.push('✅ Well-documented alternative hypotheses (+5%)');
+    }
+  } else {
+    // No self-validation provided - cap at 70% for high confidence claims
+    if (calibrated > 70) {
+      calibrated = Math.min(calibrated, 70);
+      penalties.push('No self-validation provided (capped at 70%)');
+    }
+  }
+
+  // 7. Generic answer detection
+  const genericPhrases = [
+    'check the logs',
+    'add error handling',
+    'review the code',
+    'investigate further',
+    'debug the issue',
+    'more information needed',
+    'could be many things',
+    'various reasons',
+    'multiple causes',
+    '로그를 확인',
+    '에러 처리 추가',
+    '추가 조사 필요',
+  ];
+  const explanationForGeneric = analysis.rootCause.explanation.toLowerCase();
+  const genericCount = genericPhrases.filter(p => explanationForGeneric.includes(p)).length;
+  if (genericCount >= 2 && calibrated > 50) {
+    calibrated = Math.min(calibrated, 50);
+    penalties.push(`Generic/vague explanation detected (${genericCount} generic phrases, capped at 50%)`);
   }
 
   // Ensure confidence stays in valid range

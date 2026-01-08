@@ -389,4 +389,233 @@ describe('log-capture', () => {
       expect(logs).toHaveLength(1);
     });
   });
+
+  describe('resource error capture', () => {
+    beforeEach(() => {
+      clearCapturedLogs();
+      restoreConsole();
+    });
+
+    afterEach(() => {
+      restoreConsole();
+      clearCapturedLogs();
+    });
+
+    it('captures image loading errors', () => {
+      initLogCapture();
+
+      const img = document.createElement('img');
+      Object.defineProperty(img, 'src', {
+        value: 'https://example.com/missing.png',
+        writable: true,
+      });
+      document.body.appendChild(img);
+
+      const errorEvent = new Event('error', { bubbles: false });
+      img.dispatchEvent(errorEvent);
+
+      const logs = getCapturedLogs();
+      expect(logs.some((l) => l.message.includes('Resource load failed'))).toBe(
+        true
+      );
+      expect(logs.some((l) => l.message.includes('IMG'))).toBe(true);
+      expect(logs.some((l) => l.message.includes('missing.png'))).toBe(true);
+
+      document.body.removeChild(img);
+    });
+
+    it('captures script loading errors', () => {
+      initLogCapture();
+
+      const script = document.createElement('script');
+      Object.defineProperty(script, 'src', {
+        value: 'https://example.com/missing.js',
+        writable: true,
+      });
+      document.body.appendChild(script);
+
+      const errorEvent = new Event('error', { bubbles: false });
+      script.dispatchEvent(errorEvent);
+
+      const logs = getCapturedLogs();
+      expect(logs.some((l) => l.message.includes('Resource load failed'))).toBe(
+        true
+      );
+      expect(logs.some((l) => l.message.includes('SCRIPT'))).toBe(true);
+
+      document.body.removeChild(script);
+    });
+
+    it('captures link (CSS) loading errors', () => {
+      initLogCapture();
+
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      Object.defineProperty(link, 'href', {
+        value: 'https://example.com/missing.css',
+        writable: true,
+      });
+      document.body.appendChild(link);
+
+      const errorEvent = new Event('error', { bubbles: false });
+      link.dispatchEvent(errorEvent);
+
+      const logs = getCapturedLogs();
+      expect(logs.some((l) => l.message.includes('Resource load failed'))).toBe(
+        true
+      );
+      expect(logs.some((l) => l.message.includes('LINK'))).toBe(true);
+
+      document.body.removeChild(link);
+    });
+
+    it('masks sensitive data in resource URLs', () => {
+      initLogCapture({ maskSensitiveData: true });
+
+      const img = document.createElement('img');
+      Object.defineProperty(img, 'src', {
+        value: 'https://example.com/image?token=sk-1234567890abcdefghij',
+        writable: true,
+      });
+      document.body.appendChild(img);
+
+      const errorEvent = new Event('error', { bubbles: false });
+      img.dispatchEvent(errorEvent);
+
+      const logs = getCapturedLogs();
+      const resourceLog = logs.find((l) =>
+        l.message.includes('Resource load failed')
+      );
+      expect(resourceLog).toBeDefined();
+      expect(resourceLog!.message).not.toContain('sk-1234567890abcdefghij');
+      expect(resourceLog!.message).toContain('REDACTED');
+
+      document.body.removeChild(img);
+    });
+
+    it('does not capture window errors as resource errors', () => {
+      initLogCapture();
+      clearCapturedLogs();
+
+      const errorEvent = new ErrorEvent('error', {
+        message: 'Test error',
+        filename: 'test.js',
+        lineno: 1,
+        colno: 1,
+      });
+
+      window.dispatchEvent(errorEvent);
+
+      const logs = getCapturedLogs();
+      expect(
+        logs.some((l) => l.message.includes('Resource load failed'))
+      ).toBe(false);
+      expect(logs.some((l) => l.message.includes('Uncaught Error'))).toBe(true);
+    });
+
+    it('cleans up resource error handler on restoreConsole', () => {
+      initLogCapture();
+      restoreConsole();
+      clearCapturedLogs();
+
+      const img = document.createElement('img');
+      Object.defineProperty(img, 'src', {
+        value: 'https://example.com/test.png',
+        writable: true,
+      });
+      document.body.appendChild(img);
+
+      const errorEvent = new Event('error', { bubbles: false });
+      img.dispatchEvent(errorEvent);
+
+      const logs = getCapturedLogs();
+      expect(logs).toHaveLength(0);
+
+      document.body.removeChild(img);
+    });
+  });
+
+  describe('log entry type field', () => {
+    let originalFetch: typeof fetch;
+
+    beforeEach(() => {
+      clearCapturedLogs();
+      restoreConsole();
+      originalFetch = globalThis.fetch;
+    });
+
+    afterEach(() => {
+      restoreConsole();
+      clearCapturedLogs();
+      globalThis.fetch = originalFetch;
+    });
+
+    it('sets type to "console" for console.error logs', () => {
+      initLogCapture();
+      console.error('test error');
+
+      const logs = getCapturedLogs();
+      expect(logs[0]!.type).toBe('console');
+    });
+
+    it('sets type to "console" for console.warn logs', () => {
+      initLogCapture();
+      console.warn('test warning');
+
+      const logs = getCapturedLogs();
+      expect(logs[0]!.type).toBe('console');
+    });
+
+    it('sets type to "network" for fetch requests', async () => {
+      const mockResponse = new Response('OK', { status: 200 });
+      globalThis.fetch = vi.fn().mockResolvedValue(mockResponse);
+
+      initLogCapture();
+      await fetch('https://api.example.com/data');
+
+      const logs = getCapturedLogs();
+      expect(logs[0]!.type).toBe('network');
+    });
+
+    it('sets type to "runtime" for uncaught errors', () => {
+      initLogCapture();
+      clearCapturedLogs();
+
+      const errorEvent = new ErrorEvent('error', {
+        message: 'Runtime error',
+        filename: 'test.js',
+        lineno: 1,
+        colno: 1,
+      });
+      window.dispatchEvent(errorEvent);
+
+      const logs = getCapturedLogs();
+      const runtimeLog = logs.find((l) => l.message.includes('Uncaught Error'));
+      expect(runtimeLog).toBeDefined();
+      expect(runtimeLog!.type).toBe('runtime');
+    });
+
+    it('sets type to "resource" for resource loading errors', () => {
+      initLogCapture();
+
+      const img = document.createElement('img');
+      Object.defineProperty(img, 'src', {
+        value: 'https://example.com/missing.png',
+        writable: true,
+      });
+      document.body.appendChild(img);
+
+      const errorEvent = new Event('error', { bubbles: false });
+      img.dispatchEvent(errorEvent);
+
+      const logs = getCapturedLogs();
+      const resourceLog = logs.find((l) =>
+        l.message.includes('Resource load failed')
+      );
+      expect(resourceLog).toBeDefined();
+      expect(resourceLog!.type).toBe('resource');
+
+      document.body.removeChild(img);
+    });
+  });
 });

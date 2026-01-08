@@ -202,7 +202,7 @@ export const investigatorAgent: Agent<InvestigatorInput, InvestigatorOutput> = {
         schema: InvestigatorResultSchema,
         system: SYSTEM_PROMPT,
         prompt: userPrompt,
-        maxTokens: 2000,
+        maxOutputTokens: 2000,
       });
 
       // Validate and normalize hypotheses

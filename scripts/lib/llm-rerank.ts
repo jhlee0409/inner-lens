@@ -29,7 +29,7 @@ interface RerankCandidate {
 
 interface RerankResult {
   path: string;
-  newScore: number;
+  score: number;
   reason: string;
 }
 
@@ -160,8 +160,8 @@ IMPORTANT: Output ONLY the JSON array, no markdown code blocks or explanation.`;
     const { text } = await generateText({
       model: rerankModel,
       prompt: rerankPrompt,
-      maxTokens: 1000,
-      temperature: 0.1, // Low temperature for consistent ranking
+      maxOutputTokens: 1000,
+      temperature: 0.1,
     });
 
     // Parse the response
@@ -182,12 +182,10 @@ IMPORTANT: Output ONLY the JSON array, no markdown code blocks or explanation.`;
       return files;
     }
 
-    // Create a map of path -> new score
     const scoreMap = new Map<string, number>();
     for (const result of rerankResults) {
-      if (result.path && typeof result.newScore === 'number') {
-        // Normalize LLM score (0-100) to our scale
-        scoreMap.set(result.path, result.newScore * 2); // Scale to ~0-200 range
+      if (result.path && typeof result.score === 'number') {
+        scoreMap.set(result.path, result.score * 2);
       }
     }
 

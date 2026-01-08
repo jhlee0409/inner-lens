@@ -254,7 +254,7 @@ export const reviewerAgent: Agent<ReviewerInput, ReviewerOutput> = {
         schema: ReviewResultSchema,
         system: SYSTEM_PROMPT,
         prompt: userPrompt,
-        maxTokens: 1500,
+        maxOutputTokens: 1500,
       });
 
       // Apply review to get final analysis

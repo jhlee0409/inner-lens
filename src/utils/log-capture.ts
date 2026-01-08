@@ -26,6 +26,7 @@ let captureOptions: LogCaptureOptions = {
 // Store event handlers for cleanup
 let errorHandler: ((event: ErrorEvent) => void) | null = null;
 let rejectionHandler: ((event: PromiseRejectionEvent) => void) | null = null;
+let resourceErrorHandler: ((event: Event) => void) | null = null;
 
 // Maximum characters for response body truncation
 const MAX_RESPONSE_BODY_LENGTH = 1000;
@@ -82,6 +83,7 @@ function createLogEntry(level: LogLevel, args: unknown[]): LogEntry {
     message,
     timestamp: Date.now(),
     stack,
+    type: 'console',
   };
 }
 
@@ -175,6 +177,7 @@ function createNetworkLogEntry(
     level: status >= 400 ? 'error' : 'info',
     message,
     timestamp: Date.now(),
+    type: 'network',
   };
 }
 
@@ -303,6 +306,7 @@ export function initLogCapture(options?: Partial<LogCaptureOptions>): void {
     const entry = createLogEntry('error', [
       `Uncaught Error: ${event.message} at ${event.filename}:${event.lineno}:${event.colno}`,
     ]);
+    entry.type = 'runtime';
     if (event.error?.stack) {
       entry.stack = captureOptions.maskSensitiveData
         ? maskSensitiveData(event.error.stack)
@@ -329,6 +333,7 @@ export function initLogCapture(options?: Partial<LogCaptureOptions>): void {
     }
 
     const entry = createLogEntry('error', [message]);
+    entry.type = 'promise_rejection';
     if (reason instanceof Error && reason.stack) {
       entry.stack = captureOptions.maskSensitiveData
         ? maskSensitiveData(reason.stack)
@@ -337,6 +342,30 @@ export function initLogCapture(options?: Partial<LogCaptureOptions>): void {
     addLogEntry(entry);
   };
   window.addEventListener('unhandledrejection', rejectionHandler);
+
+  // Capture resource loading errors (img, script, css 404s) - they don't bubble, so capture phase required
+  resourceErrorHandler = (event: Event) => {
+    const target = event.target;
+    if (target && target !== window && target instanceof HTMLElement) {
+      const src =
+        (target as HTMLImageElement).src ||
+        (target as HTMLScriptElement).src ||
+        (target as HTMLLinkElement).href;
+      if (src) {
+        let message = `Resource load failed: ${target.tagName} - ${src}`;
+        if (captureOptions.maskSensitiveData) {
+          message = maskSensitiveData(message);
+        }
+        addLogEntry({
+          level: 'error',
+          message,
+          timestamp: Date.now(),
+          type: 'resource',
+        });
+      }
+    }
+  };
+  window.addEventListener('error', resourceErrorHandler, true);
 
   isInitialized = true;
 }
@@ -382,6 +411,10 @@ export function restoreConsole(): void {
     if (rejectionHandler) {
       window.removeEventListener('unhandledrejection', rejectionHandler);
       rejectionHandler = null;
+    }
+    if (resourceErrorHandler) {
+      window.removeEventListener('error', resourceErrorHandler, true);
+      resourceErrorHandler = null;
     }
   }
 
