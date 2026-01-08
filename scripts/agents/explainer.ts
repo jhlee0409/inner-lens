@@ -26,12 +26,13 @@ import type {
 } from './types.js';
 
 import { AnalysisResultSchema } from './types.js';
+import { type OutputLanguage, LANGUAGE_NAMES } from '../lib/i18n.js';
 
 // ============================================
 // System Prompt (Chain-of-Thought with P3-2 enhancements)
 // ============================================
 
-const SYSTEM_PROMPT = `You are an expert Security-First QA Engineer analyzing bug reports. You follow a systematic Chain-of-Thought approach.
+const BASE_SYSTEM_PROMPT = `You are an expert Security-First QA Engineer analyzing bug reports. You follow a systematic Chain-of-Thought approach.
 
 ## CRITICAL SECURITY RULES (NEVER VIOLATE)
 1. NEVER output secrets, tokens, API keys, passwords, or credentials
@@ -154,6 +155,36 @@ When "Extracted User Intent" section is provided:
 - "Inferred Features" maps user's terms to likely code equivalents (e.g., "캡쳐버튼" → "CaptureButton")
 - ALWAYS search for and analyze code related to the inferred features
 - If the bug description is vague but intent is clear, prioritize intent-based analysis`;
+
+function getSystemPrompt(language: OutputLanguage = 'en'): string {
+  if (language === 'en') {
+    return BASE_SYSTEM_PROMPT;
+  }
+
+  const languageName = LANGUAGE_NAMES[language];
+
+  return BASE_SYSTEM_PROMPT + `
+
+## OUTPUT LANGUAGE REQUIREMENT
+
+**CRITICAL: You MUST write ALL analysis output in ${languageName}.**
+
+This includes:
+- rootCause.summary and rootCause.explanation
+- suggestedFix.steps and suggestedFix.codeChanges[].description
+- prevention items
+- additionalContext
+- invalidReason (if applicable)
+
+**Exceptions (keep in English):**
+- File paths and code snippets
+- Technical terms that don't have standard translations
+- Variable/function names from the codebase
+
+Example for Korean (ko):
+- rootCause.summary: "사용자 입력값 검증 누락으로 인한 null 참조 오류"
+- suggestedFix.steps: ["1. UserService.ts의 validateInput 함수에 null 체크 추가", "2. 단위 테스트 작성"]`;
+}
 
 // ============================================
 // User Prompt Template
@@ -338,12 +369,12 @@ export const explainerAgent: Agent<ExplainerInput, ExplainerOutput> = {
       );
 
       console.log('   🤖 Generating analysis with LLM...');
+      console.log(`   🌐 Output language: ${LANGUAGE_NAMES[config?.language || 'en']}`);
 
-      // Generate structured analysis
       const { object: analysis } = await generateObject({
         model: config.model,
         schema: AnalysisResultSchema,
-        system: SYSTEM_PROMPT,
+        system: getSystemPrompt(config?.language),
         prompt: userPrompt,
         maxOutputTokens: 4000,
       });

@@ -109,15 +109,14 @@ async function runExplainer(
   investigatorOutput?: InvestigatorOutput,
   config?: OrchestratorConfig
 ): Promise<ExplainerOutput> {
-  // Use the actual Explainer Agent
   return explainerAgent.execute(
     {
       issueContext: context,
-      level: 1, // Will be set properly by orchestrator
+      level: 1,
       finderOutput,
       investigatorOutput,
     },
-    { model: config?.explainerModel }
+    { model: config?.explainerModel, language: config?.language }
   );
 }
 
@@ -130,14 +129,13 @@ async function runInvestigator(
   finderOutput: FinderOutput,
   config?: OrchestratorConfig
 ): Promise<InvestigatorOutput> {
-  // Use the actual Investigator Agent
   return investigatorAgent.execute(
     {
       issueContext: context,
-      level: 2, // Investigator is L2 only
+      level: 2,
       finderOutput,
     },
-    { model: config?.investigatorModel }
+    { model: config?.investigatorModel, language: config?.language }
   );
 }
 
@@ -152,16 +150,15 @@ async function runReviewer(
   investigatorOutput?: InvestigatorOutput,
   config?: OrchestratorConfig
 ): Promise<ReviewerOutput> {
-  // Use the actual Reviewer Agent
   return reviewerAgent.execute(
     {
       issueContext: context,
-      level: 2, // Reviewer is L2 only
+      level: 2,
       finderOutput,
       explainerOutput,
       investigatorOutput,
     },
-    { model: config?.reviewerModel }
+    { model: config?.reviewerModel, language: config?.language }
   );
 }
 

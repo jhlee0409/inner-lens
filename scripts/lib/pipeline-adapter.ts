@@ -90,6 +90,7 @@ export async function runP5Analysis(
     reviewerModel: config.model,
     analysisLevel: 'auto',
     enableReviewer: true,
+    language: config.language,
   };
 
   return runAnalysis({

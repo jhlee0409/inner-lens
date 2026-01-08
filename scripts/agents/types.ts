@@ -12,6 +12,7 @@ import type { LanguageModel } from 'ai';
 import { z } from 'zod';
 import type { ParsedBugReport } from '../lib/issue-parser.js';
 import type { CorrelationResult } from '../lib/error-correlation.js';
+import type { OutputLanguage } from '../lib/i18n.js';
 
 // ============================================
 // Issue Context (Input from GitHub)
@@ -124,6 +125,7 @@ export interface AgentConfig {
   model?: LanguageModel;
   maxRetries?: number;
   timeout?: number;
+  language?: OutputLanguage;
 }
 
 /**
@@ -313,6 +315,9 @@ export interface OrchestratorConfig {
   analysisLevel?: 'auto' | 1 | 2;
   enableReviewer?: boolean;
   maxRetries?: number;
+
+  // Output language for analysis
+  language?: OutputLanguage;
 }
 
 export interface OrchestratorResult {
