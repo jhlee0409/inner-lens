@@ -35,6 +35,7 @@ import {
 import {
   runP5Analysis,
   getPipelineMode,
+  buildAdditionalContext,
   type PipelineConfig,
 } from './lib/pipeline-adapter.js';
 import type { OrchestratorResult, ExtractedIntent } from './agents/types.js';
@@ -282,7 +283,7 @@ function convertP5ToLocalFormat(orchestratorResult: OrchestratorResult): Analysi
 
   return {
     isValidReport: analysis.isValidReport,
-    invalidReason: analysis.isValidReport ? undefined : 'Insufficient information for analysis',
+    invalidReason: analysis.invalidReason,
     reportType,
     analyses: [{
       severity: analysis.severity,
@@ -307,7 +308,7 @@ function convertP5ToLocalFormat(orchestratorResult: OrchestratorResult): Analysi
       },
       prevention: analysis.prevention,
       confidence: analysis.confidence,
-      additionalContext: analysis.additionalContext,
+      additionalContext: [analysis.additionalContext, buildAdditionalContext(orchestratorResult)].filter(Boolean).join('\n\n'),
       selfValidation: analysis.selfValidation ?? {
         counterEvidence: [],
         assumptions: [],
