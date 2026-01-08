@@ -1,6 +1,6 @@
 {
   "name": "inner-lens",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Self-Debugging QA Agent - Universal bug reporting widget with AI-powered analysis for any frontend framework",
   "author": "jack",
   "license": "MIT",
