@@ -76,6 +76,8 @@ export interface IssueContext {
   errorMessages: string[];
   parsedReport?: ParsedBugReport;
   correlationResult?: CorrelationResult;
+  /** Performance-based category hint (e.g., 'performance', 'ui_ux') */
+  categoryHint?: string;
 }
 
 // ============================================

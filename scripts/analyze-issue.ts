@@ -974,8 +974,9 @@ async function analyzeIssue(): Promise<void> {
 
   // 2c. Extract general keywords + enhanced keywords from parsed report
   let keywords = extractKeywords(issueText);
+  let enhancedKeywords: string[] = [];
   if (parsedReport) {
-    const enhancedKeywords = extractSearchKeywords(parsedReport);
+    enhancedKeywords = extractSearchKeywords(parsedReport);
     keywords = [...new Set([...keywords, ...enhancedKeywords])];
     console.log(`   🔤 Keywords enhanced: ${keywords.length} total (${enhancedKeywords.length} from structured data)`);
   } else {
@@ -1012,7 +1013,9 @@ async function analyzeIssue(): Promise<void> {
         config.owner,
         config.repo,
         p5Config,
-        parsedReport ?? undefined
+        parsedReport ?? undefined,
+        enhancedKeywords.length > 0 ? enhancedKeywords : undefined,
+        categoryHint ?? undefined
       );
 
       console.log(`\n   ✅ P5 Analysis Complete`);

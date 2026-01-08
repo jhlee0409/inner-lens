@@ -99,20 +99,17 @@ function extractLevelCriteria(context: IssueContext): LevelCriteria {
 // Placeholder Agents (To be implemented in Phase 2-4)
 // ============================================
 
-/**
- * Explainer Agent - Generates analysis (Phase 2)
- * Uses Chain-of-Thought methodology with evidence-based reasoning
- */
 async function runExplainer(
   context: IssueContext,
   finderOutput: FinderOutput,
+  level: AnalysisLevel,
   investigatorOutput?: InvestigatorOutput,
   config?: OrchestratorConfig
 ): Promise<ExplainerOutput> {
   return explainerAgent.execute(
     {
       issueContext: context,
-      level: 1,
+      level,
       finderOutput,
       investigatorOutput,
     },
@@ -244,6 +241,7 @@ export async function runAnalysis(options: RunAnalysisOptions): Promise<Orchestr
   const explainerOutput = await runExplainer(
     issueContext,
     finderOutput,
+    level,
     investigatorOutput,
     config
   );

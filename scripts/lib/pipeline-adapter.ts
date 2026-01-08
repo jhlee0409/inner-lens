@@ -58,6 +58,18 @@ export function buildAdditionalContext(result: OrchestratorResult): string {
   return parts.join('\n');
 }
 
+export interface P5AnalysisOptions {
+  title: string;
+  body: string;
+  issueNumber: number;
+  owner: string;
+  repo: string;
+  config: PipelineConfig;
+  parsedReport?: ParsedBugReport;
+  enhancedKeywords?: string[];
+  categoryHint?: string;
+}
+
 export async function runP5Analysis(
   title: string,
   body: string,
@@ -65,9 +77,22 @@ export async function runP5Analysis(
   owner: string,
   repo: string,
   config: PipelineConfig,
-  parsedReport?: ParsedBugReport
+  parsedReport?: ParsedBugReport,
+  enhancedKeywords?: string[],
+  categoryHint?: string
 ): Promise<OrchestratorResult> {
   const issueContext = buildIssueContext(title, body, issueNumber, owner, repo);
+
+  if (enhancedKeywords && enhancedKeywords.length > 0) {
+    issueContext.keywords = [...new Set([...issueContext.keywords, ...enhancedKeywords])];
+    if (config.verbose) {
+      console.log(`   🔤 Keywords enhanced: ${issueContext.keywords.length} total (${enhancedKeywords.length} from structured data)`);
+    }
+  }
+
+  if (categoryHint) {
+    issueContext.categoryHint = categoryHint;
+  }
 
   if (parsedReport) {
     issueContext.parsedReport = parsedReport;

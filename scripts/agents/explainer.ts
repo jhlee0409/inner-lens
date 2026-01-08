@@ -285,7 +285,8 @@ function buildUserPrompt(
   hypotheses?: string[],
   parsedReport?: ParsedBugReport,
   correlation?: CorrelationResult,
-  extractedIntent?: ExtractedIntent
+  extractedIntent?: ExtractedIntent,
+  categoryHint?: string
 ): string {
   const bugContextSection = buildBugContextSection(parsedReport, correlation);
   const intentSection = buildIntentSection(extractedIntent);
@@ -303,8 +304,16 @@ ${body}
 ### Extracted Keywords
 ${keywords.join(', ')}
 
-${intentSection}${bugContextSection ? `${bugContextSection}\n` : ''}
-## Code Context
+${intentSection}${bugContextSection ? `${bugContextSection}\n` : ''}`;
+
+  if (categoryHint) {
+    prompt += `## Performance Analysis Hint
+Based on Core Web Vitals analysis, this is likely a **${categoryHint}** issue. Prioritize investigating ${categoryHint}-related code patterns.
+
+`;
+  }
+
+  prompt += `## Code Context
 ${codeContext || 'No relevant code files found in the repository.'}
 `;
 
@@ -365,7 +374,8 @@ export const explainerAgent: Agent<ExplainerInput, ExplainerOutput> = {
         hypotheses,
         issueContext.parsedReport,
         issueContext.correlationResult,
-        finderOutput.data.extractedIntent
+        finderOutput.data.extractedIntent,
+        issueContext.categoryHint
       );
 
       console.log('   🤖 Generating analysis with LLM...');
