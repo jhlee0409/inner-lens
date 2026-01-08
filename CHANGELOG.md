@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2025-01-09
+
+### Fixed
+- **(Widget)** User action capture no longer records clicks on inner-lens widget itself
+- **(Analysis Engine)** Language setting now properly propagates through P5 pipeline (issue/comment language respects user config)
+- **(Analysis Engine)** Enhanced keywords and category hints now reach LLM analysis phase
+- **(Workflow)** CI dependency version pinning uses tilde (~) instead of caret (^) for stability
+
+### Changed
+- **(Analysis Engine)** Finder agent refactored to LLM-first intent-based architecture
+  - Pattern search no longer pollutes LLM relevance rankings
+  - Pattern results now only supplement LLM findings (max 5 high-confidence files)
+  - Improved file discovery accuracy for bug analysis
+
 ## [0.4.1] - 2025-01-08
 
 ### Changed
