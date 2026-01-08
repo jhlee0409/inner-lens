@@ -452,7 +452,7 @@ describe('InnerLensCore', () => {
       instance.mount();
 
       const trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;
-      expect(trigger?.getAttribute('aria-label')).toBe('버그 제보');
+      expect(trigger?.getAttribute('aria-label')).toBe('문제 신고');
     });
 
     it('should use Japanese texts when language is ja', () => {
@@ -460,7 +460,7 @@ describe('InnerLensCore', () => {
       instance.mount();
 
       const trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;
-      expect(trigger?.getAttribute('aria-label')).toBe('バグを報告');
+      expect(trigger?.getAttribute('aria-label')).toBe('問題を報告');
     });
   });
 

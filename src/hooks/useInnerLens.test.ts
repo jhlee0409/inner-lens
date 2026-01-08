@@ -216,7 +216,7 @@ describe('useInnerLens', () => {
       });
 
       let trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;
-      expect(trigger?.getAttribute('aria-label')).toBe('Report a bug');
+      expect(trigger?.getAttribute('aria-label')).toBe('Report an issue');
 
       language = 'ko';
 
@@ -225,7 +225,7 @@ describe('useInnerLens', () => {
       });
 
       trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;
-      expect(trigger?.getAttribute('aria-label')).toBe('버그 제보');
+      expect(trigger?.getAttribute('aria-label')).toBe('문제 신고');
     });
 
     it('should remount when labels change', () => {
