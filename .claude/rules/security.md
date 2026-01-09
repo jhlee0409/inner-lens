@@ -25,10 +25,12 @@ await analyzeWithAI(maskedLogs);
 await analyzeWithAI(rawLogs); // 마스킹 없이 전송
 ```
 
-## 마스킹 패턴 (22개)
+## 마스킹 패턴 (30개)
 
 | 패턴 | 치환값 |
 |------|--------|
+| Discord 웹훅 | `[DISCORD_WEBHOOK_REDACTED]` |
+| 데이터베이스 URL | `[DATABASE_URL_REDACTED]` |
 | 이메일 | `[EMAIL_REDACTED]` |
 | Bearer 토큰 | `[TOKEN_REDACTED]` |
 | API 키 파라미터 | `[API_KEY_REDACTED]` |
@@ -38,6 +40,7 @@ await analyzeWithAI(rawLogs); // 마스킹 없이 전송
 | SSN | `[SSN_REDACTED]` |
 | 전화번호 | `[PHONE_REDACTED]` |
 | IPv4 주소 | `[IP_REDACTED]` |
+| IPv6 주소 | `[IP_REDACTED]` |
 | AWS Access Key | `[AWS_KEY_REDACTED]` |
 | AWS Secret Key | `[AWS_SECRET_REDACTED]` |
 | GitHub 토큰 | `[GITHUB_TOKEN_REDACTED]` |
@@ -47,8 +50,15 @@ await analyzeWithAI(rawLogs); // 마스킹 없이 전송
 | Stripe 키 | `[STRIPE_KEY_REDACTED]` |
 | JWT 토큰 | `[JWT_REDACTED]` |
 | 환경변수 시크릿 | `[SECRET_REDACTED]` |
-| 데이터베이스 URL | `[DATABASE_URL_REDACTED]` |
 | Private Key (PEM) | `[PRIVATE_KEY_REDACTED]` |
+| Slack 토큰 | `[SLACK_TOKEN_REDACTED]` |
+| NPM 토큰 | `[NPM_TOKEN_REDACTED]` |
+| SendGrid 키 | `[SENDGRID_KEY_REDACTED]` |
+| Twilio SID | `[TWILIO_REDACTED]` |
+| JSON 민감 키 | `[REDACTED]` |
+| ENV 민감 키 | `[REDACTED]` |
+| Query 민감 키 | `[REDACTED]` |
+| Header 민감 키 | `[REDACTED]` |
 
 ## API 보안
 

@@ -117,7 +117,7 @@ inner-lens/
 │   ├── hooks/
 │   │   └── useInnerLens.ts       # React Hook
 │   ├── utils/
-│   │   ├── masking.ts            # 민감정보 마스킹 (27개 패턴) ⭐
+│   │   ├── masking.ts            # 민감정보 마스킹 (30개 패턴) ⭐
 │   │   ├── log-capture.ts        # 콘솔 로그 캡처
 │   │   ├── user-action-capture.ts # 클릭/입력 캡처
 │   │   ├── navigation-capture.ts  # 라우팅 히스토리 캡처
@@ -191,7 +191,7 @@ class InnerLensCore {
 
 ### 2. 마스킹 시스템 (src/utils/masking.ts)
 
-22개 정규식 패턴으로 민감정보 마스킹:
+30개 정규식 패턴으로 민감정보 마스킹:
 
 | 패턴 | 치환값 |
 |------|--------|

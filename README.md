@@ -355,7 +355,7 @@ npm install rrweb@2.0.0-alpha.17
 
 ## Security
 
-Sensitive data is automatically masked before transmission (27 patterns):
+Sensitive data is automatically masked before transmission (30 patterns):
 
 | Category | Replacement |
 |----------|-------------|
