@@ -83,6 +83,16 @@
         "types": "./dist/server.d.cts",
         "default": "./dist/server.cjs"
       }
+    },
+    "./build": {
+      "import": {
+        "types": "./dist/build.d.ts",
+        "default": "./dist/build.js"
+      },
+      "require": {
+        "types": "./dist/build.d.cts",
+        "default": "./dist/build.cjs"
+      }
     }
   },
   "main": "./dist/core.cjs",

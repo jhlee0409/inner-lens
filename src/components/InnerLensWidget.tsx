@@ -106,6 +106,7 @@ type SubmissionState = 'idle' | 'submitting' | 'success' | 'error';
 export function InnerLensWidget({
   endpoint,
   repository,
+  branch,
   labels = ['inner-lens'],
   captureConsoleLogs = true,
   maxLogEntries = 50,
@@ -363,6 +364,7 @@ export function InnerLensWidget({
         timestamp: Date.now(),
         owner: owner || undefined,
         repo: repo || undefined,
+        branch: branch || undefined,
         userActions: userActions.length > 0 ? userActions : undefined,
         navigations: navigations.length > 0 ? navigations : undefined,
         performance: performance ?? undefined,

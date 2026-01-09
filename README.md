@@ -48,6 +48,20 @@ npx inner-lens init
 Or manually:
 
 **React / Next.js:**
+
+1. Configure build to inject git branch:
+```js
+// next.config.js
+const { getGitBranch } = require('inner-lens/build');
+
+module.exports = {
+  env: {
+    NEXT_PUBLIC_GIT_BRANCH: getGitBranch(),
+  },
+};
+```
+
+2. Add the widget:
 ```tsx
 import { InnerLensWidget } from 'inner-lens/react';
 
@@ -55,13 +69,33 @@ export default function App() {
   return (
     <>
       <YourApp />
-      <InnerLensWidget repository="your-org/your-repo" />
+      <InnerLensWidget 
+        repository="your-org/your-repo"
+        branch={process.env.NEXT_PUBLIC_GIT_BRANCH}
+      />
     </>
   );
 }
 ```
 
-**Vue 3:**
+**Vue 3 (Vite):**
+
+1. Configure build:
+```js
+// vite.config.js
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import { getGitBranch } from 'inner-lens/build';
+
+export default defineConfig({
+  plugins: [vue()],
+  define: {
+    'import.meta.env.VITE_GIT_BRANCH': JSON.stringify(getGitBranch()),
+  },
+});
+```
+
+2. Add the widget:
 ```vue
 <script setup>
 import { InnerLensWidget } from 'inner-lens/vue';
@@ -69,17 +103,28 @@ import { InnerLensWidget } from 'inner-lens/vue';
 
 <template>
   <YourApp />
-  <InnerLensWidget repository="your-org/your-repo" />
+  <InnerLensWidget 
+    repository="your-org/your-repo"
+    :branch="import.meta.env.VITE_GIT_BRANCH"
+  />
 </template>
 ```
 
-**Vanilla JS:**
+**Vanilla JS (Vite):**
+
+1. Configure build (same as Vue)
+2. Add the widget:
 ```js
 import { InnerLens } from 'inner-lens/vanilla';
 
-const widget = new InnerLens({ repository: 'your-org/your-repo' });
+const widget = new InnerLens({ 
+  repository: 'your-org/your-repo',
+  branch: import.meta.env.VITE_GIT_BRANCH,
+});
 widget.mount();
 ```
+
+> **Note:** The `branch` prop tells the AI analysis engine which code version to analyze. If you only deploy from `main`, you can omit it (defaults to `main`). The `getGitBranch()` utility auto-detects branch from CI/CD environment variables (Vercel, Netlify, AWS Amplify, Cloudflare Pages, Render, Railway, GitHub Actions, Heroku).
 
 ---
 
@@ -244,47 +289,6 @@ jobs:
 ```
 
 </details>
-
----
-
-## Branch Tracking
-
-When QA tests on non-main branches (e.g., `dev`, `staging`), the AI analysis engine needs to checkout the correct branch. Enable branch tracking by injecting the git branch at build time:
-
-**Next.js:**
-```js
-// next.config.js
-const { getGitBranch } = require('inner-lens/build');
-
-module.exports = {
-  env: {
-    NEXT_PUBLIC_GIT_BRANCH: getGitBranch(),
-  },
-};
-```
-
-**Vite:**
-```js
-// vite.config.js
-import { getGitBranch } from 'inner-lens/build';
-
-export default {
-  define: {
-    'import.meta.env.VITE_GIT_BRANCH': JSON.stringify(getGitBranch()),
-  },
-};
-```
-
-Then pass the branch to the widget:
-
-```tsx
-<InnerLensWidget 
-  repository="owner/repo" 
-  branch={process.env.NEXT_PUBLIC_GIT_BRANCH}
-/>
-```
-
-The `getGitBranch()` utility auto-detects branch from CI/CD environment variables (Vercel, Netlify, AWS Amplify, Cloudflare Pages, Render, Railway, GitHub Actions, Heroku).
 
 ---
 

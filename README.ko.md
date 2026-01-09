@@ -48,6 +48,20 @@ npx inner-lens init
 또는 수동 설정:
 
 **React / Next.js:**
+
+1. 빌드 설정에 git branch 주입:
+```js
+// next.config.js
+const { getGitBranch } = require('inner-lens/build');
+
+module.exports = {
+  env: {
+    NEXT_PUBLIC_GIT_BRANCH: getGitBranch(),
+  },
+};
+```
+
+2. 위젯 추가:
 ```tsx
 import { InnerLensWidget } from 'inner-lens/react';
 
@@ -55,13 +69,33 @@ export default function App() {
   return (
     <>
       <YourApp />
-      <InnerLensWidget repository="your-org/your-repo" />
+      <InnerLensWidget 
+        repository="your-org/your-repo"
+        branch={process.env.NEXT_PUBLIC_GIT_BRANCH}
+      />
     </>
   );
 }
 ```
 
-**Vue 3:**
+**Vue 3 (Vite):**
+
+1. 빌드 설정:
+```js
+// vite.config.js
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import { getGitBranch } from 'inner-lens/build';
+
+export default defineConfig({
+  plugins: [vue()],
+  define: {
+    'import.meta.env.VITE_GIT_BRANCH': JSON.stringify(getGitBranch()),
+  },
+});
+```
+
+2. 위젯 추가:
 ```vue
 <script setup>
 import { InnerLensWidget } from 'inner-lens/vue';
@@ -69,17 +103,28 @@ import { InnerLensWidget } from 'inner-lens/vue';
 
 <template>
   <YourApp />
-  <InnerLensWidget repository="your-org/your-repo" />
+  <InnerLensWidget 
+    repository="your-org/your-repo"
+    :branch="import.meta.env.VITE_GIT_BRANCH"
+  />
 </template>
 ```
 
-**Vanilla JS:**
+**Vanilla JS (Vite):**
+
+1. 빌드 설정 (Vue와 동일)
+2. 위젯 추가:
 ```js
 import { InnerLens } from 'inner-lens/vanilla';
 
-const widget = new InnerLens({ repository: 'your-org/your-repo' });
+const widget = new InnerLens({ 
+  repository: 'your-org/your-repo',
+  branch: import.meta.env.VITE_GIT_BRANCH,
+});
 widget.mount();
 ```
+
+> **참고:** `branch` prop은 AI 분석 엔진이 어떤 코드 버전을 분석할지 알려줍니다. `main` 브랜치에서만 배포한다면 생략 가능합니다 (기본값: `main`). `getGitBranch()` 유틸리티는 CI/CD 환경변수(Vercel, Netlify, AWS Amplify, Cloudflare Pages, Render, Railway, GitHub Actions, Heroku)에서 브랜치를 자동 감지합니다.
 
 ---
 
@@ -244,47 +289,6 @@ jobs:
 ```
 
 </details>
-
----
-
-## 브랜치 트래킹
-
-QA가 main이 아닌 브랜치(예: `dev`, `staging`)에서 테스트할 때, AI 분석 엔진이 올바른 브랜치를 checkout해야 합니다. 빌드 시 git 브랜치를 주입하여 브랜치 트래킹을 활성화하세요:
-
-**Next.js:**
-```js
-// next.config.js
-const { getGitBranch } = require('inner-lens/build');
-
-module.exports = {
-  env: {
-    NEXT_PUBLIC_GIT_BRANCH: getGitBranch(),
-  },
-};
-```
-
-**Vite:**
-```js
-// vite.config.js
-import { getGitBranch } from 'inner-lens/build';
-
-export default {
-  define: {
-    'import.meta.env.VITE_GIT_BRANCH': JSON.stringify(getGitBranch()),
-  },
-};
-```
-
-그런 다음 위젯에 브랜치를 전달합니다:
-
-```tsx
-<InnerLensWidget 
-  repository="owner/repo" 
-  branch={process.env.NEXT_PUBLIC_GIT_BRANCH}
-/>
-```
-
-`getGitBranch()` 유틸리티는 CI/CD 환경변수(Vercel, Netlify, AWS Amplify, Cloudflare Pages, Render, Railway, GitHub Actions, Heroku)에서 브랜치를 자동 감지합니다.
 
 ---
 

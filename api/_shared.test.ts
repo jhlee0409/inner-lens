@@ -286,6 +286,30 @@ describe('api/_shared', () => {
       expect(body).toContain('John Doe');
     });
 
+    it('should include branch when provided', () => {
+      const payload = {
+        owner: 'test-owner',
+        repo: 'test-repo',
+        description: 'Test',
+        branch: 'feature/test-branch',
+      };
+
+      const body = formatIssueBody(payload);
+      expect(body).toContain('### Branch');
+      expect(body).toContain('feature/test-branch');
+    });
+
+    it('should not include branch section when branch is not provided', () => {
+      const payload = {
+        owner: 'test-owner',
+        repo: 'test-repo',
+        description: 'Test',
+      };
+
+      const body = formatIssueBody(payload);
+      expect(body).not.toContain('### Branch');
+    });
+
     it('should limit logs to MAX_LOG_ENTRIES', () => {
       const logs = Array.from({ length: 100 }, (_, i) => ({
         level: 'info' as const,

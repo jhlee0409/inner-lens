@@ -115,6 +115,7 @@ export function useInnerLens(config: InnerLensCoreConfig = {}) {
     () => [
       config.endpoint,
       config.repository,
+      config.branch,
       config.hidden,
       config.disabled,
       config.language,
@@ -174,6 +175,10 @@ export const InnerLensWidget = defineComponent({
       default: HOSTED_API_ENDPOINT,
     },
     repository: {
+      type: String,
+      default: undefined,
+    },
+    branch: {
       type: String,
       default: undefined,
     },
@@ -282,6 +287,7 @@ export const InnerLensWidget = defineComponent({
       const config: InnerLensCoreConfig = {
         endpoint: props.endpoint,
         repository: props.repository,
+        branch: props.branch,
         labels: props.labels,
         captureConsoleLogs: props.captureConsoleLogs,
         maxLogEntries: props.maxLogEntries,
@@ -330,6 +336,7 @@ export const InnerLensWidget = defineComponent({
       () => [
         props.endpoint,
         props.repository,
+        props.branch,
         props.hidden,
         props.disabled,
         props.language,

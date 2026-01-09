@@ -311,6 +311,61 @@ describe('InnerLensCore', () => {
       expect(callBody.repo).toBe('repo');
     });
 
+    it('should include branch in payload when configured', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ success: true, issueUrl: 'https://github.com/owner/repo/issues/1' }),
+      });
+      global.fetch = mockFetch;
+
+      instance = new InnerLensCore({
+        repository: 'owner/repo',
+        endpoint: '/api/report',
+        branch: 'feature/test-branch',
+      });
+      instance.mount();
+      instance.open();
+
+      const textarea = document.querySelector('#inner-lens-description') as HTMLTextAreaElement;
+      textarea.value = 'Test bug description';
+      textarea.dispatchEvent(new Event('input'));
+
+      const submitBtn = document.querySelector('#inner-lens-submit') as HTMLElement;
+      submitBtn?.click();
+
+      await vi.runAllTimersAsync();
+
+      const callBody = JSON.parse((mockFetch.mock.calls[0]?.[1] as { body: string }).body);
+      expect(callBody.branch).toBe('feature/test-branch');
+    });
+
+    it('should not include branch in payload when not configured', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ success: true, issueUrl: 'https://github.com/owner/repo/issues/1' }),
+      });
+      global.fetch = mockFetch;
+
+      instance = new InnerLensCore({
+        repository: 'owner/repo',
+        endpoint: '/api/report',
+      });
+      instance.mount();
+      instance.open();
+
+      const textarea = document.querySelector('#inner-lens-description') as HTMLTextAreaElement;
+      textarea.value = 'Test bug description';
+      textarea.dispatchEvent(new Event('input'));
+
+      const submitBtn = document.querySelector('#inner-lens-submit') as HTMLElement;
+      submitBtn?.click();
+
+      await vi.runAllTimersAsync();
+
+      const callBody = JSON.parse((mockFetch.mock.calls[0]?.[1] as { body: string }).body);
+      expect(callBody.branch).toBeUndefined();
+    });
+
     it('should call onSuccess callback on successful submit', async () => {
       const onSuccess = vi.fn();
       global.fetch = vi.fn().mockResolvedValue({
