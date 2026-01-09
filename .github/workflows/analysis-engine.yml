@@ -38,16 +38,6 @@ on:
         required: false
         type: number
         default: 25
-      max_tokens:
-        description: 'Maximum tokens for AI response (1000-8000)'
-        required: false
-        type: number
-        default: 4000
-      node_version:
-        description: 'Node.js version'
-        required: false
-        type: string
-        default: '20'
       language:
         description: 'Output language for analysis (en, ko, ja, zh, es, de, fr, pt)'
         required: false
@@ -113,7 +103,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
         with:
-          node-version: ${{ inputs.node_version }}
+          node-version: '20'
 
       - name: Checkout inner-lens scripts
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -193,7 +183,6 @@ jobs:
           REPO_OWNER: ${{ github.repository_owner }}
           REPO_NAME: ${{ github.event.repository.name }}
           MAX_FILES: ${{ inputs.max_files }}
-          MAX_TOKENS: ${{ inputs.max_tokens }}
           OUTPUT_LANGUAGE: ${{ inputs.language }}
           GITHUB_TOKEN: ${{ github.token }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -207,7 +196,6 @@ jobs:
           echo "🤖 Provider: $AI_PROVIDER"
           echo "🧠 Model: ${AI_MODEL:-default}"
           echo "📁 Max Files: $MAX_FILES"
-          echo "📝 Max Tokens: $MAX_TOKENS"
           echo "🌐 Language: $OUTPUT_LANGUAGE"
           echo ""
           export PATH="${{ github.workspace }}/.inner-lens/node_modules/.bin:$PATH"

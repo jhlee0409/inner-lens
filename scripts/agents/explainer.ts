@@ -386,7 +386,7 @@ export const explainerAgent: Agent<ExplainerInput, ExplainerOutput> = {
         schema: AnalysisResultSchema,
         system: getSystemPrompt(config?.language),
         prompt: userPrompt,
-        maxOutputTokens: 4000,
+        maxOutputTokens: 6000,
       });
 
       // Post-process: Add evidence chain if missing

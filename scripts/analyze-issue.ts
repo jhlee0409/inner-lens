@@ -53,7 +53,6 @@ interface AnalysisConfig {
   owner: string;
   repo: string;
   maxFiles: number;
-  maxTokens: number;
   retryAttempts: number;
   retryDelay: number;
   // Self-consistency settings (P3-2)
@@ -138,7 +137,6 @@ const config: AnalysisConfig = {
   owner: process.env['REPO_OWNER'] || '',
   repo: process.env['REPO_NAME'] || '',
   maxFiles: parseInt(process.env['MAX_FILES'] || '25', 10),
-  maxTokens: parseInt(process.env['MAX_TOKENS'] || '4000', 10),
   retryAttempts: 3,
   retryDelay: 2000,
   // Self-consistency: run multiple analyses and check agreement (P3-2)
@@ -1001,7 +999,6 @@ async function analyzeIssue(): Promise<void> {
       mode: 'p5',
       model: model as unknown as import('ai').LanguageModel,
       maxFiles: config.maxFiles,
-      maxTokens: config.maxTokens,
       language: config.language,
       verbose: true,
     };

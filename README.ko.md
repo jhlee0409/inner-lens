@@ -217,8 +217,6 @@ jobs:
 | `model` | 아니요 | `string` | - | 커스텀 모델 이름 (예: `claude-sonnet-4-20250514`) |
 | `language` | 아니요 | `string` | `en` | 분석 출력 언어 (`en`, `ko`, `ja`, `zh`, `es`, `de`, `fr`, `pt`) |
 | `max_files` | 아니요 | `number` | `25` | 분석할 최대 파일 수 (5-50) |
-| `max_tokens` | 아니요 | `number` | `4000` | AI 응답 최대 토큰 수 (1000-8000) |
-| `node_version` | 아니요 | `string` | `20` | Node.js 버전 |
 
 **시크릿** (provider에 따라 필수):
 
@@ -241,7 +239,6 @@ jobs:
       model: 'claude-sonnet-4-20250514'
       language: 'ko'
       max_files: 30
-      max_tokens: 6000
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```

@@ -19,7 +19,6 @@ export interface PipelineConfig {
   model: LanguageModel;
   // Analysis settings
   maxFiles: number;
-  maxTokens: number;
   // Language
   language: OutputLanguage;
   // Verbose logging

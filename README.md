@@ -217,8 +217,6 @@ jobs:
 | `model` | No | `string` | - | Custom model name (e.g., `claude-sonnet-4-20250514`) |
 | `language` | No | `string` | `en` | Analysis output language (`en`, `ko`, `ja`, `zh`, `es`, `de`, `fr`, `pt`) |
 | `max_files` | No | `number` | `25` | Maximum files to analyze (5-50) |
-| `max_tokens` | No | `number` | `4000` | Maximum tokens for AI response (1000-8000) |
-| `node_version` | No | `string` | `20` | Node.js version |
 
 **Secrets** (required based on provider):
 
@@ -241,7 +239,6 @@ jobs:
       model: 'claude-sonnet-4-20250514'
       language: 'ko'
       max_files: 30
-      max_tokens: 6000
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
