@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2025-01-09
+
+### Fixed
+- **(Widget)** React/Vue `branch` prop now correctly passed to API payload (was documented but not implemented)
+- **(Build)** `inner-lens/build` export added to package.json (was missing, `getGitBranch()` import failed)
+
+### Changed
+- **(Docs)** Branch tracking setup integrated into Quick Start (no longer a separate section)
+
+### Added
+- **(Tests)** Branch prop tests for InnerLensCore and api/_shared
+
 ## [0.4.3] - 2025-01-09
 
 ### Fixed
