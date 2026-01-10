@@ -162,7 +162,7 @@ Analysis posted as comment with fix suggestions
 | **Setup Time** | 2 minutes | 10 minutes |
 | **Backend Required** | No | Yes |
 | **Issue Author** | `inner-lens-app[bot]` | Your GitHub account |
-| **Rate Limit** | 10 req/min/IP | None |
+| **Rate Limit** | 10 req/min/IP + 100 req/day per repo | None |
 
 ### Hosted Mode
 

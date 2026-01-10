@@ -162,7 +162,7 @@ AI가 코드를 분석하고 원인 파악
 | **설정 시간** | 2분 | 10분 |
 | **백엔드 필요** | 아니요 | 예 |
 | **Issue 작성자** | `inner-lens-app[bot]` | 본인 GitHub 계정 |
-| **Rate Limit** | 10 req/min/IP | 없음 |
+| **Rate Limit** | 10 req/min/IP + 저장소당 100건/일 | 없음 |
 
 ### Hosted 모드
 

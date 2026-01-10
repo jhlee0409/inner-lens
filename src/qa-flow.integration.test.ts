@@ -81,8 +81,8 @@ describe('QA Issue Flow Integration Tests', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.description).toBe(validQAReport.description);
-        expect(result.data.logs).toHaveLength(2);
-        expect(result.data.logs[0]!.level).toBe('error');
+        expect(result.data.logs ?? []).toHaveLength(2);
+        expect(result.data.logs?.[0]?.level).toBe('error');
       }
     });
 

@@ -109,10 +109,10 @@ export const BugReportSchema = z.object({
       timestamp: z.number(),
       stack: z.string().optional(),
     })
-  ),
-  url: z.string().url().or(z.string().length(0)),
-  userAgent: z.string(),
-  timestamp: z.number(),
+  ).optional(),
+  url: z.string().url().or(z.string().length(0)).optional(),
+  userAgent: z.string().optional(),
+  timestamp: z.number().optional(),
   owner: z.string().optional(),
   repo: z.string().optional(),
   branch: z.string().optional(),
@@ -133,6 +133,7 @@ export const BugReportSchema = z.object({
     id: z.string().optional(),
   }).optional(),
 });
+
 
 export type ValidatedBugReport = z.infer<typeof BugReportSchema>;
 
@@ -204,15 +205,28 @@ export async function createGitHubIssue(
   });
 
   // Format logs for the issue body
-  const formattedLogs = payload.logs
-    .slice(-MAX_LOG_ENTRIES)
-    .map((log) => {
-      const timestamp = new Date(log.timestamp).toISOString();
-      return `[${timestamp}] [${log.level.toUpperCase()}] ${maskSensitiveData(log.message)}${
-        log.stack ? `\n${maskSensitiveData(log.stack)}` : ''
-      }`;
-    })
-    .join('\n');
+  const maskedLogs = (payload.logs ?? []).map((log) => ({
+    ...log,
+    message: maskSensitiveData(log.message),
+    stack: log.stack ? maskSensitiveData(log.stack) : undefined,
+    timestamp: log.timestamp ?? Date.now(),
+  }));
+
+  const formattedLogs = maskedLogs.length
+    ? maskedLogs
+        .slice(-MAX_LOG_ENTRIES)
+        .map((log) => {
+          const timestamp = new Date(log.timestamp ?? Date.now()).toISOString();
+          return `[${timestamp}] [${log.level.toUpperCase()}] ${log.message}${
+            log.stack ? `\n${log.stack}` : ''
+          }`;
+        })
+        .join('\n')
+    : null;
+
+
+
+
 
   // Format user actions
   const formattedUserActions = payload.userActions?.length
@@ -284,11 +298,13 @@ ${formattedReporter}
 `;
   }
 
+  const reportedAt = payload.timestamp ?? Date.now();
+
   issueBody += `
 ### Environment
 - **URL:** ${maskSensitiveData(payload.url || 'N/A')}
 - **User Agent:** ${payload.userAgent || 'N/A'}
-- **Reported At:** ${new Date(payload.timestamp).toISOString()}
+- **Reported At:** ${new Date(reportedAt).toISOString()}
 `;
 
   if (formattedPageContext) {
@@ -346,6 +362,18 @@ ${formattedNavigations}
     issueBody += `
 ### Session Replay
 📹 Session replay data attached (${(payload.sessionReplay.length / 1024).toFixed(1)}KB compressed)
+`;
+  }
+
+  if (payload.metadata && Object.keys(payload.metadata).length > 0) {
+    issueBody += `
+---
+
+### Metadata
+
+\`\`\`json
+${maskSensitiveData(JSON.stringify(payload.metadata, null, 2))}
+\`\`\`
 `;
   }
 

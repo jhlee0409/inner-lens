@@ -100,16 +100,16 @@ describe('validateBugReport', () => {
     expect(result.success).toBe(false);
   });
 
-  it('rejects missing timestamp', () => {
+  it('accepts missing timestamp', () => {
     const { timestamp, ...rest } = validPayload;
     const result = validateBugReport(rest);
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
-  it('rejects missing userAgent', () => {
+  it('accepts missing userAgent', () => {
     const { userAgent, ...rest } = validPayload;
     const result = validateBugReport(rest);
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   it('rejects non-object payload', () => {

@@ -129,15 +129,15 @@ describe('QA Data Quality: Sufficiency for AI Analysis', () => {
     expect(report.description.length).toBeGreaterThan(10);
 
     // 2. Logs provide error details
-    const errorLogs = report.logs.filter((l) => l.level === 'error');
+    const errorLogs = (report.logs ?? []).filter((l) => l.level === 'error');
     expect(errorLogs.length).toBeGreaterThan(0);
 
     // 3. Stack traces provide file locations
-    const logsWithStack = report.logs.filter((l) => l.stack);
+    const logsWithStack = (report.logs ?? []).filter((l) => l.stack);
     expect(logsWithStack.length).toBeGreaterThan(0);
 
     // 4. Network logs provide API context
-    const networkLogs = report.logs.filter((l) => l.message.includes('[NETWORK]'));
+    const networkLogs = (report.logs ?? []).filter((l) => l.message.includes('[NETWORK]'));
     expect(networkLogs.length).toBeGreaterThan(0);
   });
 
@@ -146,7 +146,8 @@ describe('QA Data Quality: Sufficiency for AI Analysis', () => {
 
     // AI uses regex to extract keywords from description + logs
     // Keywords help identify relevant source files
-    const fullText = `${report.description} ${report.logs.map((l) => l.message + (l.stack || '')).join(' ')}`;
+    const logs = report.logs ?? [];
+    const fullText = `${report.description} ${logs.map((l) => l.message + (l.stack || '')).join(' ')}`;
 
     // File paths pattern
     const filePathPattern = /[\w-]+\.(ts|tsx|js|jsx)/g;
@@ -204,17 +205,20 @@ describe('QA Data Quality: Sufficiency for AI Analysis', () => {
       };
 
       // Calculate "analysis richness score"
-      const calculateRichness = (report: BugReportPayload): number => {
-        let score = 0;
-        if (report.description.length > 20) score += 20;
-        if (report.logs.length > 0) score += 20;
-        if (report.logs.some((l) => l.level === 'error')) score += 15;
-        if (report.logs.some((l) => l.stack)) score += 15;
-        if (report.logs.some((l) => l.message.includes('[NETWORK]'))) score += 10;
-        if (report.url.length > 10) score += 10;
-        if (report.userAgent.includes('Chrome') || report.userAgent.includes('Firefox')) score += 10;
-        return score;
-      };
+    const calculateRichness = (report: BugReportPayload): number => {
+      let score = 0;
+      if (report.description.length > 20) score += 20;
+      const logs = report.logs ?? [];
+      if (logs.length > 0) score += 20;
+      if (logs.some((l) => l.level === 'error')) score += 15;
+      if (logs.some((l) => l.stack)) score += 15;
+      if (logs.some((l) => l.message.includes('[NETWORK]'))) score += 10;
+      if ((report.url ?? '').length > 10) score += 10;
+      const ua = report.userAgent ?? '';
+      if (ua.includes('Chrome') || ua.includes('Firefox')) score += 10;
+      return score;
+    };
+
 
       expect(calculateRichness(richReport)).toBeGreaterThan(80);
       expect(calculateRichness(minimalReport)).toBeLessThan(30);
@@ -515,14 +519,15 @@ describe('QA Data Quality: Complete Data Inventory', () => {
     expect(exampleCapture.description).toContain('form data was lost');
 
     // 2. Error type: TypeError null reference
-    expect(exampleCapture.logs[0]?.message).toContain('TypeError');
+    const logs = exampleCapture.logs ?? [];
+    expect(logs[0]?.message).toContain('TypeError');
 
     // 3. Error location: FormComponent.tsx:45
-    expect(exampleCapture.logs[0]?.stack).toContain('FormComponent.tsx:45');
+    expect(logs[0]?.stack).toContain('FormComponent.tsx:45');
 
     // 4. API failure details: 422, validation failed
-    expect(exampleCapture.logs[1]?.message).toContain('422');
-    expect(exampleCapture.logs[1]?.message).toContain('Validation failed');
+    expect(logs[1]?.message).toContain('422');
+    expect(logs[1]?.message).toContain('Validation failed');
 
     // 5. Context: forms page, step 3
     expect(exampleCapture.url).toContain('/forms/new');
