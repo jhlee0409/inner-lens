@@ -8,24 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.4.3] - 2026-01-10
 
 ### Added
-- **(Build)** Git branch tracking utilities and `inner-lens/build` export (`getGitBranch` and helpers)
-- **(Widget)** Branch prop wired through React/Vue → API payload
-- **(Tests)** Branch tracking utilities and branch prop coverage for InnerLensCore/api/_shared
-
-### Changed
-- **(Workflow)** Removed unused `max_tokens`/`node_version` options; increased explainer output limit to 6000
-- **(Docs)** Quick Start aligned with branch tracking; masking pattern count corrected (27 → 30)
+- **(Widget/API)** Issue body enriched with Versions / Deployment / Environment tables (URL, user agent, branch, runtime: locale/timezone/viewport/device/color-scheme/online/platform)
+- **(Widget/API)** Bug report payload now carries `version`, `deployment`, `runtime` fields end-to-end (core → API → issue body)
+- **(Build)** Auto-populate version/deployment/runtime metadata at build time via tsup defines
+  - `__INNER_LENS_VERSION__`: from package.json
+  - `__INNER_LENS_COMMIT__`: auto-detect from `git rev-parse --short HEAD`
+  - `__INNER_LENS_RELEASE__`: auto-generate `v{version}`
+  - `__INNER_LENS_BUILD_TIME__`: ISO timestamp at build
+  - Eliminates most N/A fields in GitHub issue bodies without user configuration
 
 ### Fixed
-- **(Widget)** Branch prop wiring fixes (React/Vue → API)
-- **(Self-hosted)** Report optional fields and metadata aligned between self-hosted and hosted flows
 - **(Analysis Engine)** Complete i18n support for all comment output sections
   - Analysis Level, Total Duration, Agents Used labels now translated
   - Hallucination Check Report fully localized (8 languages)
   - Confidence Calibration messages translated
   - Reviewer Notes section headers localized
 - **(Analysis Engine)** Added 29 new translation keys across 8 languages
-- **(Docs)** Masking 패턴 수 표기 수정 (27 → 30)
 
 ## [0.4.2] - 2025-01-09
 

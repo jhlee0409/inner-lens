@@ -1,5 +1,10 @@
 import type { ReactNode } from 'react';
 
+declare const __INNER_LENS_VERSION__: string | undefined;
+declare const __INNER_LENS_COMMIT__: string | undefined;
+declare const __INNER_LENS_RELEASE__: string | undefined;
+declare const __INNER_LENS_BUILD_TIME__: string | undefined;
+
 /**
  * AI Provider options for bug analysis
  */

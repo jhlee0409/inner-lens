@@ -144,6 +144,38 @@ export interface RuntimeEnvironment {
   platform?: string;
 }
 
+export function buildRuntimeEnvironment(): RuntimeEnvironment {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return { online: false };
+  }
+
+  const viewport = {
+    width: window.innerWidth,
+    height: window.innerHeight,
+    devicePixelRatio: window.devicePixelRatio,
+  };
+
+  const device: DeviceClass = viewport.width <= 767 ? 'mobile' : viewport.width <= 1024 ? 'tablet' : 'desktop';
+  const colorScheme: ColorSchemePreference = !window.matchMedia
+    ? 'no-preference'
+    : window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : window.matchMedia('(prefers-color-scheme: light)').matches
+        ? 'light'
+        : 'no-preference';
+
+  return {
+    locale: navigator.language || undefined,
+    language: navigator.language || undefined,
+    timezoneOffset: new Date().getTimezoneOffset(),
+    viewport,
+    device,
+    colorScheme,
+    online: navigator.onLine,
+    platform: navigator.platform || undefined,
+  };
+}
+
 export interface BugReportPayload {
   description: string;
   logs?: LogEntry[];
