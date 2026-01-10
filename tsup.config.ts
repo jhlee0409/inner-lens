@@ -1,7 +1,23 @@
 import { defineConfig } from 'tsup';
 import fs from 'fs';
+import { execSync } from 'child_process';
 
 const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf-8'));
+
+function getGitCommit(): string {
+  try {
+    return execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim();
+  } catch {
+    return process.env.GIT_COMMIT || '';
+  }
+}
+
+const runtimeDefines = {
+  __INNER_LENS_VERSION__: JSON.stringify(pkg.version),
+  __INNER_LENS_COMMIT__: JSON.stringify(process.env.GIT_COMMIT || getGitCommit()),
+  __INNER_LENS_RELEASE__: JSON.stringify(process.env.GIT_RELEASE || `v${pkg.version}`),
+  __INNER_LENS_BUILD_TIME__: JSON.stringify(process.env.BUILD_TIME || new Date().toISOString()),
+};
 
 export default defineConfig([
   // Core library build (framework-agnostic)
@@ -18,6 +34,7 @@ export default defineConfig([
     minify: false,
     target: 'es2022',
     external: ['rrweb', '@rrweb/types'],
+    define: runtimeDefines,
   },
   // React library build (with "use client" directive for Next.js RSC compatibility)
   {
@@ -33,6 +50,7 @@ export default defineConfig([
     treeshake: true,
     minify: false,
     target: 'es2022',
+    define: runtimeDefines,
     esbuildOptions(options) {
       options.banner = {
         js: '"use client";\n',
@@ -48,7 +66,7 @@ export default defineConfig([
         if (fs.existsSync(filePath)) {
           const content = fs.readFileSync(filePath, 'utf-8');
           if (!content.startsWith('"use client"')) {
-            fs.writeFileSync(filePath, `"use client";\n${content}`);
+            fs.writeFileSync(filePath, '"use client";\n' + content);
           }
         }
       }
@@ -68,6 +86,7 @@ export default defineConfig([
     treeshake: true,
     minify: false,
     target: 'es2022',
+    define: runtimeDefines,
   },
   // Vanilla JS build (no framework dependencies)
   {
@@ -83,6 +102,7 @@ export default defineConfig([
     minify: false,
     target: 'es2022',
     external: ['rrweb', '@rrweb/types'],
+    define: runtimeDefines,
   },
   // Server library build
   {
@@ -127,6 +147,7 @@ export default defineConfig([
     minify: false,
     target: 'es2022',
     external: ['rrweb', '@rrweb/types'],
+    define: runtimeDefines,
   },
   // CLI executable build
   {

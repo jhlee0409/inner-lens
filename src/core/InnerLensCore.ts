@@ -19,6 +19,12 @@ import type {
   ColorSchemePreference,
 } from '../types';
 import { WIDGET_TEXTS, HOSTED_API_ENDPOINT } from '../types';
+
+declare const __INNER_LENS_VERSION__: string | undefined;
+declare const __INNER_LENS_COMMIT__: string | undefined;
+declare const __INNER_LENS_RELEASE__: string | undefined;
+declare const __INNER_LENS_BUILD_TIME__: string | undefined;
+
 import {
   initLogCapture,
   getCapturedLogs,
@@ -614,23 +620,41 @@ export class InnerLensCore {
   }
 
   private getVersionInfo(): VersionInfo | undefined {
+    const definedVersion =
+      typeof __INNER_LENS_VERSION__ !== 'undefined' && __INNER_LENS_VERSION__ !== ''
+        ? __INNER_LENS_VERSION__
+        : undefined;
     const sdkVersion = typeof globalThis !== 'undefined'
       ? (globalThis as typeof globalThis & { __INNER_LENS_VERSION__?: string }).__INNER_LENS_VERSION__
       : undefined;
-    return sdkVersion ? { widget: sdkVersion, sdk: sdkVersion } : undefined;
+    const version = definedVersion ?? sdkVersion;
+    return version ? { widget: version, sdk: version } : undefined;
   }
 
   private getDeploymentInfo(): DeploymentInfo | undefined {
     const environment = this.config.branch;
-    const commit = typeof window !== 'undefined'
+    const commitFromDefine =
+      typeof __INNER_LENS_COMMIT__ !== 'undefined' && __INNER_LENS_COMMIT__ !== ''
+        ? __INNER_LENS_COMMIT__
+        : undefined;
+    const releaseFromDefine =
+      typeof __INNER_LENS_RELEASE__ !== 'undefined' && __INNER_LENS_RELEASE__ !== ''
+        ? __INNER_LENS_RELEASE__
+        : undefined;
+    const buildTimeFromDefine =
+      typeof __INNER_LENS_BUILD_TIME__ !== 'undefined' && __INNER_LENS_BUILD_TIME__ !== ''
+        ? __INNER_LENS_BUILD_TIME__
+        : undefined;
+
+    const commit = commitFromDefine ?? (typeof window !== 'undefined'
       ? (window as Window & { __INNER_LENS_COMMIT__?: string }).__INNER_LENS_COMMIT__
-      : undefined;
-    const release = typeof window !== 'undefined'
+      : undefined);
+    const release = releaseFromDefine ?? (typeof window !== 'undefined'
       ? (window as Window & { __INNER_LENS_RELEASE__?: string }).__INNER_LENS_RELEASE__
-      : undefined;
-    const buildTime = typeof window !== 'undefined'
+      : undefined);
+    const buildTime = buildTimeFromDefine ?? (typeof window !== 'undefined'
       ? (window as Window & { __INNER_LENS_BUILD_TIME__?: string }).__INNER_LENS_BUILD_TIME__
-      : undefined;
+      : undefined);
 
     if (!environment && !commit && !release && !buildTime) return undefined;
 
@@ -644,7 +668,9 @@ export class InnerLensCore {
 
   private getRuntimeEnvironment(): RuntimeEnvironment {
     if (typeof window === 'undefined' || typeof navigator === 'undefined') {
-      return {};
+      return {
+        online: false,
+      };
     }
 
     const viewport = {
@@ -657,14 +683,14 @@ export class InnerLensCore {
     const colorScheme = this.getColorScheme();
 
     return {
-      locale: navigator.language,
-      language: navigator.language,
+      locale: navigator.language || undefined,
+      language: navigator.language || undefined,
       timezoneOffset: new Date().getTimezoneOffset(),
       viewport,
       device,
       colorScheme,
       online: navigator.onLine,
-      platform: navigator.platform,
+      platform: navigator.platform || undefined,
     };
   }
 
