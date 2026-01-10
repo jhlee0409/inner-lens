@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2026-01-11
+
+### Changed
+- **(Widget)** React Widget rewritten to wrap InnerLensCore (828 → 160 lines)
+- **(CLI)** cli.ts split into modular structure (1,973 → 6 files)
+  - `src/cli/index.ts`: Commander setup
+  - `src/cli/types.ts`: Type definitions and constants
+  - `src/cli/auth.ts`: GitHub OAuth Device Flow
+  - `src/cli/frameworks.ts`: Framework detection
+  - `src/cli/workflow.ts`: GitHub Actions generation
+  - `src/cli/setup.ts`: init/check commands
+- **(Internal)** Zod schema sync validation added to sync-check script
+- **(API)** RuntimeEnvironmentSchema updated (browser/os fields added, platform removed)
+
 ## [0.4.3] - 2026-01-10
 
 ### Added
