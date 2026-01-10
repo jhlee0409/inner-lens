@@ -248,18 +248,18 @@ jobs:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
-| Provider | Model | Secret |
-|----------|-------|--------|
-| Anthropic | claude-sonnet-4-5-20250929 | `ANTHROPIC_API_KEY` |
-| OpenAI | gpt-4o | `OPENAI_API_KEY` |
-| Google | gemini-2.5-flash | `GOOGLE_GENERATIVE_AI_API_KEY` |
+| Provider | Model (example) | Secret | Notes |
+|----------|-----------------|--------|-------|
+| Anthropic | claude-sonnet-4-5-20250929 | `ANTHROPIC_API_KEY` | `model` is optional; omit to use provider default |
+| OpenAI | gpt-4o | `OPENAI_API_KEY` | `model` is optional; omit to use provider default |
+| Google | gemini-2.5-flash | `GOOGLE_GENERATIVE_AI_API_KEY` | `model` is optional; omit to use provider default |
 
 ### Workflow Options
 
 | Option | Required | Type | Default | Description |
 |--------|:--------:|------|---------|-------------|
 | `provider` | No | `string` | `anthropic` | AI provider (`anthropic`, `openai`, `google`) |
-| `model` | No | `string` | - | Custom model name (e.g., `claude-sonnet-4-20250514`) |
+| `model` | No | `string` | `''` | Optional model name (e.g., `claude-sonnet-4-20250514`); empty string uses provider default |
 | `language` | No | `string` | `en` | Analysis output language (`en`, `ko`, `ja`, `zh`, `es`, `de`, `fr`, `pt`) |
 | `max_files` | No | `number` | `25` | Maximum files to analyze (5-50) |
 
@@ -322,6 +322,8 @@ npm install rrweb@2.0.0-alpha.17
 | `language` | `string` | `en` | UI language (`en`, `ko`, `ja`, `zh`, `es`) |
 | `position` | `string` | `bottom-right` | Button position |
 | `buttonColor` | `string` | `#6366f1` | Button color |
+| `buttonSize` | `sm\|md\|lg` | `lg` | Trigger button size |
+| `styles` | `{ buttonColor?, buttonPosition?, buttonSize? }` | - | Advanced style config (overrides position/color/size) |
 | `hidden` | `boolean` | `false` | Hide widget |
 | `disabled` | `boolean` | `false` | Disable widget |
 | `captureSessionReplay` | `boolean` | `false` | Enable DOM recording |
@@ -339,11 +341,16 @@ npm install rrweb@2.0.0-alpha.17
 | `captureUserActions` | `boolean` | `true` |
 | `captureNavigation` | `boolean` | `true` |
 | `capturePerformance` | `boolean` | `true` |
+| `captureSessionReplay` | `boolean` | `false` |
+| `styles` | `{ buttonColor?, buttonPosition?, buttonSize? }` | - |
 | `buttonSize` | `sm\|md\|lg` | `lg` |
 | `buttonText` | `string` | i18n |
 | `dialogTitle` | `string` | i18n |
+| `dialogDescription` | `string` | i18n |
 | `submitText` | `string` | i18n |
 | `cancelText` | `string` | i18n |
+| `successMessage` | `string` | i18n |
+| `trigger` | `ReactNode` | - |
 | `onOpen` | `() => void` | - |
 | `onClose` | `() => void` | - |
 | `onSuccess` | `(url) => void` | - |
@@ -389,6 +396,11 @@ Sensitive data is automatically masked before transmission (30 patterns):
 | `createKoaHandler` | Koa |
 | `createNodeHandler` | Node.js HTTP |
 | `handleBugReport` | Any |
+
+### Utilities (Vue bundle re-exports)
+- Masking: `maskSensitiveData`, `maskSensitiveObject`, `validateMasking`
+- Log capture: `initLogCapture`, `getCapturedLogs`, `clearCapturedLogs`, `addCustomLog`, `restoreConsole`
+(available from `inner-lens/vue`)
 
 ---
 
