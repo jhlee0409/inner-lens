@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createStyles } from '../utils/styles';
+import { createStyles, keyframesCSS } from '../utils/styles';
 import type { InnerLensConfig } from '../types';
 import { HOSTED_API_ENDPOINT } from '../types';
 
@@ -337,5 +337,29 @@ describe('InnerLensWidget Payload Fields', () => {
       };
       expect(ssrRuntime.online).toBe(false);
     });
+  });
+});
+
+describe('keyframesCSS - Host CSS Override Protection', () => {
+  it('should include textarea color override', () => {
+    expect(keyframesCSS).toContain('#inner-lens-widget textarea');
+    expect(keyframesCSS).toContain('color: #111827 !important');
+  });
+
+  it('should include textarea background override', () => {
+    expect(keyframesCSS).toContain('background-color: #ffffff !important');
+  });
+
+  it('should include input element styles', () => {
+    expect(keyframesCSS).toContain('#inner-lens-widget input');
+  });
+
+  it('should include placeholder color override', () => {
+    expect(keyframesCSS).toContain('::placeholder');
+    expect(keyframesCSS).toContain('color: #9ca3af !important');
+  });
+
+  it('should include box-sizing reset for form elements', () => {
+    expect(keyframesCSS).toContain('box-sizing: border-box !important');
   });
 });

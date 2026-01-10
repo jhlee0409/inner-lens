@@ -472,6 +472,29 @@ export const keyframesCSS = `
   all: revert !important;
 }
 
+/* Force form element styles - these must override host CSS resets */
+#inner-lens-widget textarea,
+#inner-lens-widget input {
+  color: #111827 !important;
+  background-color: #ffffff !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+#inner-lens-widget textarea::placeholder,
+#inner-lens-widget input::placeholder {
+  color: #9ca3af !important;
+  opacity: 1 !important;
+}
+
 /* Reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   #inner-lens-widget * {

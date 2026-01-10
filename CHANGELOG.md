@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **(Widget)** Widget styles now use `!important` on all CSS properties to prevent host app CSS (Tailwind, etc.) from overriding widget appearance
   - Fixes invisible dialog title and other styling issues when embedded in apps with aggressive global CSS resets
+  - Added explicit textarea/input color and background styles in global CSS to override host `all: revert` rules
 - **(Widget)** Fixed JSON parsing error when API returns non-JSON error response (e.g., 404 HTML page)
   - Now checks response status before attempting to parse JSON body
 
