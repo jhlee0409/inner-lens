@@ -1105,20 +1105,24 @@ export class InnerLensCore {
 
       clearTimeout(timeoutId);
 
-      const data = (await response.json()) as BugReportResponse;
-
       if (!response.ok) {
         const texts = this.getTexts();
-        if (data.errorCode === 'DAILY_LIMIT_EXCEEDED') {
+        let data: BugReportResponse | null = null;
+        try {
+          data = (await response.json()) as BugReportResponse;
+        } catch {
+          throw new Error(texts.submitError);
+        }
+        if (data?.errorCode === 'DAILY_LIMIT_EXCEEDED') {
           throw new Error(texts.dailyLimitExceeded);
         }
-        if (data.errorCode === 'RATE_LIMIT_EXCEEDED') {
+        if (data?.errorCode === 'RATE_LIMIT_EXCEEDED') {
           throw new Error(texts.rateLimitExceeded);
         }
-        throw new Error(
-          data.message || texts.submitError
-        );
+        throw new Error(data?.message || texts.submitError);
       }
+
+      const data = (await response.json()) as BugReportResponse;
 
       this.submissionState = 'success';
       this.issueUrl = data.issueUrl ?? null;

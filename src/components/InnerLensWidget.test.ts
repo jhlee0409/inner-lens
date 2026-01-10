@@ -16,38 +16,38 @@ describe('InnerLensWidget Configuration', () => {
   describe('createStyles - Position Options', () => {
     it('should default to bottom-right position', () => {
       const styles = createStyles();
-      expect(styles.triggerButton.bottom).toBe('20px');
-      expect(styles.triggerButton.right).toBe('20px');
+      expect(styles.triggerButton.bottom).toBe('20px !important');
+      expect(styles.triggerButton.right).toBe('20px !important');
     });
 
     it('should set bottom-left position', () => {
       const styles = createStyles({ buttonPosition: 'bottom-left' });
-      expect(styles.triggerButton.bottom).toBe('20px');
-      expect(styles.triggerButton.left).toBe('20px');
+      expect(styles.triggerButton.bottom).toBe('20px !important');
+      expect(styles.triggerButton.left).toBe('20px !important');
     });
 
     it('should set top-right position', () => {
       const styles = createStyles({ buttonPosition: 'top-right' });
-      expect(styles.triggerButton.top).toBe('20px');
-      expect(styles.triggerButton.right).toBe('20px');
+      expect(styles.triggerButton.top).toBe('20px !important');
+      expect(styles.triggerButton.right).toBe('20px !important');
     });
 
     it('should set top-left position', () => {
       const styles = createStyles({ buttonPosition: 'top-left' });
-      expect(styles.triggerButton.top).toBe('20px');
-      expect(styles.triggerButton.left).toBe('20px');
+      expect(styles.triggerButton.top).toBe('20px !important');
+      expect(styles.triggerButton.left).toBe('20px !important');
     });
   });
 
   describe('createStyles - Button Color', () => {
     it('should default to #6366f1 button color', () => {
       const styles = createStyles();
-      expect(styles.triggerButton.backgroundColor).toBe('#6366f1');
+      expect(styles.triggerButton.backgroundColor).toBe('#6366f1 !important');
     });
 
     it('should use custom button color', () => {
       const styles = createStyles({ buttonColor: '#10b981' });
-      expect(styles.triggerButton.backgroundColor).toBe('#10b981');
+      expect(styles.triggerButton.backgroundColor).toBe('#10b981 !important');
     });
 
     it('should use custom button color with position', () => {
@@ -55,9 +55,9 @@ describe('InnerLensWidget Configuration', () => {
         buttonColor: '#ef4444',
         buttonPosition: 'top-left',
       });
-      expect(styles.triggerButton.backgroundColor).toBe('#ef4444');
-      expect(styles.triggerButton.top).toBe('20px');
-      expect(styles.triggerButton.left).toBe('20px');
+      expect(styles.triggerButton.backgroundColor).toBe('#ef4444 !important');
+      expect(styles.triggerButton.top).toBe('20px !important');
+      expect(styles.triggerButton.left).toBe('20px !important');
     });
   });
 
@@ -221,26 +221,23 @@ describe('InnerLensWidget Configuration', () => {
 
 describe('Convenience Options Mapping', () => {
   it('should map position to buttonPosition in createStyles', () => {
-    // Simulate widget behavior: position maps to buttonPosition
     const position: InnerLensConfig['position'] = 'top-right';
     const styleConfig = { buttonPosition: position };
     const styles = createStyles(styleConfig);
 
-    expect(styles.triggerButton.top).toBe('20px');
-    expect(styles.triggerButton.right).toBe('20px');
+    expect(styles.triggerButton.top).toBe('20px !important');
+    expect(styles.triggerButton.right).toBe('20px !important');
   });
 
   it('should map buttonColor directly to createStyles', () => {
-    // Simulate widget behavior: buttonColor passes through
     const buttonColor: InnerLensConfig['buttonColor'] = '#22c55e';
     const styleConfig = { buttonColor };
     const styles = createStyles(styleConfig);
 
-    expect(styles.triggerButton.backgroundColor).toBe('#22c55e');
+    expect(styles.triggerButton.backgroundColor).toBe('#22c55e !important');
   });
 
   it('should handle merged style config correctly', () => {
-    // Simulate widget merging: convenience options override styles object
     const styleConfig = {
       buttonPosition: 'bottom-left' as const,
       buttonColor: '#3b82f6',
@@ -248,7 +245,6 @@ describe('Convenience Options Mapping', () => {
     const position = 'top-right' as const;
     const buttonColor = '#ef4444';
 
-    // Widget merges like this:
     const mergedStyleConfig = {
       ...styleConfig,
       buttonPosition: position ?? styleConfig.buttonPosition,
@@ -257,10 +253,9 @@ describe('Convenience Options Mapping', () => {
 
     const styles = createStyles(mergedStyleConfig);
 
-    // Convenience options should take priority
-    expect(styles.triggerButton.top).toBe('20px');
-    expect(styles.triggerButton.right).toBe('20px');
-    expect(styles.triggerButton.backgroundColor).toBe('#ef4444');
+    expect(styles.triggerButton.top).toBe('20px !important');
+    expect(styles.triggerButton.right).toBe('20px !important');
+    expect(styles.triggerButton.backgroundColor).toBe('#ef4444 !important');
   });
 });
 
