@@ -631,7 +631,11 @@ export function formatIssueBody(payload: HostedBugReportPayload): string {
     body += `\n---\n\n### Reporter\n\n${formattedReporter}\n`;
   }
 
-  body += `\n---\n\n### Environment\n\n| Field | Value |\n|-------|-------|\n| URL | ${maskSensitiveData(payload.url || 'N/A')} |\n| User Agent | ${payload.userAgent || 'N/A'} |\n| Timestamp | ${payload.timestamp ? new Date(payload.timestamp).toISOString() : new Date().toISOString()} |\n`;
+  const branchRow = payload.branch
+    ? `| Branch | ${payload.branch} |\n`
+    : '';
+
+  body += `\n---\n\n### Environment\n\n| Field | Value |\n|-------|-------|\n| URL | ${maskSensitiveData(payload.url || 'N/A')} |\n| User Agent | ${payload.userAgent || 'N/A'} |\n| Timestamp | ${payload.timestamp ? new Date(payload.timestamp).toISOString() : new Date().toISOString()} |\n${branchRow}`;
 
   if (formattedPageContext) {
     body += `\n---\n\n### Page Context\n\n${formattedPageContext}\n`;

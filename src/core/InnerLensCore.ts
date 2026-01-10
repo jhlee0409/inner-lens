@@ -931,6 +931,7 @@ export class InnerLensCore {
         metadata: {
           repository: this.config.repository,
           labels: this.config.labels,
+          branch: this.config.branch,
         },
       };
 
