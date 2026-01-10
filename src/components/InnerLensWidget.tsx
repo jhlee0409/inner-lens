@@ -12,11 +12,17 @@ import type {
   InnerLensConfig,
   LogEntry,
   BugReportPayload,
-  WidgetLanguage,
   UserAction,
   NavigationEntry,
   PerformanceSummary,
   PageContext,
+  VersionInfo,
+  DeploymentInfo,
+  RuntimeEnvironment,
+  DeviceClass,
+  ColorSchemePreference,
+  BrowserInfo,
+  OSInfo,
 } from '../types';
 import { WIDGET_TEXTS, HOSTED_API_ENDPOINT } from '../types';
 import {
@@ -50,6 +56,150 @@ import {
 } from '../utils/session-replay';
 import { createStyles, keyframesCSS } from '../utils/styles';
 import { maskSensitiveData } from '../utils/masking';
+
+declare const __INNER_LENS_VERSION__: string | undefined;
+declare const __INNER_LENS_COMMIT__: string | undefined;
+declare const __INNER_LENS_RELEASE__: string | undefined;
+declare const __INNER_LENS_BUILD_TIME__: string | undefined;
+
+function getVersionInfo(): VersionInfo | undefined {
+  const definedVersion =
+    typeof __INNER_LENS_VERSION__ !== 'undefined' && __INNER_LENS_VERSION__ !== ''
+      ? __INNER_LENS_VERSION__
+      : undefined;
+  const sdkVersion = typeof globalThis !== 'undefined'
+    ? (globalThis as typeof globalThis & { __INNER_LENS_VERSION__?: string }).__INNER_LENS_VERSION__
+    : undefined;
+  const version = definedVersion ?? sdkVersion;
+  return version ? { widget: version, sdk: version } : undefined;
+}
+
+function getDeploymentInfo(branch?: string): DeploymentInfo | undefined {
+  const environment = branch;
+  const commitFromDefine =
+    typeof __INNER_LENS_COMMIT__ !== 'undefined' && __INNER_LENS_COMMIT__ !== ''
+      ? __INNER_LENS_COMMIT__
+      : undefined;
+  const releaseFromDefine =
+    typeof __INNER_LENS_RELEASE__ !== 'undefined' && __INNER_LENS_RELEASE__ !== ''
+      ? __INNER_LENS_RELEASE__
+      : undefined;
+  const buildTimeFromDefine =
+    typeof __INNER_LENS_BUILD_TIME__ !== 'undefined' && __INNER_LENS_BUILD_TIME__ !== ''
+      ? __INNER_LENS_BUILD_TIME__
+      : undefined;
+
+  const commit = commitFromDefine ?? (typeof window !== 'undefined'
+    ? (window as Window & { __INNER_LENS_COMMIT__?: string }).__INNER_LENS_COMMIT__
+    : undefined);
+  const release = releaseFromDefine ?? (typeof window !== 'undefined'
+    ? (window as Window & { __INNER_LENS_RELEASE__?: string }).__INNER_LENS_RELEASE__
+    : undefined);
+  const buildTime = buildTimeFromDefine ?? (typeof window !== 'undefined'
+    ? (window as Window & { __INNER_LENS_BUILD_TIME__?: string }).__INNER_LENS_BUILD_TIME__
+    : undefined);
+
+  if (!environment && !commit && !release && !buildTime) return undefined;
+
+  return {
+    environment,
+    commit,
+    release,
+    buildTime,
+  };
+}
+
+function inferDeviceClass(width: number): DeviceClass {
+  if (width <= 767) return 'mobile';
+  if (width <= 1024) return 'tablet';
+  return 'desktop';
+}
+
+function getColorScheme(): ColorSchemePreference {
+  if (typeof window === 'undefined' || !window.matchMedia) return 'no-preference';
+  if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+  if (window.matchMedia('(prefers-color-scheme: light)').matches) return 'light';
+  return 'no-preference';
+}
+
+function parseBrowserInfo(ua: string): { browser: BrowserInfo; os: OSInfo } {
+  const browser: BrowserInfo = {};
+  const os: OSInfo = {};
+
+  // Browser detection
+  if (ua.includes('Firefox/')) {
+    browser.name = 'Firefox';
+    browser.version = ua.match(/Firefox\/(\d+)/)?.[1];
+  } else if (ua.includes('Edg/')) {
+    browser.name = 'Edge';
+    browser.version = ua.match(/Edg\/(\d+)/)?.[1];
+  } else if (ua.includes('Chrome/')) {
+    browser.name = 'Chrome';
+    browser.version = ua.match(/Chrome\/(\d+)/)?.[1];
+  } else if (ua.includes('Safari/') && !ua.includes('Chrome')) {
+    browser.name = 'Safari';
+    browser.version = ua.match(/Version\/(\d+)/)?.[1];
+  } else if (ua.includes('Opera') || ua.includes('OPR/')) {
+    browser.name = 'Opera';
+    browser.version = ua.match(/(?:Opera|OPR)\/(\d+)/)?.[1];
+  }
+
+  // OS detection
+  if (ua.includes('Windows')) {
+    os.name = 'Windows';
+    if (ua.includes('Windows NT 10')) os.version = '10';
+    else if (ua.includes('Windows NT 11')) os.version = '11';
+    else if (ua.includes('Windows NT 6.3')) os.version = '8.1';
+    else if (ua.includes('Windows NT 6.1')) os.version = '7';
+  } else if (ua.includes('Mac OS X')) {
+    os.name = 'macOS';
+    const match = ua.match(/Mac OS X (\d+)[._](\d+)/);
+    if (match) os.version = `${match[1]}.${match[2]}`;
+  } else if (ua.includes('iPhone') || ua.includes('iPad')) {
+    os.name = 'iOS';
+    const match = ua.match(/OS (\d+)_(\d+)/);
+    if (match) os.version = `${match[1]}.${match[2]}`;
+  } else if (ua.includes('Android')) {
+    os.name = 'Android';
+    os.version = ua.match(/Android (\d+(?:\.\d+)?)/)?.[1];
+  } else if (ua.includes('Linux')) {
+    os.name = 'Linux';
+  } else if (ua.includes('CrOS')) {
+    os.name = 'ChromeOS';
+  }
+
+  return { browser, os };
+}
+
+function getRuntimeEnvironment(): RuntimeEnvironment {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return {
+      online: false,
+    };
+  }
+
+  const viewport = {
+    width: window.innerWidth,
+    height: window.innerHeight,
+    devicePixelRatio: window.devicePixelRatio,
+  };
+
+  const device = inferDeviceClass(viewport.width);
+  const colorScheme = getColorScheme();
+  const { browser, os } = parseBrowserInfo(navigator.userAgent);
+
+  return {
+    locale: navigator.language || undefined,
+    language: navigator.language || undefined,
+    timezoneOffset: new Date().getTimezoneOffset(),
+    viewport,
+    device,
+    colorScheme,
+    online: navigator.onLine,
+    browser,
+    os,
+  };
+}
 
 interface InnerLensWidgetProps extends InnerLensConfig {}
 
@@ -365,6 +515,9 @@ export function InnerLensWidget({
         owner: owner || undefined,
         repo: repo || undefined,
         branch: branch || undefined,
+        version: getVersionInfo(),
+        deployment: getDeploymentInfo(branch),
+        runtime: getRuntimeEnvironment(),
         userActions: userActions.length > 0 ? userActions : undefined,
         navigations: navigations.length > 0 ? navigations : undefined,
         performance: performance ?? undefined,

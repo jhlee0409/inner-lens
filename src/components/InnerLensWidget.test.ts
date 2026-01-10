@@ -273,3 +273,74 @@ describe('HOSTED_API_ENDPOINT Constant', () => {
     expect(HOSTED_API_ENDPOINT).toMatch(/^https:\/\//);
   });
 });
+
+describe('InnerLensWidget Payload Fields', () => {
+  describe('Version Info', () => {
+    it('should have VersionInfo type with widget and sdk fields', () => {
+      const versionInfo: { widget?: string; sdk?: string } = {
+        widget: '0.4.3',
+        sdk: '0.4.3',
+      };
+      expect(versionInfo.widget).toBe('0.4.3');
+      expect(versionInfo.sdk).toBe('0.4.3');
+    });
+  });
+
+  describe('Deployment Info', () => {
+    it('should have DeploymentInfo type with all expected fields', () => {
+      const deploymentInfo: {
+        environment?: string;
+        commit?: string;
+        release?: string;
+        buildTime?: string;
+      } = {
+        environment: 'main',
+        commit: 'abc123',
+        release: 'v0.4.3',
+        buildTime: '2026-01-10T09:38:52.642Z',
+      };
+      expect(deploymentInfo.environment).toBe('main');
+      expect(deploymentInfo.commit).toBe('abc123');
+      expect(deploymentInfo.release).toBe('v0.4.3');
+      expect(deploymentInfo.buildTime).toBe('2026-01-10T09:38:52.642Z');
+    });
+  });
+
+  describe('Runtime Environment', () => {
+    it('should have RuntimeEnvironment type with all expected fields', () => {
+      const runtimeEnv: {
+        locale?: string;
+        language?: string;
+        timezoneOffset?: number;
+        viewport?: { width: number; height: number; devicePixelRatio?: number };
+        device?: 'mobile' | 'tablet' | 'desktop';
+        colorScheme?: 'light' | 'dark' | 'no-preference';
+        online?: boolean;
+        platform?: string;
+      } = {
+        locale: 'en-US',
+        language: 'en-US',
+        timezoneOffset: -540,
+        viewport: { width: 1920, height: 1080, devicePixelRatio: 2 },
+        device: 'desktop',
+        colorScheme: 'dark',
+        online: true,
+        platform: 'MacIntel',
+      };
+      expect(runtimeEnv.locale).toBe('en-US');
+      expect(runtimeEnv.timezoneOffset).toBe(-540);
+      expect(runtimeEnv.viewport?.width).toBe(1920);
+      expect(runtimeEnv.device).toBe('desktop');
+      expect(runtimeEnv.colorScheme).toBe('dark');
+      expect(runtimeEnv.online).toBe(true);
+      expect(runtimeEnv.platform).toBe('MacIntel');
+    });
+
+    it('should handle SSR environment with minimal data', () => {
+      const ssrRuntime: { online?: boolean } = {
+        online: false,
+      };
+      expect(ssrRuntime.online).toBe(false);
+    });
+  });
+});

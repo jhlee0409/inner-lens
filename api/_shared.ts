@@ -133,6 +133,16 @@ export interface RuntimeViewport {
 export type DeviceClass = 'mobile' | 'tablet' | 'desktop';
 export type ColorSchemePreference = 'light' | 'dark' | 'no-preference';
 
+export interface BrowserInfo {
+  name?: string;
+  version?: string;
+}
+
+export interface OSInfo {
+  name?: string;
+  version?: string;
+}
+
 export interface RuntimeEnvironment {
   locale?: string;
   language?: string;
@@ -141,7 +151,55 @@ export interface RuntimeEnvironment {
   device?: DeviceClass;
   colorScheme?: ColorSchemePreference;
   online?: boolean;
-  platform?: string;
+  browser?: BrowserInfo;
+  os?: OSInfo;
+}
+
+function parseBrowserInfo(ua: string): { browser: BrowserInfo; os: OSInfo } {
+  const browser: BrowserInfo = {};
+  const os: OSInfo = {};
+
+  if (ua.includes('Firefox/')) {
+    browser.name = 'Firefox';
+    browser.version = ua.match(/Firefox\/(\d+)/)?.[1];
+  } else if (ua.includes('Edg/')) {
+    browser.name = 'Edge';
+    browser.version = ua.match(/Edg\/(\d+)/)?.[1];
+  } else if (ua.includes('Chrome/')) {
+    browser.name = 'Chrome';
+    browser.version = ua.match(/Chrome\/(\d+)/)?.[1];
+  } else if (ua.includes('Safari/') && !ua.includes('Chrome')) {
+    browser.name = 'Safari';
+    browser.version = ua.match(/Version\/(\d+)/)?.[1];
+  } else if (ua.includes('Opera') || ua.includes('OPR/')) {
+    browser.name = 'Opera';
+    browser.version = ua.match(/(?:Opera|OPR)\/(\d+)/)?.[1];
+  }
+
+  if (ua.includes('Windows')) {
+    os.name = 'Windows';
+    if (ua.includes('Windows NT 10')) os.version = '10';
+    else if (ua.includes('Windows NT 11')) os.version = '11';
+    else if (ua.includes('Windows NT 6.3')) os.version = '8.1';
+    else if (ua.includes('Windows NT 6.1')) os.version = '7';
+  } else if (ua.includes('Mac OS X')) {
+    os.name = 'macOS';
+    const match = ua.match(/Mac OS X (\d+)[._](\d+)/);
+    if (match) os.version = `${match[1]}.${match[2]}`;
+  } else if (ua.includes('iPhone') || ua.includes('iPad')) {
+    os.name = 'iOS';
+    const match = ua.match(/OS (\d+)_(\d+)/);
+    if (match) os.version = `${match[1]}.${match[2]}`;
+  } else if (ua.includes('Android')) {
+    os.name = 'Android';
+    os.version = ua.match(/Android (\d+(?:\.\d+)?)/)?.[1];
+  } else if (ua.includes('Linux')) {
+    os.name = 'Linux';
+  } else if (ua.includes('CrOS')) {
+    os.name = 'ChromeOS';
+  }
+
+  return { browser, os };
 }
 
 export function buildRuntimeEnvironment(): RuntimeEnvironment {
@@ -163,6 +221,7 @@ export function buildRuntimeEnvironment(): RuntimeEnvironment {
       : window.matchMedia('(prefers-color-scheme: light)').matches
         ? 'light'
         : 'no-preference';
+  const { browser, os } = parseBrowserInfo(navigator.userAgent);
 
   return {
     locale: navigator.language || undefined,
@@ -172,7 +231,8 @@ export function buildRuntimeEnvironment(): RuntimeEnvironment {
     device,
     colorScheme,
     online: navigator.onLine,
-    platform: navigator.platform || undefined,
+    browser,
+    os,
   };
 }
 
@@ -805,7 +865,8 @@ ${formattedReporter}
 | Device | ${payload.runtime.device ?? 'N/A'} |
 | Color Scheme | ${payload.runtime.colorScheme ?? 'N/A'} |
 | Online | ${payload.runtime.online ?? 'N/A'} |
-| Platform | ${payload.runtime.platform ?? 'N/A'} |
+| Browser | ${payload.runtime.browser ? `${payload.runtime.browser.name ?? 'Unknown'}${payload.runtime.browser.version ? ` ${payload.runtime.browser.version}` : ''}` : 'N/A'} |
+| OS | ${payload.runtime.os ? `${payload.runtime.os.name ?? 'Unknown'}${payload.runtime.os.version ? ` ${payload.runtime.os.version}` : ''}` : 'N/A'} |
 `
     : `| Locale | N/A |
 | Timezone Offset | N/A |
@@ -813,7 +874,8 @@ ${formattedReporter}
 | Device | N/A |
 | Color Scheme | N/A |
 | Online | N/A |
-| Platform | N/A |
+| Browser | N/A |
+| OS | N/A |
 `;
 
   const branchRow = payload.branch ? `| Branch | ${payload.branch} |

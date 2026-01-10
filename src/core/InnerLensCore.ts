@@ -17,6 +17,8 @@ import type {
   RuntimeEnvironment,
   DeviceClass,
   ColorSchemePreference,
+  BrowserInfo,
+  OSInfo,
 } from '../types';
 import { WIDGET_TEXTS, HOSTED_API_ENDPOINT } from '../types';
 
@@ -681,6 +683,7 @@ export class InnerLensCore {
 
     const device = this.inferDeviceClass(viewport.width);
     const colorScheme = this.getColorScheme();
+    const { browser, os } = this.parseBrowserInfo(navigator.userAgent);
 
     return {
       locale: navigator.language || undefined,
@@ -690,8 +693,58 @@ export class InnerLensCore {
       device,
       colorScheme,
       online: navigator.onLine,
-      platform: navigator.platform || undefined,
+      browser,
+      os,
     };
+  }
+
+  private parseBrowserInfo(ua: string): { browser: BrowserInfo; os: OSInfo } {
+    const browser: BrowserInfo = {};
+    const os: OSInfo = {};
+
+    // Browser detection
+    if (ua.includes('Firefox/')) {
+      browser.name = 'Firefox';
+      browser.version = ua.match(/Firefox\/(\d+)/)?.[1];
+    } else if (ua.includes('Edg/')) {
+      browser.name = 'Edge';
+      browser.version = ua.match(/Edg\/(\d+)/)?.[1];
+    } else if (ua.includes('Chrome/')) {
+      browser.name = 'Chrome';
+      browser.version = ua.match(/Chrome\/(\d+)/)?.[1];
+    } else if (ua.includes('Safari/') && !ua.includes('Chrome')) {
+      browser.name = 'Safari';
+      browser.version = ua.match(/Version\/(\d+)/)?.[1];
+    } else if (ua.includes('Opera') || ua.includes('OPR/')) {
+      browser.name = 'Opera';
+      browser.version = ua.match(/(?:Opera|OPR)\/(\d+)/)?.[1];
+    }
+
+    // OS detection
+    if (ua.includes('Windows')) {
+      os.name = 'Windows';
+      if (ua.includes('Windows NT 10')) os.version = '10';
+      else if (ua.includes('Windows NT 11')) os.version = '11';
+      else if (ua.includes('Windows NT 6.3')) os.version = '8.1';
+      else if (ua.includes('Windows NT 6.1')) os.version = '7';
+    } else if (ua.includes('Mac OS X')) {
+      os.name = 'macOS';
+      const match = ua.match(/Mac OS X (\d+)[._](\d+)/);
+      if (match) os.version = `${match[1]}.${match[2]}`;
+    } else if (ua.includes('iPhone') || ua.includes('iPad')) {
+      os.name = 'iOS';
+      const match = ua.match(/OS (\d+)_(\d+)/);
+      if (match) os.version = `${match[1]}.${match[2]}`;
+    } else if (ua.includes('Android')) {
+      os.name = 'Android';
+      os.version = ua.match(/Android (\d+(?:\.\d+)?)/)?.[1];
+    } else if (ua.includes('Linux')) {
+      os.name = 'Linux';
+    } else if (ua.includes('CrOS')) {
+      os.name = 'ChromeOS';
+    }
+
+    return { browser, os };
   }
 
   private inferDeviceClass(width: number): DeviceClass {

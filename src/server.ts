@@ -118,6 +118,16 @@ const RuntimeViewportSchema = z.object({
   devicePixelRatio: z.number().optional(),
 });
 
+const BrowserInfoSchema = z.object({
+  name: z.string().optional(),
+  version: z.string().optional(),
+});
+
+const OSInfoSchema = z.object({
+  name: z.string().optional(),
+  version: z.string().optional(),
+});
+
 const RuntimeEnvironmentSchema = z.object({
   locale: z.string().optional(),
   language: z.string().optional(),
@@ -126,7 +136,8 @@ const RuntimeEnvironmentSchema = z.object({
   device: z.enum(['mobile', 'tablet', 'desktop']).optional(),
   colorScheme: z.enum(['light', 'dark', 'no-preference']).optional(),
   online: z.boolean().optional(),
-  platform: z.string().optional(),
+  browser: BrowserInfoSchema.optional(),
+  os: OSInfoSchema.optional(),
 });
 
 export const BugReportSchema = z.object({
@@ -359,7 +370,8 @@ ${formattedReporter}
 | Device | ${payload.runtime.device ?? 'N/A'} |
 | Color Scheme | ${payload.runtime.colorScheme ?? 'N/A'} |
 | Online | ${payload.runtime.online ?? 'N/A'} |
-| Platform | ${payload.runtime.platform ?? 'N/A'} |
+| Browser | ${payload.runtime.browser ? `${payload.runtime.browser.name ?? 'Unknown'}${payload.runtime.browser.version ? ` ${payload.runtime.browser.version}` : ''}` : 'N/A'} |
+| OS | ${payload.runtime.os ? `${payload.runtime.os.name ?? 'Unknown'}${payload.runtime.os.version ? ` ${payload.runtime.os.version}` : ''}` : 'N/A'} |
 `
     : `| Locale | N/A |
 | Timezone Offset | N/A |
@@ -367,7 +379,8 @@ ${formattedReporter}
 | Device | N/A |
 | Color Scheme | N/A |
 | Online | N/A |
-| Platform | N/A |
+| Browser | N/A |
+| OS | N/A |
 `;
 
   const branchRow = payload.branch ? `| Branch | ${payload.branch} |

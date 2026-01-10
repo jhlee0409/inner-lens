@@ -556,6 +556,26 @@ export interface RuntimeViewport {
 export type DeviceClass = 'mobile' | 'tablet' | 'desktop';
 export type ColorSchemePreference = 'light' | 'dark' | 'no-preference';
 
+/**
+ * Summarized browser information (privacy-friendly alternative to full userAgent)
+ */
+export interface BrowserInfo {
+  /** Browser name (e.g., Chrome, Firefox, Safari) */
+  name?: string;
+  /** Browser major version (e.g., 120) */
+  version?: string;
+}
+
+/**
+ * Summarized OS information (privacy-friendly alternative to navigator.platform)
+ */
+export interface OSInfo {
+  /** OS name (e.g., Windows, macOS, Linux, iOS, Android) */
+  name?: string;
+  /** OS version if available (e.g., 10, 14.0) */
+  version?: string;
+}
+
 export interface RuntimeEnvironment {
   /** Browser locale (e.g., en-US) */
   locale?: string;
@@ -571,8 +591,10 @@ export interface RuntimeEnvironment {
   colorScheme?: ColorSchemePreference;
   /** Online/offline status */
   online?: boolean;
-  /** Platform string (e.g., MacIntel) */
-  platform?: string;
+  /** Summarized browser info (privacy-friendly) */
+  browser?: BrowserInfo;
+  /** Summarized OS info (replaces deprecated navigator.platform) */
+  os?: OSInfo;
 }
 
 /**

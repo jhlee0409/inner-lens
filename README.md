@@ -360,9 +360,63 @@ npm install rrweb@2.0.0-alpha.17
 
 ---
 
-## Security
+## Security & Privacy
 
-Sensitive data is automatically masked before transmission (30 patterns):
+### Data Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        Your Application (Browser)                        │
+│  ┌─────────────┐    ┌──────────────┐    ┌─────────────────────────────┐ │
+│  │ User clicks │───►│ Widget       │───►│ Client-side Masking         │ │
+│  │ Report Bug  │    │ captures     │    │ (30 patterns applied)       │ │
+│  └─────────────┘    │ context      │    │ • Emails → [EMAIL_REDACTED] │ │
+│                     └──────────────┘    │ • API keys → [*_REDACTED]   │ │
+│                                         │ • Tokens → [TOKEN_REDACTED] │ │
+│                                         └──────────────┬──────────────┘ │
+└────────────────────────────────────────────────────────┼────────────────┘
+                                                         │
+                                                         ▼
+                              ┌───────────────────────────────────────────┐
+                              │      inner-lens API (Pass-through)        │
+                              │  • No data storage                        │
+                              │  • No logging of report content           │
+                              │  • Rate limiting only                     │
+                              └───────────────────────┬───────────────────┘
+                                                      │
+                                                      ▼
+                              ┌───────────────────────────────────────────┐
+                              │           GitHub Issues API               │
+                              │  • Issue created in YOUR repository       │
+                              │  • Data stored only in GitHub             │
+                              │  • Access controlled by your repo perms   │
+                              └───────────────────────────────────────────┘
+```
+
+### What We Collect
+
+| Data Type | Purpose | Privacy Notes |
+|-----------|---------|---------------|
+| Console logs | Debug errors & warnings | Auto-masked for sensitive content |
+| User actions | Understand user journey | Generic selectors only (no personal text) |
+| Navigation history | Track page flow | URLs only (query params masked) |
+| Browser & OS info | Environment debugging | Summarized (e.g., "Chrome 120", "Windows 10") |
+| Performance metrics | Identify slow operations | Timing data only (LCP, FCP, etc.) |
+| DOM snapshot (opt-in) | Visual debugging | Session replay disabled by default |
+
+### What We DON'T Collect
+
+- ❌ **IP addresses** — Not logged or stored
+- ❌ **Cookies** — Never accessed
+- ❌ **localStorage/sessionStorage** — Never read
+- ❌ **Geolocation** — Not requested
+- ❌ **Device fingerprints** — No unique identifiers
+- ❌ **Form field values** — Input content excluded
+- ❌ **Full User Agent string** — Only browser/OS summary
+
+### Automatic Masking (30+ Patterns)
+
+Sensitive data is masked **client-side, before transmission**:
 
 | Category | Replacement |
 |----------|-------------|
@@ -373,6 +427,14 @@ Sensitive data is automatically masked before transmission (30 patterns):
 | Database URLs, Private keys | `[DATABASE_URL_REDACTED]`, `[PRIVATE_KEY_REDACTED]` |
 | Discord webhooks, Slack tokens | `[DISCORD_WEBHOOK_REDACTED]`, `[SLACK_TOKEN_REDACTED]` |
 | NPM, SendGrid, Twilio | `[NPM_TOKEN_REDACTED]`, `[SENDGRID_KEY_REDACTED]`, `[TWILIO_REDACTED]` |
+
+### Key Security Principles
+
+1. **Client-side first** — All masking happens in the browser before data leaves
+2. **No data retention** — Hosted API is a pass-through; no logs stored
+3. **User-initiated only** — Reports sent only when user clicks submit
+4. **Minimal collection** — Only debugging-relevant data captured
+5. **Transparent storage** — Data goes to YOUR GitHub repo, nowhere else
 
 ---
 
