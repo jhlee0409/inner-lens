@@ -444,6 +444,42 @@ describe('InnerLensCore', () => {
       expect(onError).toHaveBeenCalled();
     });
 
+    it('should handle non-JSON error response (e.g., 404 HTML page)', async () => {
+      // This test covers the scenario where the server returns a 404 HTML page
+      // instead of JSON. Before the fix, this would cause a SyntaxError when
+      // trying to parse HTML as JSON.
+      const onError = vi.fn();
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        json: () => Promise.reject(new SyntaxError('Unexpected token < in JSON at position 0')),
+      });
+
+      instance = new InnerLensCore({
+        repository: 'owner/repo',
+        endpoint: '/api/report',
+        onError,
+      });
+      instance.mount();
+      instance.open();
+
+      const textarea = document.querySelector('#inner-lens-description') as HTMLTextAreaElement;
+      textarea.value = 'Test description';
+      textarea.dispatchEvent(new Event('input'));
+
+      const submitBtn = document.querySelector('#inner-lens-submit') as HTMLElement;
+      submitBtn?.click();
+
+      await vi.runAllTimersAsync();
+
+      expect(onError).toHaveBeenCalled();
+      const errorArg = onError.mock.calls[0]?.[0] as Error | undefined;
+      expect(errorArg).toBeDefined();
+      expect(errorArg?.message).not.toContain('SyntaxError');
+      expect(errorArg?.message).not.toContain('Unexpected token');
+    });
+
     it('should handle timeout error', async () => {
       const onError = vi.fn();
       const abortError = new Error('Aborted');
