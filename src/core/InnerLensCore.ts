@@ -12,6 +12,11 @@ import type {
   NavigationEntry,
   PerformanceSummary,
   PageContext,
+  VersionInfo,
+  DeploymentInfo,
+  RuntimeEnvironment,
+  DeviceClass,
+  ColorSchemePreference,
 } from '../types';
 import { WIDGET_TEXTS, HOSTED_API_ENDPOINT } from '../types';
 import {
@@ -608,6 +613,74 @@ export class InnerLensCore {
     document.head.appendChild(this.styleElement);
   }
 
+  private getVersionInfo(): VersionInfo | undefined {
+    const sdkVersion = typeof globalThis !== 'undefined'
+      ? (globalThis as typeof globalThis & { __INNER_LENS_VERSION__?: string }).__INNER_LENS_VERSION__
+      : undefined;
+    return sdkVersion ? { widget: sdkVersion, sdk: sdkVersion } : undefined;
+  }
+
+  private getDeploymentInfo(): DeploymentInfo | undefined {
+    const environment = this.config.branch;
+    const commit = typeof window !== 'undefined'
+      ? (window as Window & { __INNER_LENS_COMMIT__?: string }).__INNER_LENS_COMMIT__
+      : undefined;
+    const release = typeof window !== 'undefined'
+      ? (window as Window & { __INNER_LENS_RELEASE__?: string }).__INNER_LENS_RELEASE__
+      : undefined;
+    const buildTime = typeof window !== 'undefined'
+      ? (window as Window & { __INNER_LENS_BUILD_TIME__?: string }).__INNER_LENS_BUILD_TIME__
+      : undefined;
+
+    if (!environment && !commit && !release && !buildTime) return undefined;
+
+    return {
+      environment,
+      commit,
+      release,
+      buildTime,
+    };
+  }
+
+  private getRuntimeEnvironment(): RuntimeEnvironment {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+      return {};
+    }
+
+    const viewport = {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      devicePixelRatio: window.devicePixelRatio,
+    };
+
+    const device = this.inferDeviceClass(viewport.width);
+    const colorScheme = this.getColorScheme();
+
+    return {
+      locale: navigator.language,
+      language: navigator.language,
+      timezoneOffset: new Date().getTimezoneOffset(),
+      viewport,
+      device,
+      colorScheme,
+      online: navigator.onLine,
+      platform: navigator.platform,
+    };
+  }
+
+  private inferDeviceClass(width: number): DeviceClass {
+    if (width <= 767) return 'mobile';
+    if (width <= 1024) return 'tablet';
+    return 'desktop';
+  }
+
+  private getColorScheme(): ColorSchemePreference {
+    if (typeof window === 'undefined' || !window.matchMedia) return 'no-preference';
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+    if (window.matchMedia('(prefers-color-scheme: light)').matches) return 'light';
+    return 'no-preference';
+  }
+
   private renderTrigger(): void {
     if (!this.widgetRoot) return;
 
@@ -911,7 +984,7 @@ export class InnerLensCore {
         }
       }
 
-      const payload: BugReportPayload = {
+       const payload: BugReportPayload = {
         description: this.config.maskSensitiveData
           ? maskSensitiveData(this.description)
           : this.description,
@@ -922,6 +995,9 @@ export class InnerLensCore {
         owner: owner || undefined,
         repo: repo || undefined,
         branch: this.config.branch || undefined,
+        version: this.getVersionInfo(),
+        deployment: this.getDeploymentInfo(),
+        runtime: this.getRuntimeEnvironment(),
         userActions: this.userActions.length > 0 ? this.userActions : undefined,
         navigations: this.navigations.length > 0 ? this.navigations : undefined,
         performance: this.performance ?? undefined,
@@ -934,6 +1010,7 @@ export class InnerLensCore {
           branch: this.config.branch,
         },
       };
+
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);

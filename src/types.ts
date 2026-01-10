@@ -524,6 +524,52 @@ export interface CapturedContext {
   pageContext?: PageContext;
 }
 
+export interface VersionInfo {
+  /** Deployed widget bundle version */
+  widget?: string;
+  /** SDK/core library version */
+  sdk?: string;
+}
+
+export interface DeploymentInfo {
+  /** Deployment environment (prod/staging/dev/etc.) */
+  environment?: string;
+  /** Commit SHA for the deployed build */
+  commit?: string;
+  /** Release tag or version label */
+  release?: string;
+  /** Build time (ISO string) */
+  buildTime?: string;
+}
+
+export interface RuntimeViewport {
+  width: number;
+  height: number;
+  devicePixelRatio?: number;
+}
+
+export type DeviceClass = 'mobile' | 'tablet' | 'desktop';
+export type ColorSchemePreference = 'light' | 'dark' | 'no-preference';
+
+export interface RuntimeEnvironment {
+  /** Browser locale (e.g., en-US) */
+  locale?: string;
+  /** Browser language (navigator.language) */
+  language?: string;
+  /** Timezone offset in minutes from UTC */
+  timezoneOffset?: number;
+  /** Viewport dimensions */
+  viewport?: RuntimeViewport;
+  /** Device class inferred from viewport */
+  device?: DeviceClass;
+  /** User preferred color scheme */
+  colorScheme?: ColorSchemePreference;
+  /** Online/offline status */
+  online?: boolean;
+  /** Platform string (e.g., MacIntel) */
+  platform?: string;
+}
+
 /**
  * Bug report payload sent to the server
  */
@@ -534,6 +580,10 @@ export interface BugReportPayload {
   userAgent?: string;
   timestamp?: number;
   metadata?: Record<string, unknown>;
+  // Version & deployment
+  version?: VersionInfo;
+  deployment?: DeploymentInfo;
+  runtime?: RuntimeEnvironment;
   // Centralized mode fields (for inner-lens API)
   owner?: string;
   repo?: string;
@@ -623,6 +673,10 @@ export interface HostedBugReportPayload {
   timestamp?: number;
   metadata?: Record<string, unknown>;
 
+  version?: VersionInfo;
+  deployment?: DeploymentInfo;
+  runtime?: RuntimeEnvironment;
+
   // Git branch for analysis engine
   branch?: string;
 
@@ -634,3 +688,5 @@ export interface HostedBugReportPayload {
   pageContext?: PageContext;
   reporter?: Reporter;
 }
+
+

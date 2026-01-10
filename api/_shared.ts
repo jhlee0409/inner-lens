@@ -103,23 +103,60 @@ export interface PageContext {
   referrer?: string;
 }
 
-export interface Reporter {
-  name: string;
-  email?: string;
-  id?: string;
+export interface CapturedContext {
+  logs: LogEntry[];
+  userActions: UserAction[];
+  navigations: NavigationEntry[];
+  performance?: PerformanceSummary;
+  sessionReplay?: string;
+  pageContext?: PageContext;
 }
 
-export interface HostedBugReportPayload {
-  owner: string;
-  repo: string;
+export interface VersionInfo {
+  widget?: string;
+  sdk?: string;
+}
+
+export interface DeploymentInfo {
+  environment?: string;
+  commit?: string;
+  release?: string;
+  buildTime?: string;
+}
+
+export interface RuntimeViewport {
+  width: number;
+  height: number;
+  devicePixelRatio?: number;
+}
+
+export type DeviceClass = 'mobile' | 'tablet' | 'desktop';
+export type ColorSchemePreference = 'light' | 'dark' | 'no-preference';
+
+export interface RuntimeEnvironment {
+  locale?: string;
+  language?: string;
+  timezoneOffset?: number;
+  viewport?: RuntimeViewport;
+  device?: DeviceClass;
+  colorScheme?: ColorSchemePreference;
+  online?: boolean;
+  platform?: string;
+}
+
+export interface BugReportPayload {
   description: string;
   logs?: LogEntry[];
   url?: string;
   userAgent?: string;
   timestamp?: number;
   metadata?: Record<string, unknown>;
+  version?: VersionInfo;
+  deployment?: DeploymentInfo;
+  runtime?: RuntimeEnvironment;
+  owner?: string;
+  repo?: string;
   branch?: string;
-  // Extended context
   userActions?: UserAction[];
   navigations?: NavigationEntry[];
   performance?: PerformanceSummary;
@@ -127,6 +164,46 @@ export interface HostedBugReportPayload {
   pageContext?: PageContext;
   reporter?: Reporter;
 }
+
+
+export interface Reporter {
+  name: string;
+  email?: string;
+  id?: string;
+}
+
+export interface HostedBugReportPayload {
+  // Required: Repository info
+  owner: string;
+  repo: string;
+
+  // Required: Bug details
+  description: string;
+
+  // Optional: Additional context
+  logs?: LogEntry[];
+  url?: string;
+  userAgent?: string;
+  timestamp?: number;
+  metadata?: Record<string, unknown>;
+
+  // Version & deployment
+  version?: VersionInfo;
+  deployment?: DeploymentInfo;
+  runtime?: RuntimeEnvironment;
+
+  // Git branch for analysis engine
+  branch?: string;
+
+  // Extended context (user actions, navigation, performance)
+  userActions?: UserAction[];
+  navigations?: NavigationEntry[];
+  performance?: PerformanceSummary;
+  sessionReplay?: string; // Base64 encoded rrweb data
+  pageContext?: PageContext;
+  reporter?: Reporter;
+}
+
 
 // ============================================
 // Constants
@@ -526,6 +603,35 @@ const ReporterSchema = z.object({
   id: z.string().optional(),
 });
 
+const VersionInfoSchema = z.object({
+  widget: z.string().optional(),
+  sdk: z.string().optional(),
+});
+
+const DeploymentInfoSchema = z.object({
+  environment: z.string().optional(),
+  commit: z.string().optional(),
+  release: z.string().optional(),
+  buildTime: z.string().optional(),
+});
+
+const RuntimeViewportSchema = z.object({
+  width: z.number(),
+  height: z.number(),
+  devicePixelRatio: z.number().optional(),
+});
+
+const RuntimeEnvironmentSchema = z.object({
+  locale: z.string().optional(),
+  language: z.string().optional(),
+  timezoneOffset: z.number().optional(),
+  viewport: RuntimeViewportSchema.optional(),
+  device: z.enum(['mobile', 'tablet', 'desktop']).optional(),
+  colorScheme: z.enum(['light', 'dark', 'no-preference']).optional(),
+  online: z.boolean().optional(),
+  platform: z.string().optional(),
+});
+
 export const HostedBugReportPayloadSchema = z.object({
   owner: z.string().min(1, 'Owner is required'),
   repo: z.string().min(1, 'Repo is required'),
@@ -535,6 +641,9 @@ export const HostedBugReportPayloadSchema = z.object({
   userAgent: z.string().optional(),
   timestamp: z.number().optional(),
   metadata: z.record(z.unknown()).optional(),
+  version: VersionInfoSchema.optional(),
+  deployment: DeploymentInfoSchema.optional(),
+  runtime: RuntimeEnvironmentSchema.optional(),
   branch: z.string().optional(),
   userActions: z.array(UserActionSchema).optional(),
   navigations: z.array(NavigationEntrySchema).optional(),
@@ -628,17 +737,90 @@ export function formatIssueBody(payload: HostedBugReportPayload): string {
   }
 
   if (formattedReporter) {
-    body += `\n---\n\n### Reporter\n\n${formattedReporter}\n`;
+    body += `
+---
+
+### Reporter
+
+${formattedReporter}
+`;
   }
 
-  const branchRow = payload.branch
-    ? `| Branch | ${payload.branch} |\n`
-    : '';
+  const versionRows = payload.version
+    ? `| Widget | ${payload.version.widget ?? 'N/A'} |
+| SDK | ${payload.version.sdk ?? payload.version.widget ?? 'N/A'} |
+`
+    : `| Widget | N/A |
+| SDK | N/A |
+`;
 
-  body += `\n---\n\n### Environment\n\n| Field | Value |\n|-------|-------|\n| URL | ${maskSensitiveData(payload.url || 'N/A')} |\n| User Agent | ${payload.userAgent || 'N/A'} |\n| Timestamp | ${payload.timestamp ? new Date(payload.timestamp).toISOString() : new Date().toISOString()} |\n${branchRow}`;
+  const deploymentRows = payload.deployment
+    ? `| Environment | ${payload.deployment.environment ?? 'N/A'} |
+| Commit | ${payload.deployment.commit ?? 'N/A'} |
+| Release | ${payload.deployment.release ?? 'N/A'} |
+| Build Time | ${payload.deployment.buildTime ?? 'N/A'} |
+`
+    : `| Environment | N/A |
+| Commit | N/A |
+| Release | N/A |
+| Build Time | N/A |
+`;
+
+  const runtimeRows = payload.runtime
+    ? `| Locale | ${payload.runtime.locale ?? payload.runtime.language ?? 'N/A'} |
+| Timezone Offset | ${payload.runtime.timezoneOffset ?? 'N/A'} |
+| Viewport | ${payload.runtime.viewport ? `${payload.runtime.viewport.width}x${payload.runtime.viewport.height}${payload.runtime.viewport.devicePixelRatio ? ` @${payload.runtime.viewport.devicePixelRatio}x` : ''}` : 'N/A'} |
+| Device | ${payload.runtime.device ?? 'N/A'} |
+| Color Scheme | ${payload.runtime.colorScheme ?? 'N/A'} |
+| Online | ${payload.runtime.online ?? 'N/A'} |
+| Platform | ${payload.runtime.platform ?? 'N/A'} |
+`
+    : `| Locale | N/A |
+| Timezone Offset | N/A |
+| Viewport | N/A |
+| Device | N/A |
+| Color Scheme | N/A |
+| Online | N/A |
+| Platform | N/A |
+`;
+
+  const branchRow = payload.branch ? `| Branch | ${payload.branch} |
+` : '';
+
+  body += `
+---
+
+### Versions
+
+| Field | Value |
+|-------|-------|
+${versionRows}
+---
+
+### Deployment
+
+| Field | Value |
+|-------|-------|
+${deploymentRows}
+---
+
+### Environment
+
+| Field | Value |
+|-------|-------|
+| URL | ${maskSensitiveData(payload.url || 'N/A')} |
+| User Agent | ${payload.userAgent || 'N/A'} |
+| Timestamp | ${payload.timestamp ? new Date(payload.timestamp).toISOString() : new Date().toISOString()} |
+${branchRow}${runtimeRows}`;
 
   if (formattedPageContext) {
-    body += `\n---\n\n### Page Context\n\n${formattedPageContext}\n`;
+    body += `
+---
+
+### Page Context
+
+${formattedPageContext}
+`;
   }
 
   if (formattedPerformance) {
