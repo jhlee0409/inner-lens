@@ -632,19 +632,41 @@ export function maskSensitiveData(text: string): string {
 
 const UserActionSchema = z.object({
   type: z.enum([
-    'click', 'dblclick', 'input', 'change', 'focus',
-    'blur', 'scroll', 'keydown', 'submit', 'copy', 'paste', 'select',
+    'click',
+    'dblclick',
+    'input',
+    'change',
+    'focus',
+    'blur',
+    'scroll',
+    'keydown',
+    'submit',
+    'copy',
+    'paste',
+    'select',
   ]),
   target: z.string(),
   timestamp: z.number(),
   value: z.string().optional(),
-  position: z.object({ x: z.number(), y: z.number() }).optional(),
+  position: z
+    .object({
+      x: z.number(),
+      y: z.number(),
+    })
+    .optional(),
   key: z.string().optional(),
   metadata: z.record(z.unknown()).optional(),
 });
 
 const NavigationEntrySchema = z.object({
-  type: z.enum(['pageload', 'pushstate', 'replacestate', 'popstate', 'hashchange', 'beforeunload']),
+  type: z.enum([
+    'pageload',
+    'pushstate',
+    'replacestate',
+    'popstate',
+    'hashchange',
+    'beforeunload',
+  ]),
   timestamp: z.number(),
   from: z.string(),
   to: z.string(),
@@ -713,6 +735,16 @@ const RuntimeViewportSchema = z.object({
   devicePixelRatio: z.number().optional(),
 });
 
+const BrowserInfoSchema = z.object({
+  name: z.string().optional(),
+  version: z.string().optional(),
+});
+
+const OSInfoSchema = z.object({
+  name: z.string().optional(),
+  version: z.string().optional(),
+});
+
 const RuntimeEnvironmentSchema = z.object({
   locale: z.string().optional(),
   language: z.string().optional(),
@@ -721,7 +753,8 @@ const RuntimeEnvironmentSchema = z.object({
   device: z.enum(['mobile', 'tablet', 'desktop']).optional(),
   colorScheme: z.enum(['light', 'dark', 'no-preference']).optional(),
   online: z.boolean().optional(),
-  platform: z.string().optional(),
+  browser: BrowserInfoSchema.optional(),
+  os: OSInfoSchema.optional(),
 });
 
 export const HostedBugReportPayloadSchema = z.object({

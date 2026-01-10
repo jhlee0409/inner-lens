@@ -107,6 +107,48 @@ const SYNC_RULES: SyncRule[] = [
       },
     ],
   },
+  {
+    name: 'Zod Schema Sync',
+    sourceFile: 'src/server.ts',
+    targetFile: 'api/_shared.ts',
+    contentPatterns: [
+      {
+        description: 'UserActionSchema',
+        sourcePattern: /const UserActionSchema\s*=\s*z\.object\(\{[\s\S]*?\}\);/,
+        targetPattern: /const UserActionSchema\s*=\s*z\.object\(\{[\s\S]*?\}\);/,
+      },
+      {
+        description: 'NavigationEntrySchema',
+        sourcePattern: /const NavigationEntrySchema\s*=\s*z\.object\(\{[\s\S]*?\}\);/,
+        targetPattern: /const NavigationEntrySchema\s*=\s*z\.object\(\{[\s\S]*?\}\);/,
+      },
+      {
+        description: 'PerformanceSummarySchema',
+        sourcePattern: /const PerformanceSummarySchema\s*=\s*z\.object\(\{[\s\S]*?\}\);/,
+        targetPattern: /const PerformanceSummarySchema\s*=\s*z\.object\(\{[\s\S]*?\}\);/,
+      },
+      {
+        description: 'PageContextSchema',
+        sourcePattern: /const PageContextSchema\s*=\s*z\.object\(\{[\s\S]*?\}\);/,
+        targetPattern: /const PageContextSchema\s*=\s*z\.object\(\{[\s\S]*?\}\);/,
+      },
+      {
+        description: 'BrowserInfoSchema',
+        sourcePattern: /const BrowserInfoSchema\s*=\s*z\.object\(\{[\s\S]*?\}\);/,
+        targetPattern: /const BrowserInfoSchema\s*=\s*z\.object\(\{[\s\S]*?\}\);/,
+      },
+      {
+        description: 'OSInfoSchema',
+        sourcePattern: /const OSInfoSchema\s*=\s*z\.object\(\{[\s\S]*?\}\);/,
+        targetPattern: /const OSInfoSchema\s*=\s*z\.object\(\{[\s\S]*?\}\);/,
+      },
+      {
+        description: 'RuntimeEnvironmentSchema',
+        sourcePattern: /const RuntimeEnvironmentSchema\s*=\s*z\.object\(\{[\s\S]*?\}\);/,
+        targetPattern: /const RuntimeEnvironmentSchema\s*=\s*z\.object\(\{[\s\S]*?\}\);/,
+      },
+    ],
+  },
 ];
 
 // ============================================
@@ -149,11 +191,13 @@ function extractWithBraceBalancing(
 }
 
 function extractMatch(content: string, pattern: RegExp): string | null {
-  if (pattern.source.includes('interface') || pattern.source.includes('type.*=')) {
-    const nameMatch = pattern.source.match(/(?:interface|type)\s+(\w+)/);
-    if (nameMatch) {
-      return extractWithBraceBalancing(content, pattern);
-    }
+  // Use brace balancing for interface, type, and Zod schema patterns
+  if (
+    pattern.source.includes('interface') ||
+    pattern.source.includes('type.*=') ||
+    pattern.source.includes('z\\.object')
+  ) {
+    return extractWithBraceBalancing(content, pattern);
   }
   const match = content.match(pattern);
   return match ? stripCommentsAndNormalize(match[0]) : null;
