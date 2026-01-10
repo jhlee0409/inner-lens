@@ -5,27 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.4] - 2025-01-09
-
-### Fixed
-- **(Widget)** React/Vue `branch` prop now correctly passed to API payload (was documented but not implemented)
-- **(Build)** `inner-lens/build` export added to package.json (was missing, `getGitBranch()` import failed)
-
-### Changed
-- **(Docs)** Branch tracking setup integrated into Quick Start (no longer a separate section)
+## [0.4.3] - 2026-01-10
 
 ### Added
-- **(Tests)** Branch prop tests for InnerLensCore and api/_shared
+- **(Build)** Git branch tracking utilities and `inner-lens/build` export (`getGitBranch` and helpers)
+- **(Widget)** Branch prop wired through React/Vue → API payload
+- **(Tests)** Branch tracking utilities and branch prop coverage for InnerLensCore/api/_shared
 
-## [0.4.3] - 2025-01-09
+### Changed
+- **(Workflow)** Removed unused `max_tokens`/`node_version` options; increased explainer output limit to 6000
+- **(Docs)** Quick Start aligned with branch tracking; masking pattern count corrected (27 → 30)
 
 ### Fixed
+- **(Widget)** Branch prop wiring fixes (React/Vue → API)
+- **(Self-hosted)** Report optional fields and metadata aligned between self-hosted and hosted flows
 - **(Analysis Engine)** Complete i18n support for all comment output sections
   - Analysis Level, Total Duration, Agents Used labels now translated
   - Hallucination Check Report fully localized (8 languages)
   - Confidence Calibration messages translated
   - Reviewer Notes section headers localized
 - **(Analysis Engine)** Added 29 new translation keys across 8 languages
+- **(Docs)** Masking 패턴 수 표기 수정 (27 → 30)
 
 ## [0.4.2] - 2025-01-09
 

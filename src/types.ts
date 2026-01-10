@@ -529,10 +529,10 @@ export interface CapturedContext {
  */
 export interface BugReportPayload {
   description: string;
-  logs: LogEntry[];
-  url: string;
-  userAgent: string;
-  timestamp: number;
+  logs?: LogEntry[];
+  url?: string;
+  userAgent?: string;
+  timestamp?: number;
   metadata?: Record<string, unknown>;
   // Centralized mode fields (for inner-lens API)
   owner?: string;
