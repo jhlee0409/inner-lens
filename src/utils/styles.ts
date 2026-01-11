@@ -460,7 +460,6 @@ export const keyframesCSS = `
 }
 
 #inner-lens-widget h1,
-#inner-lens-widget h2,
 #inner-lens-widget h3,
 #inner-lens-widget h4,
 #inner-lens-widget h5,
@@ -470,6 +469,11 @@ export const keyframesCSS = `
 #inner-lens-widget div,
 #inner-lens-widget label {
   all: revert !important;
+}
+
+/* h2 (dialog title) preserves inline styles for custom styling */
+#inner-lens-widget h2 {
+  all: initial !important;
 }
 
 /* Force form element styles - these must override host CSS resets */

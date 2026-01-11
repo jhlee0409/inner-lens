@@ -319,7 +319,7 @@ export class InnerLensCore {
     const texts = WIDGET_TEXTS[lang] ?? WIDGET_TEXTS.en;
 
     this.config = {
-      endpoint: HOSTED_API_ENDPOINT,
+      endpoint: config.endpoint ?? HOSTED_API_ENDPOINT,
       labels: ['inner-lens'],
       captureConsoleLogs: true,
       maxLogEntries: 50,
