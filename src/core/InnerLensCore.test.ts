@@ -16,7 +16,7 @@ describe('InnerLensCore', () => {
 
   describe('mount/unmount lifecycle', () => {
     it('should mount widget to document.body by default', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       instance.mount();
 
       const widget = document.querySelector('#inner-lens-widget');
@@ -28,7 +28,7 @@ describe('InnerLensCore', () => {
       const container = document.createElement('div');
       document.body.appendChild(container);
 
-      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       instance.mount(container);
 
       const widget = container.querySelector('#inner-lens-widget');
@@ -36,7 +36,7 @@ describe('InnerLensCore', () => {
     });
 
     it('should unmount widget from DOM', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       instance.mount();
 
       expect(document.querySelector('#inner-lens-widget')).not.toBeNull();
@@ -47,7 +47,7 @@ describe('InnerLensCore', () => {
     });
 
     it('should not mount if already mounted', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       instance.mount();
       instance.mount();
 
@@ -56,10 +56,10 @@ describe('InnerLensCore', () => {
     });
 
     it('should prevent multiple instances from mounting', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       instance.mount();
 
-      const instance2 = new InnerLensCore({ repository: 'owner/repo' });
+      const instance2 = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       instance2.mount();
 
@@ -71,7 +71,7 @@ describe('InnerLensCore', () => {
     });
 
     it('should inject styles on mount', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       instance.mount();
 
       const styleElement = document.querySelector('[data-inner-lens-styles]');
@@ -79,7 +79,7 @@ describe('InnerLensCore', () => {
     });
 
     it('should remove styles on unmount', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       instance.mount();
       instance.unmount();
 
@@ -90,14 +90,14 @@ describe('InnerLensCore', () => {
 
   describe('hidden option', () => {
     it('should not mount when hidden is true', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo', hidden: true });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo', hidden: true });
       instance.mount();
 
       expect(document.querySelector('#inner-lens-widget')).toBeNull();
     });
 
     it('should not open when hidden is true', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo', hidden: true });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo', hidden: true });
       instance.mount();
       instance.open();
 
@@ -107,7 +107,7 @@ describe('InnerLensCore', () => {
 
   describe('disabled option', () => {
     it('should render disabled button when disabled is true', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo', disabled: true });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo', disabled: true });
       instance.mount();
 
       const button = document.querySelector('#inner-lens-trigger') as HTMLButtonElement;
@@ -117,7 +117,7 @@ describe('InnerLensCore', () => {
 
   describe('open/close dialog', () => {
     it('should open dialog', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       instance.mount();
       instance.open();
 
@@ -126,7 +126,7 @@ describe('InnerLensCore', () => {
     });
 
     it('should close dialog', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       instance.mount();
       instance.open();
       instance.close();
@@ -135,14 +135,14 @@ describe('InnerLensCore', () => {
     });
 
     it('should not open if not mounted', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       instance.open();
 
       expect(instance.isDialogOpen).toBe(false);
     });
 
     it('should close dialog on Escape key', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       instance.mount();
       instance.open();
 
@@ -152,7 +152,7 @@ describe('InnerLensCore', () => {
     });
 
     it('should close dialog when clicking overlay', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       instance.mount();
       instance.open();
 
@@ -166,7 +166,7 @@ describe('InnerLensCore', () => {
   describe('callbacks', () => {
     it('should call onOpen when dialog opens', () => {
       const onOpen = vi.fn();
-      instance = new InnerLensCore({ repository: 'owner/repo', onOpen });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo', onOpen });
       instance.mount();
       instance.open();
 
@@ -175,7 +175,7 @@ describe('InnerLensCore', () => {
 
     it('should call onClose when dialog closes', () => {
       const onClose = vi.fn();
-      instance = new InnerLensCore({ repository: 'owner/repo', onClose });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo', onClose });
       instance.mount();
       instance.open();
       instance.close();
@@ -186,7 +186,7 @@ describe('InnerLensCore', () => {
 
   describe('trigger button', () => {
     it('should open dialog when trigger button is clicked', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       instance.mount();
 
       const trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;
@@ -197,6 +197,7 @@ describe('InnerLensCore', () => {
 
     it('should use custom button text', () => {
       instance = new InnerLensCore({
+        mode: 'hosted',
         repository: 'owner/repo',
         buttonText: 'Custom Bug Report',
       });
@@ -210,6 +211,7 @@ describe('InnerLensCore', () => {
   describe('dialog content', () => {
     it('should display custom dialog title', () => {
       instance = new InnerLensCore({
+        mode: 'hosted',
         repository: 'owner/repo',
         dialogTitle: 'Custom Title',
       });
@@ -221,7 +223,7 @@ describe('InnerLensCore', () => {
     });
 
     it('should have textarea with maxlength', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       instance.mount();
       instance.open();
 
@@ -230,61 +232,101 @@ describe('InnerLensCore', () => {
     });
   });
 
-  describe('endpoint validation', () => {
-    it('should fallback to hosted API when full URL endpoint contains "/undefined"', () => {
+  describe('mode validation', () => {
+    it('should warn when endpoint is provided in hosted mode', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       instance = new InnerLensCore({
+        mode: 'hosted',
         repository: 'owner/repo',
-        endpoint: 'http://localhost:3001/undefined',
+        endpoint: '/api/report',
       });
       instance.mount();
 
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Invalid endpoint detected')
+        expect.stringContaining('hosted mode')
       );
       warnSpy.mockRestore();
     });
 
-    it('should fallback to hosted API when full URL endpoint contains "/null"', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    it('should error when neither endpoint nor fullUrl is provided in self-hosted mode', () => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       instance = new InnerLensCore({
+        mode: 'self-hosted',
         repository: 'owner/repo',
-        endpoint: 'https://example.com/api/null/report',
       });
       instance.mount();
 
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Invalid endpoint detected')
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('self-hosted mode requires')
       );
-      warnSpy.mockRestore();
+      errorSpy.mockRestore();
     });
 
-    it('should accept relative path endpoint without warning (self-hosted)', () => {
+    it('should error when both endpoint and fullUrl are provided in self-hosted mode', () => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      instance = new InnerLensCore({
+        mode: 'self-hosted',
+        repository: 'owner/repo',
+        endpoint: '/api/report',
+        fullUrl: 'https://example.com/api/report',
+      });
+      instance.mount();
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Cannot use both endpoint and fullUrl')
+      );
+      errorSpy.mockRestore();
+    });
+
+    it('should accept relative path endpoint in self-hosted mode', () => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       instance = new InnerLensCore({
+        mode: 'self-hosted',
         repository: 'owner/repo',
         endpoint: '/api/bug-report',
       });
       instance.mount();
 
+      expect(errorSpy).not.toHaveBeenCalled();
       expect(warnSpy).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
       warnSpy.mockRestore();
     });
 
-    it('should accept valid full URL endpoint without warning', () => {
+    it('should accept fullUrl in self-hosted mode', () => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       instance = new InnerLensCore({
+        mode: 'self-hosted',
         repository: 'owner/repo',
-        endpoint: 'http://localhost:3001/api/report',
+        fullUrl: 'https://api.example.com/report',
       });
       instance.mount();
 
+      expect(errorSpy).not.toHaveBeenCalled();
       expect(warnSpy).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
       warnSpy.mockRestore();
+    });
+
+    it('should error when mode is not provided', () => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      instance = new InnerLensCore({
+        repository: 'owner/repo',
+      });
+      instance.mount();
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('mode is required')
+      );
+      errorSpy.mockRestore();
     });
   });
 
@@ -298,7 +340,7 @@ describe('InnerLensCore', () => {
     });
 
     it('should show error when description is empty', async () => {
-      instance = new InnerLensCore({ repository: 'owner/repo', endpoint: '/api/report' });
+      instance = new InnerLensCore({ mode: 'self-hosted', repository: 'owner/repo', endpoint: '/api/report' });
       instance.mount();
       instance.open();
 
@@ -314,8 +356,9 @@ describe('InnerLensCore', () => {
 
     it('should show error when repository is not configured in hosted mode', async () => {
       global.fetch = vi.fn();
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      instance = new InnerLensCore({});
+      instance = new InnerLensCore({ mode: 'hosted' });
       instance.mount();
       instance.open();
 
@@ -330,6 +373,7 @@ describe('InnerLensCore', () => {
 
       const error = document.querySelector('#inner-lens-error');
       expect(error?.textContent).toContain('Repository');
+      errorSpy.mockRestore();
     });
 
     it('should call fetch with correct payload on submit', async () => {
@@ -340,6 +384,7 @@ describe('InnerLensCore', () => {
       global.fetch = mockFetch;
 
       instance = new InnerLensCore({
+        mode: 'self-hosted',
         repository: 'owner/repo',
         endpoint: '/api/report',
       });
@@ -377,6 +422,7 @@ describe('InnerLensCore', () => {
       global.fetch = mockFetch;
 
       instance = new InnerLensCore({
+        mode: 'self-hosted',
         repository: 'owner/repo',
         endpoint: '/api/report',
         branch: 'feature/test-branch',
@@ -405,6 +451,7 @@ describe('InnerLensCore', () => {
       global.fetch = mockFetch;
 
       instance = new InnerLensCore({
+        mode: 'self-hosted',
         repository: 'owner/repo',
         endpoint: '/api/report',
       });
@@ -432,6 +479,7 @@ describe('InnerLensCore', () => {
       });
 
       instance = new InnerLensCore({
+        mode: 'self-hosted',
         repository: 'owner/repo',
         endpoint: '/api/report',
         onSuccess,
@@ -459,6 +507,7 @@ describe('InnerLensCore', () => {
       });
 
       instance = new InnerLensCore({
+        mode: 'self-hosted',
         repository: 'owner/repo',
         endpoint: '/api/report',
         onError,
@@ -483,6 +532,7 @@ describe('InnerLensCore', () => {
       global.fetch = vi.fn().mockRejectedValue(new TypeError('Network error'));
 
       instance = new InnerLensCore({
+        mode: 'self-hosted',
         repository: 'owner/repo',
         endpoint: '/api/report',
         onError,
@@ -515,6 +565,7 @@ describe('InnerLensCore', () => {
       });
 
       instance = new InnerLensCore({
+        mode: 'self-hosted',
         repository: 'owner/repo',
         endpoint: '/api/report',
         onError,
@@ -545,6 +596,7 @@ describe('InnerLensCore', () => {
       global.fetch = vi.fn().mockRejectedValue(abortError);
 
       instance = new InnerLensCore({
+        mode: 'self-hosted',
         repository: 'owner/repo',
         endpoint: '/api/report',
         onError,
@@ -575,6 +627,7 @@ describe('InnerLensCore', () => {
       );
 
       instance = new InnerLensCore({
+        mode: 'self-hosted',
         repository: 'owner/repo',
         endpoint: '/api/report',
       });
@@ -597,7 +650,7 @@ describe('InnerLensCore', () => {
 
   describe('i18n', () => {
     it('should use Korean texts when language is ko', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo', language: 'ko' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo', language: 'ko' });
       instance.mount();
 
       const trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;
@@ -605,7 +658,7 @@ describe('InnerLensCore', () => {
     });
 
     it('should use Japanese texts when language is ja', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo', language: 'ja' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo', language: 'ja' });
       instance.mount();
 
       const trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;
@@ -614,7 +667,7 @@ describe('InnerLensCore', () => {
 
     it('should fallback to English when language is not supported', () => {
       // This test catches the bug where unsupported language causes undefined texts
-      instance = new InnerLensCore({ repository: 'owner/repo', language: 'xyz' as 'en' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo', language: 'xyz' as 'en' });
       instance.mount();
 
       const trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;
@@ -624,6 +677,7 @@ describe('InnerLensCore', () => {
 
     it('should use custom dialogTitle when provided', () => {
       instance = new InnerLensCore({
+        mode: 'hosted',
         repository: 'owner/repo',
         dialogTitle: 'Custom Dialog Title',
       });
@@ -636,6 +690,7 @@ describe('InnerLensCore', () => {
 
     it('should use custom buttonText when provided', () => {
       instance = new InnerLensCore({
+        mode: 'hosted',
         repository: 'owner/repo',
         buttonText: 'Custom Button Text',
       });
@@ -648,6 +703,7 @@ describe('InnerLensCore', () => {
     it('should prioritize custom text over language setting', () => {
       // Custom text should override i18n, not the other way around
       instance = new InnerLensCore({
+        mode: 'hosted',
         repository: 'owner/repo',
         language: 'ko',
         buttonText: 'My Custom Button',
@@ -661,7 +717,7 @@ describe('InnerLensCore', () => {
 
     it('should display text content, not show undefined or empty', () => {
       // This test catches the bug where text is missing entirely
-      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       instance.mount();
       instance.open();
 
@@ -679,7 +735,7 @@ describe('InnerLensCore', () => {
 
   describe('button size', () => {
     it('should render small button', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo', buttonSize: 'sm' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo', buttonSize: 'sm' });
       instance.mount();
 
       const trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;
@@ -687,7 +743,7 @@ describe('InnerLensCore', () => {
     });
 
     it('should render medium button', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo', buttonSize: 'md' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo', buttonSize: 'md' });
       instance.mount();
 
       const trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;
@@ -695,7 +751,7 @@ describe('InnerLensCore', () => {
     });
 
     it('should render large button by default', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       instance.mount();
 
       const trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;
@@ -705,7 +761,7 @@ describe('InnerLensCore', () => {
 
   describe('button position', () => {
     it('should position button at bottom-right by default', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       instance.mount();
 
       const trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;
@@ -714,7 +770,7 @@ describe('InnerLensCore', () => {
     });
 
     it('should position button at top-left when specified', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo', position: 'top-left' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo', position: 'top-left' });
       instance.mount();
 
       const trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;
@@ -725,7 +781,7 @@ describe('InnerLensCore', () => {
 
   describe('button color', () => {
     it('should use default color', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo' });
       instance.mount();
 
       const trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;
@@ -733,7 +789,7 @@ describe('InnerLensCore', () => {
     });
 
     it('should use custom color', () => {
-      instance = new InnerLensCore({ repository: 'owner/repo', buttonColor: '#ff0000' });
+      instance = new InnerLensCore({ mode: 'hosted', repository: 'owner/repo', buttonColor: '#ff0000' });
       instance.mount();
 
       const trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;

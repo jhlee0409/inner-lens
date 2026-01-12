@@ -30,12 +30,13 @@ import {
 } from 'vue';
 import { InnerLensCore, type InnerLensCoreConfig } from './core/InnerLensCore';
 import type { StyleConfig } from './utils/styles';
-import { HOSTED_API_ENDPOINT } from './types';
+import type { InnerLensMode } from './types';
 
 // Re-export types
 export type {
   AIProvider,
   InnerLensConfig,
+  InnerLensMode,
   LogEntry,
   BugReportPayload,
   BugReportResponse,
@@ -113,7 +114,9 @@ export function useInnerLens(config: InnerLensCoreConfig = {}) {
 
   watch(
     () => [
+      config.mode,
       config.endpoint,
+      config.fullUrl,
       config.repository,
       config.branch,
       config.hidden,
@@ -170,9 +173,17 @@ export function useInnerLens(config: InnerLensCoreConfig = {}) {
 export const InnerLensWidget = defineComponent({
   name: 'InnerLensWidget',
   props: {
+    mode: {
+      type: String as PropType<InnerLensMode>,
+      required: true,
+    },
     endpoint: {
       type: String,
-      default: HOSTED_API_ENDPOINT,
+      default: undefined,
+    },
+    fullUrl: {
+      type: String,
+      default: undefined,
     },
     repository: {
       type: String,
@@ -285,7 +296,9 @@ export const InnerLensWidget = defineComponent({
       }
 
       const config: InnerLensCoreConfig = {
+        mode: props.mode,
         endpoint: props.endpoint,
+        fullUrl: props.fullUrl,
         repository: props.repository,
         branch: props.branch,
         labels: props.labels,
@@ -334,7 +347,9 @@ export const InnerLensWidget = defineComponent({
 
     watch(
       () => [
+        props.mode,
         props.endpoint,
+        props.fullUrl,
         props.repository,
         props.branch,
         props.hidden,

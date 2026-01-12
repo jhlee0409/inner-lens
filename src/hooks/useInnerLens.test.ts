@@ -41,14 +41,14 @@ describe('useInnerLens', () => {
 
   describe('mounting', () => {
     it('should mount widget to DOM', () => {
-      renderHook(() => useInnerLens({ repository: 'owner/repo' }));
+      renderHook(() => useInnerLens({ mode: 'hosted', repository: 'owner/repo' }));
 
       const widget = document.querySelector('#inner-lens-widget');
       expect(widget).not.toBeNull();
     });
 
     it('should unmount widget when component unmounts', () => {
-      renderHook(() => useInnerLens({ repository: 'owner/repo' }));
+      renderHook(() => useInnerLens({ mode: 'hosted', repository: 'owner/repo' }));
 
       expect(document.querySelector('#inner-lens-widget')).not.toBeNull();
 
@@ -61,7 +61,7 @@ describe('useInnerLens', () => {
     });
 
     it('should not mount when hidden is true', () => {
-      renderHook(() => useInnerLens({ repository: 'owner/repo', hidden: true }));
+      renderHook(() => useInnerLens({ mode: 'hosted', repository: 'owner/repo', hidden: true }));
 
       expect(document.querySelector('#inner-lens-widget')).toBeNull();
     });
@@ -69,7 +69,7 @@ describe('useInnerLens', () => {
 
   describe('open/close', () => {
     it('should provide open function that opens dialog', () => {
-      const { result } = renderHook(() => useInnerLens({ repository: 'owner/repo' }));
+      const { result } = renderHook(() => useInnerLens({ mode: 'hosted', repository: 'owner/repo' }));
 
       act(() => {
         result.current.open();
@@ -79,7 +79,7 @@ describe('useInnerLens', () => {
     });
 
     it('should provide close function that closes dialog', () => {
-      const { result } = renderHook(() => useInnerLens({ repository: 'owner/repo' }));
+      const { result } = renderHook(() => useInnerLens({ mode: 'hosted', repository: 'owner/repo' }));
 
       act(() => {
         result.current.open();
@@ -95,7 +95,7 @@ describe('useInnerLens', () => {
     });
 
     it('should track isOpen state', () => {
-      const { result } = renderHook(() => useInnerLens({ repository: 'owner/repo' }));
+      const { result } = renderHook(() => useInnerLens({ mode: 'hosted', repository: 'owner/repo' }));
 
       expect(result.current.isOpen).toBe(false);
 
@@ -117,7 +117,7 @@ describe('useInnerLens', () => {
     it('should call onOpen callback when dialog opens', () => {
       const onOpen = vi.fn();
       const { result } = renderHook(() =>
-        useInnerLens({ repository: 'owner/repo', onOpen })
+        useInnerLens({ mode: 'hosted', repository: 'owner/repo', onOpen })
       );
 
       act(() => {
@@ -130,7 +130,7 @@ describe('useInnerLens', () => {
     it('should call onClose callback when dialog closes', () => {
       const onClose = vi.fn();
       const { result } = renderHook(() =>
-        useInnerLens({ repository: 'owner/repo', onClose })
+        useInnerLens({ mode: 'hosted', repository: 'owner/repo', onClose })
       );
 
       act(() => {
@@ -152,7 +152,7 @@ describe('useInnerLens', () => {
       const result: { current: ReturnType<typeof useInnerLens> | null } = { current: null };
 
       function TestComponent() {
-        result.current = useInnerLens({ repository: 'owner/repo', onOpen: currentOnOpen });
+        result.current = useInnerLens({ mode: 'hosted', repository: 'owner/repo', onOpen: currentOnOpen });
         return null;
       }
 
@@ -181,7 +181,7 @@ describe('useInnerLens', () => {
       let repository = 'owner/repo1';
 
       function TestComponent() {
-        result.current = useInnerLens({ repository });
+        result.current = useInnerLens({ mode: 'hosted', repository });
         return null;
       }
 
@@ -207,7 +207,7 @@ describe('useInnerLens', () => {
       let language: 'en' | 'ko' = 'en';
 
       function TestComponent() {
-        result.current = useInnerLens({ repository: 'owner/repo', language });
+        result.current = useInnerLens({ mode: 'hosted', repository: 'owner/repo', language });
         return null;
       }
 
@@ -233,7 +233,7 @@ describe('useInnerLens', () => {
       let labels = ['bug'];
 
       function TestComponent() {
-        result.current = useInnerLens({ repository: 'owner/repo', labels });
+        result.current = useInnerLens({ mode: 'hosted', repository: 'owner/repo', labels });
         return null;
       }
 
@@ -255,7 +255,7 @@ describe('useInnerLens', () => {
 
   describe('instance', () => {
     it('should expose instance property (may be null on initial render)', () => {
-      const { result } = renderHook(() => useInnerLens({ repository: 'owner/repo' }));
+      const { result } = renderHook(() => useInnerLens({ mode: 'hosted', repository: 'owner/repo' }));
 
       expect('instance' in result.current).toBe(true);
     });

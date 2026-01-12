@@ -173,15 +173,63 @@ export interface Reporter {
 }
 
 /**
- * Configuration for the InnerLens Widget
+ * Widget operation mode
+ * - 'hosted': Uses inner-lens hosted API (default)
+ * - 'self-hosted': Uses your own backend endpoint
  */
-export interface InnerLensConfig {
-  /**
-   * API endpoint to submit bug reports
-   * @default HOSTED_API_ENDPOINT ('https://inner-lens-one.vercel.app/api/report')
-   */
-  endpoint?: string;
+export type InnerLensMode = 'hosted' | 'self-hosted';
 
+/**
+ * Hosted mode configuration
+ * Uses inner-lens hosted API - only repository is needed
+ */
+type HostedModeConfig = {
+  mode: 'hosted';
+  /** Not allowed in hosted mode */
+  endpoint?: never;
+  /** Not allowed in hosted mode */
+  fullUrl?: never;
+};
+
+/**
+ * Self-hosted mode with relative endpoint
+ * Use when your API is on the same origin
+ */
+type SelfHostedWithEndpoint = {
+  mode: 'self-hosted';
+  /**
+   * API endpoint (relative path)
+   * @example '/api/inner-lens/report'
+   */
+  endpoint: string;
+  /** Cannot use both endpoint and fullUrl */
+  fullUrl?: never;
+};
+
+/**
+ * Self-hosted mode with full URL
+ * Use for Cloudflare Workers, separate API servers, etc.
+ */
+type SelfHostedWithFullUrl = {
+  mode: 'self-hosted';
+  /** Cannot use both endpoint and fullUrl */
+  endpoint?: never;
+  /**
+   * Full URL for external API server
+   * @example 'https://my-api.workers.dev/report'
+   */
+  fullUrl: string;
+};
+
+/**
+ * Mode-specific configuration (discriminated union)
+ */
+export type InnerLensModeConfig = HostedModeConfig | SelfHostedWithEndpoint | SelfHostedWithFullUrl;
+
+/**
+ * Base configuration shared by all modes
+ */
+export interface InnerLensBaseConfig {
   /**
    * GitHub repository in format "owner/repo"
    * Required for creating issues
@@ -367,6 +415,12 @@ export interface InnerLensConfig {
 
   reporter?: Reporter;
 }
+
+/**
+ * Configuration for the InnerLens Widget
+ * Combines base configuration with mode-specific requirements
+ */
+export type InnerLensConfig = InnerLensBaseConfig & InnerLensModeConfig;
 
 /**
  * Log entry source type for categorization

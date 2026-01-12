@@ -7,10 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.8] - 2026-01-12
 
+### Changed
+- **BREAKING**: `mode` prop is now **required** - must be either `'hosted'` or `'self-hosted'`
+  - `mode: 'hosted'` - Uses inner-lens hosted API, only requires `repository`
+  - `mode: 'self-hosted'` - Requires either `endpoint` (relative path) or `fullUrl` (absolute URL)
+  - Migration: Add `mode="hosted"` to existing configurations using hosted API
+  - Migration: Add `mode="self-hosted"` to existing configurations using custom endpoints
+
+### Added
+- **(Widget)** `fullUrl` prop for specifying absolute API endpoints (external servers, Cloudflare, etc.)
+- **(Widget)** Export `InnerLensMode` type from `inner-lens/react` and `inner-lens/vue`
+
 ### Fixed
-- **(Widget)** Detect and warn when endpoint contains `/undefined` or `/null` in full URLs
-  - Automatically falls back to hosted API when environment variables are not set
-  - Only applies to absolute URLs (http/https) - relative paths are unaffected
+- **(Widget)** Clear validation errors for endpoint configuration:
+  - Error when `mode` is not specified
+  - Error when self-hosted mode has neither `endpoint` nor `fullUrl`
+  - Error when self-hosted mode has both `endpoint` AND `fullUrl` (must choose one)
+  - Warning when hosted mode has `endpoint` or `fullUrl` (they are ignored)
 
 ## [0.4.7] - 2026-01-12
 

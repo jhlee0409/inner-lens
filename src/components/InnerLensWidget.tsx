@@ -29,12 +29,14 @@ import React, {
 import { InnerLensCore, type InnerLensCoreConfig } from '../core/InnerLensCore';
 import type { InnerLensConfig } from '../types';
 
-interface InnerLensWidgetProps extends InnerLensConfig {
+type InnerLensWidgetProps = InnerLensConfig & {
   trigger?: ReactNode;
-}
+};
 
 export function InnerLensWidget({
+  mode,
   endpoint,
+  fullUrl,
   repository,
   branch,
   labels,
@@ -91,7 +93,9 @@ export function InnerLensWidget({
     const shouldHideButton = trigger !== undefined || hidden;
 
     const config: InnerLensCoreConfig = {
+      mode,
       endpoint,
+      fullUrl,
       repository,
       branch,
       labels,
@@ -139,7 +143,9 @@ export function InnerLensWidget({
       instanceRef.current = null;
     };
   }, [
+    mode,
     endpoint,
+    fullUrl,
     repository,
     branch,
     labelsJson,

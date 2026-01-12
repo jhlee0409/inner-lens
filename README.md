@@ -69,7 +69,8 @@ export default function App() {
   return (
     <>
       <YourApp />
-      <InnerLensWidget 
+      <InnerLensWidget
+        mode="hosted"
         repository="your-org/your-repo"
         branch={process.env.NEXT_PUBLIC_GIT_BRANCH}
       />
@@ -103,7 +104,8 @@ import { InnerLensWidget } from 'inner-lens/vue';
 
 <template>
   <YourApp />
-  <InnerLensWidget 
+  <InnerLensWidget
+    mode="hosted"
     repository="your-org/your-repo"
     :branch="import.meta.env.VITE_GIT_BRANCH"
   />
@@ -117,7 +119,8 @@ import { InnerLensWidget } from 'inner-lens/vue';
 ```js
 import { InnerLens } from 'inner-lens/vanilla';
 
-const widget = new InnerLens({ 
+const widget = new InnerLens({
+  mode: 'hosted',
   repository: 'your-org/your-repo',
   branch: import.meta.env.VITE_GIT_BRANCH,
 });
@@ -167,10 +170,10 @@ Analysis posted as comment with fix suggestions
 ### Hosted Mode
 
 1. Install [GitHub App](https://github.com/apps/inner-lens-app)
-2. Add widget with `repository` prop
+2. Add widget with `mode="hosted"` and `repository` prop
 
 ```tsx
-<InnerLensWidget repository="owner/repo" />
+<InnerLensWidget mode="hosted" repository="owner/repo" />
 ```
 
 ### Self-Hosted Mode
@@ -188,12 +191,23 @@ export const POST = createFetchHandler({
 });
 ```
 
-3. Add widget with `endpoint` prop:
+3. Add widget with `mode="self-hosted"` and `endpoint` prop:
 
 ```tsx
-<InnerLensWidget 
-  endpoint="/api/inner-lens/report" 
-  repository="owner/repo" 
+<InnerLensWidget
+  mode="self-hosted"
+  endpoint="/api/inner-lens/report"
+  repository="owner/repo"
+/>
+```
+
+For external API servers (Cloudflare Workers, separate domain, etc.), use `fullUrl`:
+
+```tsx
+<InnerLensWidget
+  mode="self-hosted"
+  fullUrl="https://api.example.com/inner-lens/report"
+  repository="owner/repo"
 />
 ```
 
@@ -307,17 +321,23 @@ npm install rrweb@2.0.0-alpha.17
 ```
 
 ```tsx
-<InnerLensWidget repository="owner/repo" captureSessionReplay={true} />
+<InnerLensWidget mode="hosted" repository="owner/repo" captureSessionReplay={true} />
 ```
 
 ---
 
 ## Configuration
 
+> **Migration from v0.4.7 or earlier:** The `mode` prop is now **required**.
+> - If using hosted API: add `mode="hosted"`
+> - If using custom endpoint: add `mode="self-hosted"`
+
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
+| `mode` | `'hosted' \| 'self-hosted'` | **required** | API mode (see below) |
 | `repository` | `string` | - | GitHub repo (`owner/repo`) |
-| `endpoint` | `string` | Hosted API | Custom backend URL |
+| `endpoint` | `string` | - | Relative backend URL (self-hosted only) |
+| `fullUrl` | `string` | - | Absolute backend URL (self-hosted only) |
 | `branch` | `string` | - | Git branch for AI analysis |
 | `language` | `string` | `en` | UI language (`en`, `ko`, `ja`, `zh`, `es`) |
 | `position` | `string` | `bottom-right` | Button position |
@@ -477,6 +497,10 @@ The widget uses browser APIs, so it must run as a client component.
 // App Router: Add 'use client' directive
 'use client';
 import { InnerLensWidget } from 'inner-lens/react';
+
+function BugReportWidget() {
+  return <InnerLensWidget mode="hosted" repository="owner/repo" />;
+}
 
 // Pages Router: Use dynamic import
 import dynamic from 'next/dynamic';

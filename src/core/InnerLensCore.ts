@@ -19,6 +19,7 @@ import type {
   ColorSchemePreference,
   BrowserInfo,
   OSInfo,
+  InnerLensMode,
 } from '../types';
 import { WIDGET_TEXTS, HOSTED_API_ENDPOINT } from '../types';
 
@@ -56,10 +57,26 @@ import { createStyles, keyframesCSS, type StyleConfig } from '../utils/styles';
 
 export interface InnerLensCoreConfig {
   /**
-   * API endpoint to submit bug reports
-   * @default HOSTED_API_ENDPOINT (for hosted mode)
+   * Widget operation mode
+   * - 'hosted': Uses inner-lens hosted API (requires only repository)
+   * - 'self-hosted': Uses your own backend (requires endpoint or fullUrl)
+   * @default 'hosted'
+   */
+  mode?: InnerLensMode;
+
+  /**
+   * API endpoint (relative path) for self-hosted mode
+   * Use this when your API is on the same origin
+   * @example '/api/inner-lens/report'
    */
   endpoint?: string;
+
+  /**
+   * Full URL for self-hosted mode when using external API server
+   * Use this for Cloudflare Workers, separate API servers, etc.
+   * @example 'https://my-api.workers.dev/report'
+   */
+  fullUrl?: string;
 
   /**
    * GitHub repository in format "owner/repo"
@@ -318,19 +335,16 @@ export class InnerLensCore {
     const lang = config.language ?? 'en';
     const texts = WIDGET_TEXTS[lang] ?? WIDGET_TEXTS.en;
 
-    // Validate endpoint - reject full URLs containing "undefined" or "null" (likely env var issue)
-    // Only check absolute URLs (http:// or https://) - relative paths like "/api/report" are fine
-    let resolvedEndpoint = config.endpoint;
-    if (resolvedEndpoint && /^https?:\/\//.test(resolvedEndpoint)) {
-      if (resolvedEndpoint.includes('/undefined') || resolvedEndpoint.includes('/null')) {
-        console.warn(
-          `[inner-lens] Invalid endpoint detected: "${resolvedEndpoint}". ` +
-          `This usually means an environment variable is not set. ` +
-          `Falling back to hosted API.`
-        );
-        resolvedEndpoint = undefined;
-      }
+    // Validate mode is provided (required)
+    if (!config.mode) {
+      console.error(
+        `[inner-lens] mode is required. Use mode="hosted" or mode="self-hosted".\n` +
+        `  - hosted: Uses inner-lens hosted API (requires only repository)\n` +
+        `  - self-hosted: Uses your own backend (requires endpoint or fullUrl)`
+      );
     }
+    const mode = config.mode ?? 'hosted'; // fallback for runtime safety
+    const resolvedEndpoint = this.validateAndResolveEndpoint(mode, config.endpoint, config.fullUrl);
 
     this.config = {
       labels: ['inner-lens'],
@@ -353,10 +367,58 @@ export class InnerLensCore {
       cancelText: texts.cancelText,
       successMessage: texts.successMessage,
       ...config,
+      mode,
       // Override endpoint AFTER spread to ensure validation is applied
-      endpoint: resolvedEndpoint ?? HOSTED_API_ENDPOINT,
+      endpoint: resolvedEndpoint,
       styles: mergedStyles,
     };
+  }
+
+  /**
+   * Validate mode and endpoint/fullUrl configuration
+   * Returns the resolved endpoint URL to use for API calls
+   */
+  private validateAndResolveEndpoint(
+    mode: InnerLensMode,
+    endpoint?: string,
+    fullUrl?: string
+  ): string {
+    if (mode === 'hosted') {
+      // Hosted mode: warn if endpoint or fullUrl is provided (they will be ignored)
+      if (endpoint || fullUrl) {
+        console.warn(
+          `[inner-lens] In hosted mode, endpoint and fullUrl are ignored. ` +
+          `Remove them or use mode="self-hosted" if you want to use a custom endpoint.`
+        );
+      }
+      return HOSTED_API_ENDPOINT;
+    }
+
+    // Self-hosted mode validation
+    const hasEndpoint = endpoint !== undefined && endpoint !== '';
+    const hasFullUrl = fullUrl !== undefined && fullUrl !== '';
+
+    if (!hasEndpoint && !hasFullUrl) {
+      console.error(
+        `[inner-lens] self-hosted mode requires either endpoint or fullUrl. ` +
+        `Example: endpoint="/api/inner-lens/report" or fullUrl="https://api.example.com/report"`
+      );
+      // Fallback to hosted API to prevent complete failure
+      return HOSTED_API_ENDPOINT;
+    }
+
+    if (hasEndpoint && hasFullUrl) {
+      console.error(
+        `[inner-lens] Cannot use both endpoint and fullUrl. Choose one:\n` +
+        `  - endpoint: for relative paths (same origin), e.g., "/api/inner-lens/report"\n` +
+        `  - fullUrl: for external servers, e.g., "https://api.example.com/report"`
+      );
+      // Fallback to hosted API to prevent ambiguity
+      return HOSTED_API_ENDPOINT;
+    }
+
+    // Return the provided endpoint or fullUrl
+    return hasFullUrl ? fullUrl! : endpoint!;
   }
 
   /**
@@ -386,7 +448,7 @@ export class InnerLensCore {
       return;
     }
 
-    if (this.config.endpoint === HOSTED_API_ENDPOINT) {
+    if (this.config.mode === 'hosted') {
       const [owner, repo] = (this.config.repository || '').split('/');
       if (!owner || !repo) {
         console.warn('[inner-lens] Missing or invalid repository. Expected format: "owner/repo". Bug reports will fail until configured.');
@@ -1056,7 +1118,7 @@ export class InnerLensCore {
       const owner = parsedOwner ?? '';
       const repo = parsedRepo ?? '';
 
-      if (this.config.endpoint === HOSTED_API_ENDPOINT && (!owner || !repo)) {
+      if (this.config.mode === 'hosted' && (!owner || !repo)) {
         this.submissionState = 'error';
         this.errorMessage = this.getTexts().repositoryNotConfigured;
         this.render();

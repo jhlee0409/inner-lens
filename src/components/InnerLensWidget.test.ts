@@ -65,6 +65,7 @@ describe('InnerLensWidget Configuration', () => {
     it('should accept all UI text customization props', () => {
       // Type test: this should compile without errors
       const config: InnerLensConfig = {
+        mode: 'hosted',
         buttonText: 'Report Bug',
         dialogTitle: 'Found an Issue?',
         dialogDescription: 'Tell us what happened',
@@ -86,6 +87,7 @@ describe('InnerLensWidget Configuration', () => {
     it('should accept top-level position and buttonColor', () => {
       // Type test: convenience options should be accepted
       const config: InnerLensConfig = {
+        mode: 'hosted',
         position: 'bottom-left',
         buttonColor: '#10b981',
       };
@@ -97,6 +99,7 @@ describe('InnerLensWidget Configuration', () => {
     it('should accept styles object for backward compatibility', () => {
       // Type test: legacy styles object should still work
       const config: InnerLensConfig = {
+        mode: 'hosted',
         styles: {
           buttonPosition: 'top-right',
           buttonColor: '#ef4444',
@@ -110,6 +113,7 @@ describe('InnerLensWidget Configuration', () => {
     it('should accept both convenience options and styles object', () => {
       // Type test: both can be used together
       const config: InnerLensConfig = {
+        mode: 'hosted',
         position: 'bottom-left', // Convenience (takes priority in widget)
         buttonColor: '#10b981',
         styles: {
@@ -128,6 +132,7 @@ describe('InnerLensWidget Configuration', () => {
     it('should accept onOpen callback', () => {
       let opened = false;
       const config: InnerLensConfig = {
+        mode: 'hosted',
         onOpen: () => {
           opened = true;
         },
@@ -140,6 +145,7 @@ describe('InnerLensWidget Configuration', () => {
     it('should accept onClose callback', () => {
       let closed = false;
       const config: InnerLensConfig = {
+        mode: 'hosted',
         onClose: () => {
           closed = true;
         },
@@ -152,6 +158,7 @@ describe('InnerLensWidget Configuration', () => {
     it('should accept onSuccess callback with issueUrl', () => {
       let receivedUrl: string | undefined;
       const config: InnerLensConfig = {
+        mode: 'hosted',
         onSuccess: (issueUrl) => {
           receivedUrl = issueUrl;
         },
@@ -164,6 +171,7 @@ describe('InnerLensWidget Configuration', () => {
     it('should accept onError callback with Error', () => {
       let receivedError: Error | undefined;
       const config: InnerLensConfig = {
+        mode: 'hosted',
         onError: (error) => {
           receivedError = error;
         },
@@ -177,10 +185,13 @@ describe('InnerLensWidget Configuration', () => {
   });
 
   describe('InnerLensConfig Type - Full Configuration', () => {
-    it('should accept complete configuration with all options', () => {
+    it('should accept complete configuration with all options (self-hosted mode)', () => {
       const config: InnerLensConfig = {
-        // Core options
+        // Mode
+        mode: 'self-hosted',
         endpoint: '/api/bugs',
+
+        // Core options
         repository: 'owner/repo',
         labels: ['bug', 'urgent'],
         captureConsoleLogs: true,
@@ -215,6 +226,27 @@ describe('InnerLensWidget Configuration', () => {
       expect(config.buttonText).toBe('Report');
       expect(config.hidden).toBe(false);
       expect(config.disabled).toBe(false);
+    });
+
+    it('should accept complete configuration with fullUrl (self-hosted mode)', () => {
+      const config: InnerLensConfig = {
+        mode: 'self-hosted',
+        fullUrl: 'https://api.example.com/report',
+        repository: 'owner/repo',
+      };
+
+      expect(config.fullUrl).toBe('https://api.example.com/report');
+      expect(config.mode).toBe('self-hosted');
+    });
+
+    it('should accept hosted mode configuration', () => {
+      const config: InnerLensConfig = {
+        mode: 'hosted',
+        repository: 'owner/repo',
+      };
+
+      expect(config.mode).toBe('hosted');
+      expect(config.repository).toBe('owner/repo');
     });
   });
 });

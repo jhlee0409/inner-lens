@@ -31,6 +31,7 @@ export { useInnerLens } from './hooks/useInnerLens';
 export type {
   AIProvider,
   InnerLensConfig,
+  InnerLensMode,
   LogEntry,
   BugReportPayload,
   BugReportResponse,
