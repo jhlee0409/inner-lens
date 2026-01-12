@@ -203,6 +203,7 @@ export const investigatorAgent: Agent<InvestigatorInput, InvestigatorOutput> = {
         system: SYSTEM_PROMPT,
         prompt: userPrompt,
         maxOutputTokens: 2000,
+        abortSignal: AbortSignal.timeout(60_000), // 60 second timeout
       });
 
       // Validate and normalize hypotheses

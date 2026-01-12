@@ -148,6 +148,7 @@ export const BugReportSchema = z.object({
       message: z.string(),
       timestamp: z.number(),
       stack: z.string().optional(),
+      type: z.enum(['console', 'runtime', 'resource', 'network', 'promise_rejection']).optional(),
     })
   ).optional(),
   url: z.string().url().or(z.string().length(0)).optional(),
@@ -293,7 +294,9 @@ export async function createGitHubIssue(
   const formattedPerformance = payload.performance
     ? [
         `LCP: ${payload.performance.coreWebVitals.LCP?.toFixed(0) ?? 'N/A'}ms`,
+        `FCP: ${payload.performance.coreWebVitals.FCP?.toFixed(0) ?? 'N/A'}ms`,
         `FID: ${payload.performance.coreWebVitals.FID?.toFixed(0) ?? 'N/A'}ms`,
+        `INP: ${payload.performance.coreWebVitals.INP?.toFixed(0) ?? 'N/A'}ms`,
         `CLS: ${payload.performance.coreWebVitals.CLS?.toFixed(3) ?? 'N/A'}`,
         `TTFB: ${payload.performance.coreWebVitals.TTFB?.toFixed(0) ?? 'N/A'}ms`,
         `DOM Loaded: ${payload.performance.timing.domContentLoaded}ms`,

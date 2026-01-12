@@ -553,6 +553,70 @@ describe('InnerLensCore', () => {
       const trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;
       expect(trigger?.getAttribute('aria-label')).toBe('問題を報告');
     });
+
+    it('should fallback to English when language is not supported', () => {
+      // This test catches the bug where unsupported language causes undefined texts
+      instance = new InnerLensCore({ repository: 'owner/repo', language: 'xyz' as 'en' });
+      instance.mount();
+
+      const trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;
+      // Should fallback to English, NOT show undefined or empty
+      expect(trigger?.getAttribute('aria-label')).toBe('Report an issue');
+    });
+
+    it('should use custom dialogTitle when provided', () => {
+      instance = new InnerLensCore({
+        repository: 'owner/repo',
+        dialogTitle: 'Custom Dialog Title',
+      });
+      instance.mount();
+      instance.open();
+
+      const title = document.querySelector('#inner-lens-title');
+      expect(title?.textContent).toContain('Custom Dialog Title');
+    });
+
+    it('should use custom buttonText when provided', () => {
+      instance = new InnerLensCore({
+        repository: 'owner/repo',
+        buttonText: 'Custom Button Text',
+      });
+      instance.mount();
+
+      const trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;
+      expect(trigger?.getAttribute('aria-label')).toBe('Custom Button Text');
+    });
+
+    it('should prioritize custom text over language setting', () => {
+      // Custom text should override i18n, not the other way around
+      instance = new InnerLensCore({
+        repository: 'owner/repo',
+        language: 'ko',
+        buttonText: 'My Custom Button',
+      });
+      instance.mount();
+
+      const trigger = document.querySelector('#inner-lens-trigger') as HTMLElement;
+      // Should use custom text, NOT Korean translation
+      expect(trigger?.getAttribute('aria-label')).toBe('My Custom Button');
+    });
+
+    it('should display text content, not show undefined or empty', () => {
+      // This test catches the bug where text is missing entirely
+      instance = new InnerLensCore({ repository: 'owner/repo' });
+      instance.mount();
+      instance.open();
+
+      const title = document.querySelector('#inner-lens-title');
+      const submitBtn = document.querySelector('#inner-lens-submit');
+
+      // Text content should exist and not be empty/undefined
+      expect(title?.textContent).toBeTruthy();
+      expect(title?.textContent).not.toBe('undefined');
+      expect(title?.textContent).not.toBe('');
+      expect(submitBtn?.textContent).toBeTruthy();
+      expect(submitBtn?.textContent).not.toBe('undefined');
+    });
   });
 
   describe('button size', () => {

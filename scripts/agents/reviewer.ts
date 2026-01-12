@@ -255,6 +255,7 @@ export const reviewerAgent: Agent<ReviewerInput, ReviewerOutput> = {
         system: SYSTEM_PROMPT,
         prompt: userPrompt,
         maxOutputTokens: 1500,
+        abortSignal: AbortSignal.timeout(60_000), // 60 second timeout
       });
 
       const finalAnalysis = applyReview(analysis, review, config.language);

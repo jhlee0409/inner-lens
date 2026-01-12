@@ -773,7 +773,7 @@ export const HostedBugReportPayloadSchema = z.object({
   userActions: z.array(UserActionSchema).optional(),
   navigations: z.array(NavigationEntrySchema).optional(),
   performance: PerformanceSummarySchema.optional(),
-  sessionReplay: z.string().optional(),
+  sessionReplay: z.string().max(MAX_SESSION_REPLAY_SIZE, 'Session replay data exceeds 5MB limit').optional(),
   pageContext: PageContextSchema.optional(),
   reporter: ReporterSchema.optional(),
 });
@@ -829,7 +829,9 @@ export function formatIssueBody(payload: HostedBugReportPayload): string {
   const formattedPerformance = payload.performance
     ? [
         `LCP: ${payload.performance.coreWebVitals.LCP?.toFixed(0) ?? 'N/A'}ms`,
+        `FCP: ${payload.performance.coreWebVitals.FCP?.toFixed(0) ?? 'N/A'}ms`,
         `FID: ${payload.performance.coreWebVitals.FID?.toFixed(0) ?? 'N/A'}ms`,
+        `INP: ${payload.performance.coreWebVitals.INP?.toFixed(0) ?? 'N/A'}ms`,
         `CLS: ${payload.performance.coreWebVitals.CLS?.toFixed(3) ?? 'N/A'}`,
         `TTFB: ${payload.performance.coreWebVitals.TTFB?.toFixed(0) ?? 'N/A'}ms`,
         `DOM Loaded: ${payload.performance.timing.domContentLoaded}ms`,
@@ -955,7 +957,11 @@ ${formattedPageContext}
   }
 
   if (maskedLogs.length > 0) {
-    body += `\n---\n\n<details>\n<summary><b>Console Logs (${maskedLogs.length} entries)</b></summary>\n\n\`\`\`\n${maskedLogs.map((log) => `[${log.level.toUpperCase()}] ${log.message}${log.stack ? '\n' + log.stack : ''}`).join('\n')}\n\`\`\`\n\n</details>\n`;
+    const formattedLogs = maskedLogs.map((log) => {
+      const timestamp = new Date(log.timestamp ?? Date.now()).toISOString();
+      return `[${timestamp}] [${log.level.toUpperCase()}] ${log.message}${log.stack ? '\n' + log.stack : ''}`;
+    }).join('\n');
+    body += `\n---\n\n<details>\n<summary><b>Console Logs (${maskedLogs.length} entries)</b></summary>\n\n\`\`\`\n${formattedLogs}\n\`\`\`\n\n</details>\n`;
   }
 
   if (formattedUserActions) {

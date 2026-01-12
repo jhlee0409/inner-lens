@@ -220,7 +220,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Only accept POST
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ success: false, message: 'Method not allowed', error: 'Method not allowed' });
   }
 
   const clientIp = (
@@ -234,7 +234,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? Math.ceil((ipRateLimitResult.reset - Date.now()) / 1000) 
       : 60;
     res.setHeader('Retry-After', String(retryAfter));
-    return res.status(429).json({ 
+    return res.status(429).json({
+      success: false,
+      message: 'Too many requests. Please try again later.',
       error: 'Too many requests. Please try again later.',
       errorCode: 'RATE_LIMIT_EXCEEDED',
       retryAfter,
@@ -244,7 +246,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const payloadSize = JSON.stringify(req.body).length;
     if (payloadSize > MAX_PAYLOAD_SIZE) {
-      return res.status(413).json({ 
+      return res.status(413).json({
+        success: false,
+        message: `Payload too large (${Math.round(payloadSize / 1024 / 1024)}MB). Maximum allowed: 10MB.`,
         error: `Payload too large (${Math.round(payloadSize / 1024 / 1024)}MB). Maximum allowed: 10MB.`,
         errorCode: 'PAYLOAD_TOO_LARGE',
       });
@@ -252,13 +256,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const validation = validateHostedBugReport(req.body);
     if (!validation.success) {
-      return res.status(400).json({ error: validation.error });
+      return res.status(400).json({ success: false, message: validation.error, error: validation.error });
     }
     const payload = validation.data;
 
     const dailyLimitResult = await checkDailyRepoLimit(payload.owner, payload.repo);
     if (!dailyLimitResult.success) {
       return res.status(429).json({
+        success: false,
+        message: 'Daily limit exceeded for this repository',
         error: 'Daily limit exceeded for this repository',
         errorCode: 'DAILY_LIMIT_EXCEEDED',
         remaining: 0,
@@ -272,6 +278,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!octokit) {
       return res.status(403).json({
+        success: false,
+        message: 'inner-lens app is not installed on this repository',
         error: 'inner-lens app is not installed on this repository',
         installUrl: `https://github.com/apps/inner-lens-app/installations/new`,
       });
@@ -303,6 +311,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Missing environment variables
       if (error.message.includes('Missing GitHub App configuration')) {
         return res.status(500).json({
+          success: false,
+          message: 'Server configuration error',
           error: 'Server configuration error',
           details: 'GitHub App is not configured. Please contact the administrator.',
         });
@@ -310,18 +320,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Repository not found
       if (error.message.includes('Not Found')) {
-        return res.status(404).json({ error: 'Repository not found or no access' });
+        return res.status(404).json({ success: false, message: 'Repository not found or no access', error: 'Repository not found or no access' });
       }
 
       // Bad credentials
       if (error.message.includes('Bad credentials') || error.message.includes('401')) {
         return res.status(500).json({
+          success: false,
+          message: 'Authentication error',
           error: 'Authentication error',
           details: 'GitHub App credentials are invalid.',
         });
       }
     }
 
-    return res.status(500).json({ error: 'Failed to create issue' });
+    return res.status(500).json({ success: false, message: 'Failed to create issue', error: 'Failed to create issue' });
   }
 }

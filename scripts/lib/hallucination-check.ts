@@ -401,8 +401,8 @@ function checkLineContentMentioned(
 function extractSymbolReferences(text: string): string[] {
   const symbols: string[] = [];
 
-  // Function calls: functionName(
-  const funcPattern = /\b([a-z][a-zA-Z0-9]*)\s*\(/g;
+  // Function calls: functionName( or FunctionName(
+  const funcPattern = /\b([a-zA-Z][a-zA-Z0-9]*)\s*\(/g;
   let match;
   while ((match = funcPattern.exec(text)) !== null) {
     const name = match[1];

@@ -387,6 +387,7 @@ export const explainerAgent: Agent<ExplainerInput, ExplainerOutput> = {
         system: getSystemPrompt(config?.language),
         prompt: userPrompt,
         maxOutputTokens: 6000,
+        abortSignal: AbortSignal.timeout(90_000), // 90 second timeout
       });
 
       // Post-process: Add evidence chain if missing

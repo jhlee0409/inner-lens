@@ -128,6 +128,7 @@ IMPORTANT:
       prompt,
       maxOutputTokens: 1000,
       temperature: 0.2,
+      abortSignal: AbortSignal.timeout(30_000), // 30 second timeout
     });
 
     let cleanText = text.trim();
@@ -184,6 +185,7 @@ Output ONLY valid JSON array, no markdown.`;
       prompt,
       maxOutputTokens: 1500,
       temperature: 0.2,
+      abortSignal: AbortSignal.timeout(30_000), // 30 second timeout
     });
 
     let cleanText = text.trim();
@@ -355,6 +357,7 @@ IMPORTANT: Output ONLY the JSON array, no markdown code blocks or explanation.`;
       prompt: rerankPrompt,
       maxOutputTokens: 1000,
       temperature: 0.1,
+      abortSignal: AbortSignal.timeout(30_000), // 30 second timeout
     });
 
     let rerankResults: RerankResult[];
