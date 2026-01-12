@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.7] - 2026-01-12
+
+### Fixed
+- **(Widget)** i18n fallback for dialogTitle and buttonText when language is not supported
+- **(Analysis Engine)** Added 60-second timeout to all LLM calls to prevent indefinite hangs
+- **(Analysis Engine)** Fixed error response format (lowercase `error` field for consistency)
+- **(Analysis Engine)** Fixed Zod schema for optional fields (hypotheses, counterEvidence, etc.)
+
+### Changed
+- **(Tests)** Removed 690 lines of placeholder tests that didn't catch real bugs
+- **(Tests)** Fixed N/A prevention tests to match actual table cell format (`| URL | N/A |`)
+- **(Tests)** Added meaningful i18n fallback tests
+
 ## [0.4.6] - 2026-01-11
 
 ### Fixed
