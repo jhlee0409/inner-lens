@@ -387,8 +387,9 @@ describe('QA Issue Flow Integration Tests', () => {
       const callArgs = mockCreate.mock.calls[0]![0];
       // When URL is provided, it MUST appear in the issue body
       expect(callArgs.body).toContain('https://app.example.com/dashboard');
-      // N/A should NOT appear for URL field when URL is provided
-      expect(callArgs.body).not.toMatch(/\*\*URL:\*\*\s*N\/A/);
+      // N/A should NOT appear in URL table cell when URL is provided
+      // Actual format: | URL | <value> |
+      expect(callArgs.body).not.toMatch(/\| URL \| N\/A \|/);
     });
 
     it('should NOT show N/A when userAgent is provided', async () => {
@@ -401,8 +402,9 @@ describe('QA Issue Flow Integration Tests', () => {
 
       const callArgs = mockCreate.mock.calls[0]![0];
       expect(callArgs.body).toContain('Chrome');
-      // N/A should NOT appear for User Agent field when userAgent is provided
-      expect(callArgs.body).not.toMatch(/\*\*User Agent:\*\*\s*N\/A/);
+      // N/A should NOT appear in User Agent table cell when userAgent is provided
+      // Actual format: | User Agent | <value> |
+      expect(callArgs.body).not.toMatch(/\| User Agent \| N\/A \|/);
     });
 
     it('should mask sensitive data in issue body', async () => {
