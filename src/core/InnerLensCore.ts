@@ -318,8 +318,21 @@ export class InnerLensCore {
     const lang = config.language ?? 'en';
     const texts = WIDGET_TEXTS[lang] ?? WIDGET_TEXTS.en;
 
+    // Validate endpoint - reject full URLs containing "undefined" or "null" (likely env var issue)
+    // Only check absolute URLs (http:// or https://) - relative paths like "/api/report" are fine
+    let resolvedEndpoint = config.endpoint;
+    if (resolvedEndpoint && /^https?:\/\//.test(resolvedEndpoint)) {
+      if (resolvedEndpoint.includes('/undefined') || resolvedEndpoint.includes('/null')) {
+        console.warn(
+          `[inner-lens] Invalid endpoint detected: "${resolvedEndpoint}". ` +
+          `This usually means an environment variable is not set. ` +
+          `Falling back to hosted API.`
+        );
+        resolvedEndpoint = undefined;
+      }
+    }
+
     this.config = {
-      endpoint: config.endpoint ?? HOSTED_API_ENDPOINT,
       labels: ['inner-lens'],
       captureConsoleLogs: true,
       maxLogEntries: 50,
@@ -340,6 +353,8 @@ export class InnerLensCore {
       cancelText: texts.cancelText,
       successMessage: texts.successMessage,
       ...config,
+      // Override endpoint AFTER spread to ensure validation is applied
+      endpoint: resolvedEndpoint ?? HOSTED_API_ENDPOINT,
       styles: mergedStyles,
     };
   }

@@ -230,6 +230,64 @@ describe('InnerLensCore', () => {
     });
   });
 
+  describe('endpoint validation', () => {
+    it('should fallback to hosted API when full URL endpoint contains "/undefined"', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      instance = new InnerLensCore({
+        repository: 'owner/repo',
+        endpoint: 'http://localhost:3001/undefined',
+      });
+      instance.mount();
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid endpoint detected')
+      );
+      warnSpy.mockRestore();
+    });
+
+    it('should fallback to hosted API when full URL endpoint contains "/null"', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      instance = new InnerLensCore({
+        repository: 'owner/repo',
+        endpoint: 'https://example.com/api/null/report',
+      });
+      instance.mount();
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid endpoint detected')
+      );
+      warnSpy.mockRestore();
+    });
+
+    it('should accept relative path endpoint without warning (self-hosted)', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      instance = new InnerLensCore({
+        repository: 'owner/repo',
+        endpoint: '/api/bug-report',
+      });
+      instance.mount();
+
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
+    it('should accept valid full URL endpoint without warning', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      instance = new InnerLensCore({
+        repository: 'owner/repo',
+        endpoint: 'http://localhost:3001/api/report',
+      });
+      instance.mount();
+
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+  });
+
   describe('submit', () => {
     beforeEach(() => {
       vi.useFakeTimers();

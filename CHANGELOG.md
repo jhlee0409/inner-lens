@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.8] - 2026-01-12
+
+### Fixed
+- **(Widget)** Detect and warn when endpoint contains `/undefined` or `/null` in full URLs
+  - Automatically falls back to hosted API when environment variables are not set
+  - Only applies to absolute URLs (http/https) - relative paths are unaffected
+
 ## [0.4.7] - 2026-01-12
 
 ### Fixed
