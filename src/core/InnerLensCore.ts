@@ -765,6 +765,7 @@ export class InnerLensCore {
 
     const styles = createStyles(this.config.styles);
     const iconSize = styles.iconSize as number;
+    const t = this.getTexts();
     const isDisabled = this.isDisabled();
     const disabledStyles = isDisabled ? 'opacity: 0.5; cursor: not-allowed;' : '';
 
@@ -772,8 +773,8 @@ export class InnerLensCore {
       <button
         type="button"
         id="inner-lens-trigger"
-        aria-label="${this.escapeHtml(this.config.buttonText)}"
-        title="${this.escapeHtml(this.config.buttonText)}"
+        aria-label="${this.escapeHtml(this.config.buttonText ?? t.buttonText)}"
+        title="${this.escapeHtml(this.config.buttonText ?? t.buttonText)}"
         ${isDisabled ? 'disabled' : ''}
         style="${this.styleToString(styles.triggerButton)}${disabledStyles}"
       >
@@ -802,6 +803,7 @@ export class InnerLensCore {
 
     const styles = createStyles(this.config.styles);
     const iconSize = styles.iconSize as number;
+    const t = this.getTexts();
 
     if (!this.isOpen) {
       this.renderTrigger();
@@ -815,8 +817,8 @@ export class InnerLensCore {
       <button
         type="button"
         id="inner-lens-trigger"
-        aria-label="${this.escapeHtml(this.config.buttonText)}"
-        title="${this.escapeHtml(this.config.buttonText)}"
+        aria-label="${this.escapeHtml(this.config.buttonText ?? t.buttonText)}"
+        title="${this.escapeHtml(this.config.buttonText ?? t.buttonText)}"
         style="${this.styleToString(styles.triggerButton)}"
       >
         ${this.getBugIcon(iconSize)}
@@ -831,7 +833,7 @@ export class InnerLensCore {
         <div id="inner-lens-dialog" style="${this.styleToString(styles.dialog)}">
           <div style="${this.styleToString(styles.header)}">
             <h2 id="inner-lens-title" style="${this.styleToString(styles.headerTitle)}">
-              ${this.escapeHtml(this.config.dialogTitle)}
+              ${this.escapeHtml(this.config.dialogTitle ?? t.dialogTitle)}
             </h2>
             <button
               type="button"
