@@ -402,6 +402,12 @@ const MASKING_PATTERNS: MaskingPattern[] = [
     pattern: /https:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+/gi,
     replacement: '[DISCORD_WEBHOOK_REDACTED]',
   },
+  // Slack webhook URLs
+  {
+    name: 'slack_webhook',
+    pattern: /https:\/\/hooks\.slack\.com\/services\/[A-Z0-9]+\/[A-Z0-9]+\/[\w-]+/gi,
+    replacement: '[SLACK_WEBHOOK_REDACTED]',
+  },
   // Database connection strings
   {
     name: 'database_url',
@@ -450,16 +456,17 @@ const MASKING_PATTERNS: MaskingPattern[] = [
     pattern: /\b\d{3}[-\s]?\d{2}[-\s]?\d{4}\b/g,
     replacement: '[SSN_REDACTED]',
   },
-  // Phone numbers (US)
+  // Phone numbers (various formats - US)
+  // Exclude common non-phone contexts: Order #, ID:, Ref:, No., Number:, Timestamp:
   {
     name: 'phone',
-    pattern: /\b(?:\+?1[-.\s]?)?(?:\(?[0-9]{3}\)?[-.\s]?)?[0-9]{3}[-.\s]?[0-9]{4}\b/g,
+    pattern: /(?<!#)(?<!(?:order|id|ref|no|number|timestamp|code)[:\s]*)\b(?:\+?1[-.\s]?)?(?:\(?[0-9]{3}\)?[-.\s]?)[0-9]{3}[-.\s]?[0-9]{4}\b/gi,
     replacement: '[PHONE_REDACTED]',
   },
-  // IPv4 addresses
+  // IPv4 addresses (exclude version numbers like "Version 1.2.3.4" or "v1.2.3.4")
   {
     name: 'ipv4',
-    pattern: /\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/g,
+    pattern: /(?<!(?:version|ver|v)\s*)(?<!v)\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\b/gi,
     replacement: '[IP_REDACTED]',
   },
   // IPv6 addresses (full and compressed forms)

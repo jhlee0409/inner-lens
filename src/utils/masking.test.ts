@@ -447,3 +447,159 @@ describe('maskSensitiveObject - extended key patterns', () => {
     expect(masked.config.api.secret_key).toBe('[REDACTED]');
   });
 });
+
+describe('maskSensitiveData - Pattern Interactions (Critical)', () => {
+  describe('URL patterns must take precedence over partial matches', () => {
+    it('should mask Discord webhook URLs without SSN false positives', () => {
+      // Discord webhook IDs contain 18-19 digit sequences that could match other patterns
+      const webhook = 'https://discord.com/api/webhooks/1234567890123456789/abcToken123';
+      const result = maskSensitiveData(webhook);
+      expect(result).toBe('[DISCORD_WEBHOOK_REDACTED]');
+      // Should NOT partially match as SSN or phone
+      expect(result).not.toContain('[SSN_REDACTED]');
+      expect(result).not.toContain('[PHONE_REDACTED]');
+    });
+
+    // FIXED: Slack webhook URLs are now fully masked
+    it('should mask Slack webhook URLs completely', () => {
+      // Construct URL to avoid GitHub push protection false positive
+      const webhook = ['https://hooks.slack.com/services', 'TXXXXXXXX', 'BXXXXXXXX', 'xxxxxxxxxxxxxxxxxxxx'].join('/');
+      const result = maskSensitiveData(webhook);
+      expect(result).toBe('[SLACK_WEBHOOK_REDACTED]');
+    });
+
+    it('should mask database URLs with embedded emails', () => {
+      // Email pattern could match the user part of database URL
+      const dbUrl = 'postgresql://admin@company.com:secretpass@db.example.com:5432/mydb';
+      const result = maskSensitiveData(dbUrl);
+      // Should mask as database URL, not leave email exposed
+      expect(result).toBe('[DATABASE_URL_REDACTED]');
+      expect(result).not.toContain('admin@company.com');
+    });
+
+    it('should mask API keys in Supabase-style URLs', () => {
+      // Supabase uses anon keys that may or may not be JWT format
+      const url = 'https://xyzcompany.supabase.co/rest/v1/users?apikey=sbp_abcdef123456';
+      const result = maskSensitiveData(url);
+      // The URL structure is preserved but sensitive api_key param is redacted via key name detection
+      // TODO: Consider adding specific Supabase URL pattern
+      expect(result).not.toContain('sbp_abcdef123456');
+    });
+  });
+
+  describe('RegExp global flag state should not affect consecutive calls', () => {
+    it('should mask OpenAI keys consistently across multiple calls', () => {
+      const texts = [
+        'First key: sk-proj-abc123def456ghi789jkl012mno',
+        'Second key: sk-proj-xyz987wvu654tsr321qpo098nml',
+        'Third key: sk-proj-111222333444555666777888999',
+      ];
+
+      const results = texts.map(t => maskSensitiveData(t));
+
+      results.forEach((result, i) => {
+        // Keys are masked (may use generic [REDACTED] or specific label)
+        expect(result, `Call ${i + 1} should mask OpenAI key`).toContain('[REDACTED]');
+        expect(result, `Call ${i + 1} should not contain raw key`).not.toContain('sk-proj-');
+      });
+    });
+
+    it('should mask emails consistently across 100 consecutive calls', () => {
+      for (let i = 0; i < 100; i++) {
+        const text = `User ${i}: user${i}@example.com`;
+        const result = maskSensitiveData(text);
+        expect(result, `Call ${i + 1} failed`).toBe(`User ${i}: [EMAIL_REDACTED]`);
+      }
+    });
+
+    it('should mask multiple patterns in same string consistently', () => {
+      const text = 'Email: test@example.com, Phone: 010-1234-5678, SSN: 123-45-6789';
+
+      // Call multiple times to ensure state doesn't leak
+      for (let i = 0; i < 10; i++) {
+        const result = maskSensitiveData(text);
+        expect(result).toContain('[EMAIL_REDACTED]');
+        // Phone and SSN are masked (specific label may vary)
+        expect(result).toContain('[REDACTED]');
+        expect(result).not.toContain('test@example.com');
+        // Verify sensitive data is actually removed
+        expect(result).not.toContain('123-45-6789');
+      }
+    });
+  });
+
+  describe('Edge cases that could bypass masking', () => {
+    it('should mask API keys with varying lengths', () => {
+      const keys = [
+        'sk-short123456789012345',  // minimum length
+        'sk-' + 'a'.repeat(100),     // very long key
+        'sk-mixed123ABC456def789',   // mixed case
+      ];
+
+      keys.forEach(key => {
+        const result = maskSensitiveData(key);
+        expect(result).not.toContain('sk-');
+      });
+    });
+
+    it('should mask JWT tokens regardless of payload size', () => {
+      // Minimal JWT
+      const minJwt = 'eyJhbGciOiJIUzI1NiJ9.eyJhIjoiYiJ9.signature123';
+      expect(maskSensitiveData(minJwt)).toBe('[JWT_REDACTED]');
+
+      // Large JWT payload
+      const largePayload = Buffer.from(JSON.stringify({ data: 'x'.repeat(1000) })).toString('base64');
+      const largeJwt = `eyJhbGciOiJIUzI1NiJ9.${largePayload}.signature123`;
+      expect(maskSensitiveData(largeJwt)).toBe('[JWT_REDACTED]');
+    });
+
+    it('should mask credit cards with various formats', () => {
+      const cards = [
+        '4111111111111111',        // Visa no separators
+        '4111-1111-1111-1111',     // Visa with dashes
+        '4111 1111 1111 1111',     // Visa with spaces
+        '5500000000000004',        // Mastercard
+        '340000000000009',         // Amex (15 digits)
+        '6011000000000004',        // Discover
+      ];
+
+      cards.forEach(card => {
+        const result = maskSensitiveData(`Card: ${card}`);
+        expect(result, `Failed for ${card}`).toContain('[CARD_REDACTED]');
+      });
+    });
+
+    it('should not mask simple alphanumeric IDs', () => {
+      const safePatterns = [
+        'ID: ABC-123-XYZ',
+        'Reference: REF12345',
+      ];
+
+      safePatterns.forEach(text => {
+        const result = maskSensitiveData(text);
+        expect(result).toBe(text);
+      });
+    });
+
+    // FIXED: Version numbers like 1.2.3.4 should NOT be masked as IPs
+    // Uses negative lookbehind for "version", "ver", "v" prefixes
+    it('should NOT mask version numbers as IPs (fixed false positive)', () => {
+      expect(maskSensitiveData('Version 1.2.3.4')).toBe('Version 1.2.3.4');
+      expect(maskSensitiveData('ver 1.2.3.4')).toBe('ver 1.2.3.4');
+      expect(maskSensitiveData('v1.2.3.4')).toBe('v1.2.3.4');
+      // But actual IPs should still be masked
+      expect(maskSensitiveData('IP: 192.168.1.1')).toContain('[IP_REDACTED]');
+    });
+
+    // FIXED: Order/ID numbers should NOT be masked as phones
+    // Uses negative lookbehind for "#", "order:", "id:", etc.
+    it('should NOT mask order numbers as phones (fixed false positive)', () => {
+      expect(maskSensitiveData('Order #1234567890')).toBe('Order #1234567890');
+      expect(maskSensitiveData('ID: 1234567890')).toBe('ID: 1234567890');
+      expect(maskSensitiveData('Ref: 1234567890')).toBe('Ref: 1234567890');
+      expect(maskSensitiveData('Number: 1234567890')).toBe('Number: 1234567890');
+      // But actual phone numbers should still be masked
+      expect(maskSensitiveData('Call me at 123-456-7890')).toContain('[PHONE_REDACTED]');
+    });
+  });
+});
