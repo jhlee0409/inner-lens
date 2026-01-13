@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.9] - 2026-01-13
+
+### Fixed
+- **(Widget)** Fixed `btoa` error for non-Latin1 characters (Korean, CJK, emoji) in session replay
+  - Uses UTF-8 safe base64 encoding for session replay data
+- **(Analysis Engine)** Fixed session replay decoder to handle both UTF-8 safe and plain base64 binary data
+- **(Security)** Fixed masking false positives:
+  - Version numbers (e.g., `v1.2.3.4`) no longer masked as IP addresses
+  - Order/ID numbers (e.g., `Order #123`) no longer masked as phone numbers
+
+### Added
+- **(Security)** Slack webhook URL masking pattern (`[SLACK_WEBHOOK_REDACTED]`)
+- **(Tests)** Multi-language encoding tests (19 languages/character sets)
+- **(Tests)** Edge case tests for log capture (circular refs, BigInt, Symbol, DOM nodes)
+- **(Tests)** Pattern interaction tests for masking engine
+
 ## [0.4.8] - 2026-01-12
 
 ### Changed
