@@ -1136,8 +1136,13 @@ export class InnerLensCore {
           );
         } catch (error) {
           console.warn('[inner-lens] Session replay compression failed, using uncompressed:', error);
+          // UTF-8 safe base64 encoding (handles non-Latin1 characters like Korean)
+          const jsonStr = JSON.stringify(this.sessionReplayData.events);
           sessionReplayBase64 = btoa(
-            JSON.stringify(this.sessionReplayData.events)
+            encodeURIComponent(jsonStr).replace(
+              /%([0-9A-F]{2})/g,
+              (_, p1) => String.fromCharCode(parseInt(p1, 16))
+            )
           );
         }
       }

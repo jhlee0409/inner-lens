@@ -157,6 +157,78 @@ describe('decompressSessionReplay', () => {
     expect(decoded).toBe(original);
   });
 
+  it('should decode UTF-8 safe encoded data with non-ASCII characters', () => {
+    const original = '{"message": "안녕하세요", "emoji": "🎉"}';
+    // UTF-8 safe encoding (same as InnerLensCore fallback path)
+    // Use 'latin1' encoding to treat each character as a single byte
+    const utf8SafeBase64 = Buffer.from(
+      encodeURIComponent(original).replace(
+        /%([0-9A-F]{2})/g,
+        (_, p1) => String.fromCharCode(parseInt(p1, 16))
+      ),
+      'latin1'
+    ).toString('base64');
+
+    const decoded = decompressSessionReplay(utf8SafeBase64);
+    expect(decoded).toBe(original);
+  });
+
+  it('should handle all major languages and special characters', () => {
+    // Helper to encode like InnerLensCore
+    const encodeUtf8Safe = (str: string) => Buffer.from(
+      encodeURIComponent(str).replace(
+        /%([0-9A-F]{2})/g,
+        (_, p1) => String.fromCharCode(parseInt(p1, 16))
+      ),
+      'latin1'
+    ).toString('base64');
+
+    const testCases = [
+      // East Asian
+      { lang: 'Korean', text: '안녕하세요 세계' },
+      { lang: 'Japanese', text: 'こんにちは世界' },
+      { lang: 'Chinese Simplified', text: '你好世界' },
+      { lang: 'Chinese Traditional', text: '你好世界' },
+      // European
+      { lang: 'Russian', text: 'Привет мир' },
+      { lang: 'Greek', text: 'Γειά σου κόσμε' },
+      { lang: 'German', text: 'Größe und Äpfel' },
+      { lang: 'French', text: 'Café résumé' },
+      { lang: 'Spanish', text: '¿Cómo estás? ¡Hola!' },
+      { lang: 'Portuguese', text: 'Ação, coração' },
+      // Middle Eastern
+      { lang: 'Arabic', text: 'مرحبا بالعالم' },
+      { lang: 'Hebrew', text: 'שלום עולם' },
+      // South Asian
+      { lang: 'Hindi', text: 'नमस्ते दुनिया' },
+      { lang: 'Thai', text: 'สวัสดีชาวโลก' },
+      { lang: 'Vietnamese', text: 'Xin chào thế giới' },
+      // Special characters
+      { lang: 'Emoji', text: '😀🎉🚀💻🌍🔥✨' },
+      { lang: 'Math symbols', text: '∑∏∫√∞≠≈' },
+      { lang: 'Currency', text: '€£¥₩₹฿' },
+      { lang: 'Mixed', text: 'Hello 안녕 こんにちは 你好 🌍' },
+    ];
+
+    for (const { lang, text } of testCases) {
+      const original = JSON.stringify({ language: lang, content: text });
+      const encoded = encodeUtf8Safe(original);
+      const decoded = decompressSessionReplay(encoded);
+      expect(decoded, `Failed for ${lang}`).toBe(original);
+    }
+  });
+
+  it('should decode plain base64 binary data (compressed path)', () => {
+    // Simulate gzip-like binary data (bytes outside UTF-8 range)
+    const binaryData = Buffer.from([0x1f, 0x8b, 0x08, 0x00, 0x89, 0xff]);
+    const base64 = binaryData.toString('base64');
+
+    const decoded = decompressSessionReplay(base64);
+    // Should return the binary string without throwing
+    expect(decoded).not.toBeNull();
+    expect(decoded?.length).toBe(6);
+  });
+
   it('should return null for invalid base64', () => {
     expect(decompressSessionReplay('not-valid-base64!!!')).toBeNull();
   });

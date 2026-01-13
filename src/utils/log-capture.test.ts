@@ -618,4 +618,167 @@ describe('log-capture', () => {
       document.body.removeChild(img);
     });
   });
+
+  describe('Edge Cases - Object Handling (Critical)', () => {
+    it('should handle circular references without crashing', () => {
+      initLogCapture();
+
+      const circular: Record<string, unknown> = { name: 'test', value: 123 };
+      circular.self = circular;
+      circular.nested = { parent: circular };
+
+      // Should not throw
+      expect(() => console.error('Circular object:', circular)).not.toThrow();
+
+      const logs = getCapturedLogs();
+      expect(logs).toHaveLength(1);
+      expect(logs[0]!.message).toContain('Circular object:');
+    });
+
+    it('should handle deeply nested circular references', () => {
+      initLogCapture();
+
+      const obj: Record<string, unknown> = { level: 1 };
+      let current = obj;
+      for (let i = 2; i <= 10; i++) {
+        current.child = { level: i } as Record<string, unknown>;
+        current = current.child as Record<string, unknown>;
+      }
+      // Create circular reference at deepest level
+      current.root = obj;
+
+      expect(() => console.error('Deep circular:', obj)).not.toThrow();
+
+      const logs = getCapturedLogs();
+      expect(logs).toHaveLength(1);
+    });
+
+    it('should handle objects with throwing getters', () => {
+      initLogCapture();
+
+      const problematic = {
+        normal: 'value',
+        get explosive() {
+          throw new Error('Getter exploded!');
+        },
+      };
+
+      // Should not crash the capture system
+      expect(() => console.error('Problematic object:', problematic)).not.toThrow();
+
+      const logs = getCapturedLogs();
+      expect(logs).toHaveLength(1);
+    });
+
+    it('should handle objects with custom toJSON that throws', () => {
+      initLogCapture();
+
+      const badJson = {
+        data: 'test',
+        toJSON() {
+          throw new Error('toJSON failed!');
+        },
+      };
+
+      expect(() => console.error('Bad JSON object:', badJson)).not.toThrow();
+
+      const logs = getCapturedLogs();
+      expect(logs).toHaveLength(1);
+    });
+
+    it('should handle Symbol properties gracefully', () => {
+      initLogCapture();
+
+      const sym = Symbol('test');
+      const obj = {
+        [sym]: 'symbol value',
+        normal: 'normal value',
+      };
+
+      expect(() => console.error('Symbol object:', obj)).not.toThrow();
+
+      const logs = getCapturedLogs();
+      expect(logs).toHaveLength(1);
+      expect(logs[0]!.message).toContain('normal');
+    });
+
+    it('should handle BigInt values', () => {
+      initLogCapture();
+
+      const obj = {
+        bigNumber: BigInt(9007199254740991),
+        normalNumber: 42,
+      };
+
+      expect(() => console.error('BigInt object:', obj)).not.toThrow();
+
+      const logs = getCapturedLogs();
+      expect(logs).toHaveLength(1);
+    });
+
+    it('should handle undefined and null in nested objects', () => {
+      initLogCapture();
+
+      const obj = {
+        nullValue: null,
+        undefinedValue: undefined,
+        nested: {
+          alsoNull: null,
+          alsoUndefined: undefined,
+        },
+      };
+
+      expect(() => console.error('Null/undefined object:', obj)).not.toThrow();
+
+      const logs = getCapturedLogs();
+      expect(logs).toHaveLength(1);
+    });
+
+    it('should handle extremely large objects without crashing', () => {
+      initLogCapture();
+
+      // Create a large object
+      const large: Record<string, string> = {};
+      for (let i = 0; i < 1000; i++) {
+        large[`key${i}`] = 'x'.repeat(100);
+      }
+
+      expect(() => console.error('Large object:', large)).not.toThrow();
+
+      const logs = getCapturedLogs();
+      expect(logs).toHaveLength(1);
+      // Object should be captured (truncation is optional, main goal is no crash)
+      expect(logs[0]!.message).toContain('Large object:');
+      // TODO: Consider adding truncation for very large log messages to prevent memory issues
+    });
+
+    it('should handle DOM nodes (common in real errors)', () => {
+      initLogCapture();
+
+      const div = document.createElement('div');
+      div.id = 'test-div';
+      div.className = 'my-class';
+      div.innerHTML = '<span>child</span>';
+
+      // DOM nodes have circular references to parent/children
+      expect(() => console.error('DOM node:', div)).not.toThrow();
+
+      const logs = getCapturedLogs();
+      expect(logs).toHaveLength(1);
+    });
+
+    it('should handle Error objects with circular cause', () => {
+      initLogCapture();
+
+      const error1 = new Error('First error');
+      const error2 = new Error('Second error', { cause: error1 });
+      error1.cause = error2;
+
+      expect(() => console.error('Circular error:', error1)).not.toThrow();
+
+      const logs = getCapturedLogs();
+      expect(logs).toHaveLength(1);
+      expect(logs[0]!.message).toContain('First error');
+    });
+  });
 });

@@ -409,9 +409,29 @@ export function formatDOMContextForLLM(context: DOMContext): string {
 export function decompressSessionReplay(base64Data: string): string | null {
   try {
     if (typeof atob === 'function') {
-      return atob(base64Data);
+      const binaryStr = atob(base64Data);
+      // Try UTF-8 safe decoding first (for non-ASCII characters like Korean)
+      try {
+        return decodeURIComponent(
+          Array.from(binaryStr, c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')).join('')
+        );
+      } catch {
+        // Fallback to plain decoding (for gzip compressed binary data)
+        return binaryStr;
+      }
     }
-    return Buffer.from(base64Data, 'base64').toString('utf-8');
+    // Node.js environment
+    const buffer = Buffer.from(base64Data, 'base64');
+    const binaryStr = buffer.toString('latin1');
+    // Try UTF-8 safe decoding first (for non-ASCII characters like Korean)
+    try {
+      return decodeURIComponent(
+        Array.from(binaryStr, c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')).join('')
+      );
+    } catch {
+      // Fallback to plain UTF-8 decoding (for regular or compressed data)
+      return buffer.toString('utf-8');
+    }
   } catch {
     return null;
   }
